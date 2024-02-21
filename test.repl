@@ -1,21 +1,12 @@
 using sysbus
 
-mach create "rp2040"
-
-include @emulation/rp2040_alias.cs
-include @emulation/peripherals/sio/rp2040_clocks.cs
-include @emulation/peripherals/sio/rp2040_sio.cs
-include @emulation/peripherals/timer/rp2040_timer.cs
-
-
-machine LoadPlatformDescription @rp2040.repl
+include @initialize_rp2040.repl
 
 showAnalyzer sysbus.uart0
 
-sysbus LoadELF @b2.elf
-
 sysbus LoadELF @pico-examples/build/timer/hello_timer/hello_timer.elf
+
 cpu0 VectorTableOffset `sysbus GetSymbolAddress "__VECTOR_TABLE"`
 # cpu1 VectorTableOffset `sysbus GetSymbolAddress "__VECTOR_TABLE"`
 
-machine StartGdbServer 3333
+# machine StartGdbServer 3333

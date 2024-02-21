@@ -2,21 +2,9 @@
  *   Copyright (c) 2024
  *   All rights reserved.
  */
-//
-// Copyright (c) 2010-2019 Antmicro
-// Copyright (c) 2011-2015 Realtime Embedded
-//
-// This file is licensed under the MIT License.
-// Full license text is available in 'licenses/MIT.txt'.
-//
-using System;
+
 using Antmicro.Renode.Peripherals.Bus;
-using Antmicro.Renode.Peripherals;
-using Antmicro.Renode.Utilities;
-using Antmicro.Renode.Logging;
-using System.Collections.Generic;
 using Antmicro.Renode.Core;
-using Antmicro.Renode.Peripherals.Wireless.IEEE802_15_4;
 
 namespace Antmicro.Renode.Peripherals.Memory
 {

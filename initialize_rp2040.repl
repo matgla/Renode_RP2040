@@ -1,0 +1,10 @@
+mach create "rp2040"
+
+include $ORIGIN/emulation/rp2040_alias.cs
+include $ORIGIN/emulation/peripherals/sio/rp2040_clocks.cs
+include $ORIGIN/emulation/peripherals/sio/rp2040_sio.cs
+include $ORIGIN/emulation/peripherals/timer/rp2040_timer.cs
+
+machine LoadPlatformDescription $ORIGIN/rp2040.repl
+
+sysbus LoadELF $ORIGIN/b2.elf
