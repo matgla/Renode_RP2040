@@ -21,4 +21,4 @@ jobs:
       - name: Build & Execute Tests
         shell: bash
         run: |
-          ls -la && run_tests.sh
+          ./run_tests.sh
