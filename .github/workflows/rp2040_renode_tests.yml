@@ -1,0 +1,24 @@
+name: Renode RP2040 board support tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  execute_renode_tests:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/matgla/yasldtoolchain:0.2
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Build & Execute Tests
+        shell: bash
+        run: |
+          run_tests.sh
