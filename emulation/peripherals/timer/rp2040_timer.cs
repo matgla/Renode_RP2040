@@ -12,12 +12,12 @@ using System.IO;
 namespace Antmicro.Renode.Peripherals.Timers
 {
 
-    public class Alarm 
+    public class Alarm
     {
         public ulong Value {get; set;}
         public bool Armed {get;set;}
         public bool IrqEnabled{get;set;}
-        public GPIO Irq {get;set;} 
+        public GPIO Irq {get;set;}
 
         public bool Fired {get; set;}
 
@@ -54,8 +54,8 @@ namespace Antmicro.Renode.Peripherals.Timers
         private ulong counter;
         private void OnCounterFired()
         {
-            counter += 100;
-        
+            counter += 1000;
+
             foreach (var alarm in alarms)
             {
                 alarm.Run(counter);
@@ -79,7 +79,11 @@ namespace Antmicro.Renode.Peripherals.Timers
         Alarm[] alarms;
         public RP2040Timer(Machine machine) : base(machine)
         {
-            IRQ = new GPIO();
+            IRQs = new GPIO[4];
+            for (int i = 0; i < 4; ++i)
+            {
+                IRQs[i] = new GPIO();
+            }
             alarms = new Alarm[4];
             this.clockSource = machine.ClockSource;
             Reset();
@@ -87,29 +91,29 @@ namespace Antmicro.Renode.Peripherals.Timers
         }
         public long Size { get { return 0x1000; } }
 
-        public GPIO IRQ { get; private set; }
+        public GPIO[] IRQs { get; private set;}
+        public GPIO IRQ0 => IRQs[0];
+        public GPIO IRQ1 => IRQs[1];
+        public GPIO IRQ2 => IRQs[2];
+        public GPIO IRQ3 => IRQs[3];
+
+
+
+
 
         public override void Reset()
         {
             // 1us timer counter
-            ClockEntry clock = new ClockEntry(1, 10000, OnCounterFired, this, "SystemClock", true, Direction.Ascending, WorkMode.Periodic, 1L);
+            ClockEntry clock = new ClockEntry(1, 1000, OnCounterFired, this, "SystemClock", true, Direction.Ascending, WorkMode.Periodic, 1L);
             clock.Value = 0;
             clockSource.ExchangeClockEntryWith(OnCounterFired, (ClockEntry x) => clock, () => clock);
             // timer.LimitReached += () => UpdateTimer();
             for (int i = 0; i < alarms.Length; ++i)
             {
-                if (i == 3)
-                {
                 alarms[i] = new Alarm()
                 {
-                    Irq = IRQ
+                    Irq = IRQs[i]
                 };
-                }
-                else 
-                {
-                alarms[i] = new Alarm();
- 
-                }
             }
         }
 
@@ -146,15 +150,31 @@ namespace Antmicro.Renode.Peripherals.Timers
             Registers.INTR.Define(this)
                 .WithFlag(0, FieldMode.Write, writeCallback: (_, value) =>
                 {
+                    if (value == false)
+                    {
+                        alarms[0].Irq.Unset();
+                    }
                 }, name: "INTR0")
                 .WithFlag(1, FieldMode.Write, writeCallback: (_, value) =>
                 {
+                    if (value == false)
+                    {
+                        alarms[1].Irq.Unset();
+                    }
                 }, name: "INTR1")
                 .WithFlag(2, FieldMode.Write, writeCallback: (_, value) =>
                 {
+                    if (value == false)
+                    {
+                        alarms[2].Irq.Unset();
+                    }
                 }, name: "INTR2")
                 .WithFlag(3, FieldMode.Write, writeCallback: (_, value) =>
                 {
+                    if (value == false)
+                    {
+                        alarms[3].Irq.Unset();
+                    }
                 }, name: "INTR3");
             Registers.ARMED.Define(this)
                 .WithFlag(0, FieldMode.Write, writeCallback: (_, value) =>
@@ -197,28 +217,28 @@ namespace Antmicro.Renode.Peripherals.Timers
                 .WithFlag(0, FieldMode.Write | FieldMode.Read, writeCallback: (_, value) =>
                 {
                     alarms[0].IrqEnabled = true;
-                }, valueProviderCallback: _ => 
+                }, valueProviderCallback: _ =>
                 {
                     return alarms[0].IrqEnabled;
                 }, name: "INTF0")
                 .WithFlag(1, FieldMode.Write | FieldMode.Read, writeCallback: (_, value) =>
                 {
                     alarms[1].IrqEnabled = true;
-                }, valueProviderCallback: _ => 
+                }, valueProviderCallback: _ =>
                 {
                     return alarms[1].IrqEnabled;
                 }, name: "INTF1")
                 .WithFlag(2, FieldMode.Write | FieldMode.Read, writeCallback: (_, value) =>
                 {
                     alarms[2].IrqEnabled = true;
-                }, valueProviderCallback: _ => 
+                }, valueProviderCallback: _ =>
                 {
                     return alarms[2].IrqEnabled;
                 }, name: "INTF2")
                 .WithFlag(3, FieldMode.Write | FieldMode.Read, writeCallback: (_, value) =>
                 {
                     alarms[3].IrqEnabled = true;
-                }, valueProviderCallback: _ => 
+                }, valueProviderCallback: _ =>
                 {
                     return alarms[3].IrqEnabled;
                 }, name: "INTF3");
@@ -226,29 +246,29 @@ namespace Antmicro.Renode.Peripherals.Timers
             Registers.INTF.Define(this)
                 .WithFlag(0, FieldMode.Write | FieldMode.Read, writeCallback: (_, value) =>
                 {
-                    alarms[0].Irq.Set(false);
-                }, valueProviderCallback: _ => 
+                    alarms[0].Irq.Set(value);
+                }, valueProviderCallback: _ =>
                 {
                     return false;
                 }, name: "INTF0")
                 .WithFlag(1, FieldMode.Write | FieldMode.Read, writeCallback: (_, value) =>
                 {
-                    alarms[1].Irq.Set(false);
-                }, valueProviderCallback: _ => 
+                    alarms[1].Irq.Set(value);
+                }, valueProviderCallback: _ =>
                 {
                     return false;
                 }, name: "INTF1")
                 .WithFlag(2, FieldMode.Write | FieldMode.Read, writeCallback: (_, value) =>
                 {
-                    alarms[2].Irq.Set(false);
-                }, valueProviderCallback: _ => 
+                    alarms[2].Irq.Set(value);
+                }, valueProviderCallback: _ =>
                 {
                     return false;
                 }, name: "INTF2")
                 .WithFlag(3, FieldMode.Write | FieldMode.Read, writeCallback: (_, value) =>
                 {
-                    alarms[3].Irq.Set(false);
-                }, valueProviderCallback: _ => 
+                    alarms[3].Irq.Set(value);
+                }, valueProviderCallback: _ =>
                 {
                     return false;
                 }, name: "INTF3");
@@ -268,7 +288,7 @@ namespace Antmicro.Renode.Peripherals.Timers
                         },
                         valueProviderCallback: _ =>
                         {
-                            return alarms[id].Value * 1000;
+                            return alarms[id].Value;
                         },
                         name: "ALARM" + id);
                     alarm_number++;

@@ -1,0 +1,4 @@
+include $ORIGIN/../initialize_rp2040.repl
+sysbus LoadELF $global.TEST_FILE
+sysbus.cpu0 VectorTableOffset `sysbus GetSymbolAddress "__VECTOR_TABLE"`
+sysbus.cpu1 VectorTableOffset `sysbus GetSymbolAddress "__VECTOR_TABLE"`

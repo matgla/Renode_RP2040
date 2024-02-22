@@ -1,0 +1,4 @@
+$global.TEST_FILE=$ORIGIN/../../../pico-examples/build/timer/hello_timer/hello_timer.elf
+
+include $ORIGIN/../../prepare.repl
+showAnalyzer sysbus.uart0

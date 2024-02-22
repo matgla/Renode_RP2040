@@ -1,17 +1,30 @@
 *** Settings ***
 Resource    ../../prepare.robot
 
-Suite Setup     Setup 
+Suite Setup     Setup
 Suite Teardown  Teardown
-Test Teardown   Test Teardown 
-Test Timeout     10 seconds
-
-
-*** Variables ***
-${TEST_FILE}    ${CURDIR}/../../../pico-examples/build/timer/hello_timer/hello_timer.elf
+Test Teardown   Test Teardown
+Test Timeout    90 seconds
 
 *** Test Cases ***
-Run successfully 'hello_timer' example 
-    Prepare Machine
+Run successfully 'hello_timer' example
+    Execute Command             include @${CURDIR}/hello_timer.repl
 
-    Wait For Line On Uart    Hello Timer!    timeout=5
+    Create Terminal Tester      sysbus.uart0
+
+    Wait For Line On Uart       Hello Timer!    timeout=5
+    Wait For Line On Uart       Timer 1 fired!  timeout=5
+    Wait For Line On Uart       Repeat at 25(.....)$  timeout=5   treatAsRegex=true
+    Wait For Line On Uart       Repeat at 30(.....)$  timeout=5   treatAsRegex=true
+    Wait For Line On Uart       Repeat at 35(.....)$  timeout=5   treatAsRegex=true
+    Wait For Line On Uart       Repeat at 40(.....)$  timeout=5   treatAsRegex=true
+    Wait For Line On Uart       Repeat at 45(.....)$  timeout=5   treatAsRegex=true
+    Wait For Line On Uart       cancelled... 1  timeout=5
+    Wait For Line On Uart       Repeat at 75(.....)$  timeout=5   treatAsRegex=true
+    Wait For Line On Uart       Repeat at 80(.....)$  timeout=5   treatAsRegex=true
+    Wait For Line On Uart       Repeat at 85(.....)$  timeout=5   treatAsRegex=true
+    Wait For Line On Uart       Repeat at 90(.....)$  timeout=5   treatAsRegex=true
+    Wait For Line On Uart       Repeat at 95(.....)$  timeout=5   treatAsRegex=true
+    Wait For Line On Uart       Repeat at 100(.....)$  timeout=5   treatAsRegex=true
+    Wait For Line On Uart       cancelled... 1  timeout=5
+    Wait For Line On Uart       Done  timeout=5

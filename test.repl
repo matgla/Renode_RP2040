@@ -4,9 +4,10 @@ include @initialize_rp2040.repl
 
 showAnalyzer sysbus.uart0
 
-sysbus LoadELF @pico-examples/build/timer/hello_timer/hello_timer.elf
+#sysbus LoadELF @../Yasboot/build/source/yasboot.elf
+sysbus LoadBinary @../Yasboot/build/mspc_disk_with_app.img 0x10000000
 
-cpu0 VectorTableOffset `sysbus GetSymbolAddress "__VECTOR_TABLE"`
-# cpu1 VectorTableOffset `sysbus GetSymbolAddress "__VECTOR_TABLE"`
+cpu0 VectorTableOffset  0x10000200
+cpu1 VectorTableOffset  0x10000200
 
-# machine StartGdbServer 3333
+machine StartGdbServer 3334

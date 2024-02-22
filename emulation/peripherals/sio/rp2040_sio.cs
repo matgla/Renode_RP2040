@@ -7,7 +7,9 @@ using System.Collections.Generic;
 using System.Linq;
 using Antmicro.Renode.Core;
 using Antmicro.Renode.Core.Structure.Registers;
+using Antmicro.Renode.Logging;
 using Antmicro.Renode.Peripherals.Bus;
+using Lucene.Net.Util;
 
 namespace Antmicro.Renode.Peripherals.Miscellaneous
 {
@@ -21,10 +23,10 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
 
     class Divider
     {
-        public ulong dividend{get; set;}
-        public ulong divisor{get; set;}
-        public ulong quotient{get; set;}
-        public ulong remainder{get; set;}
+        public long dividend{get; set;}
+        public long divisor{get; set;}
+        public long quotient{get; set;}
+        public long remainder{get; set;}
 
         public bool ready{get; set;}
         public bool dirty{get; set;}
@@ -33,9 +35,10 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
         {
             if (divisor != 0)
             {
-                quotient = (ulong)((long)dividend/(long)divisor);
-                remainder = (ulong)((long)dividend % (long)divisor);
+                quotient = dividend / divisor;
+                remainder = dividend % divisor;
             }
+            ready = true;
         }
         public void CalculateUnsigned()
         {
@@ -44,6 +47,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                 quotient = dividend / divisor;
                 remainder = dividend % divisor;
             }
+            ready = true;
         }
     }
     [AllowedTranslations(AllowedTranslation.ByteToDoubleWord)]
@@ -210,55 +214,55 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                 writeCallback: (_, value) =>
                 {
                     machine.SystemBus.TryGetCurrentCPUId(out var cpuId);
-                    divider[cpuId].dividend = value;
+                    divider[cpuId].dividend = (int)value;
                     divider[cpuId].dirty = true;
                     divider[cpuId].CalculateUnsigned();
                 },
                 valueProviderCallback: _ =>
                 {
                     machine.SystemBus.TryGetCurrentCPUId(out var cpuId);
-                    return divider[cpuId].dividend;
+                    return (uint)divider[cpuId].dividend;
                 }, name: "DIV_UDIVIDEND");
             Registers.DIV_UDIVISOR.Define(this)
                 .WithValueField(0, 32, FieldMode.Write | FieldMode.Read,
                 writeCallback: (_, value) =>
                 {
                     machine.SystemBus.TryGetCurrentCPUId(out var cpuId);
-                    divider[cpuId].divisor = value;
+                    divider[cpuId].divisor = (int)value;
                     divider[cpuId].dirty = true;
                     divider[cpuId].CalculateUnsigned();
                 },
                 valueProviderCallback: _ =>
                 {
                     machine.SystemBus.TryGetCurrentCPUId(out var cpuId);
-                    return divider[cpuId].divisor;
+                    return (uint)divider[cpuId].divisor;
                 }, name: "DIV_UDIVISOR");
             Registers.DIV_SDIVIDEND.Define(this)
                 .WithValueField(0, 32, FieldMode.Write | FieldMode.Read,
                 writeCallback: (_, value) =>
                 {
                     machine.SystemBus.TryGetCurrentCPUId(out var cpuId);
-                    divider[cpuId].dividend = value;
+                    divider[cpuId].dividend = (int)value;
                     divider[cpuId].dirty = true;
                     divider[cpuId].CalculateSigned();
                 },
                 valueProviderCallback: _ =>
                 {
                     machine.SystemBus.TryGetCurrentCPUId(out var cpuId);
-                    return divider[cpuId].dividend;
+                    return (uint)divider[cpuId].dividend;
                 }, name: "DIV_SDIVIDEND");
             Registers.DIV_SDIVISOR.Define(this)
                 .WithValueField(0, 32, FieldMode.Write | FieldMode.Read,
                 writeCallback: (_, value) =>
                 {
                     machine.SystemBus.TryGetCurrentCPUId(out var cpuId);
-                    divider[cpuId].divisor = value;
+                    divider[cpuId].divisor = (int)value;
                     divider[cpuId].CalculateSigned();
                 },
                 valueProviderCallback: _ =>
                 {
                     machine.SystemBus.TryGetCurrentCPUId(out var cpuId);
-                    return divider[cpuId].divisor;
+                    return (uint)divider[cpuId].divisor;
                 }, name: "DIV_SDIVISOR");
             Registers.DIV_QUOTIENT.Define(this)
                 .WithValueField(0, 32, FieldMode.Write | FieldMode.Read,
@@ -266,13 +270,13 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                 {
                     machine.SystemBus.TryGetCurrentCPUId(out var cpuId);
                     divider[cpuId].dirty = true;
-                    divider[cpuId].quotient = value;
+                    divider[cpuId].quotient = (int)value;
                 },
                 valueProviderCallback: _ =>
                 {
                     machine.SystemBus.TryGetCurrentCPUId(out var cpuId);
                     divider[cpuId].dirty = false;
-                    return divider[cpuId].quotient;
+                    return (uint)divider[cpuId].quotient;
                 }, name: "DIV_QUOTIENT");
             Registers.DIV_REMAINDER.Define(this)
                 .WithValueField(0, 32, FieldMode.Write | FieldMode.Read,
@@ -280,12 +284,12 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                 {
                     machine.SystemBus.TryGetCurrentCPUId(out var cpuId);
                     divider[cpuId].dirty = true;
-                    divider[cpuId].remainder = value;
+                    divider[cpuId].remainder = (int)value;
                 },
                 valueProviderCallback: _ =>
                 {
                     machine.SystemBus.TryGetCurrentCPUId(out var cpuId);
-                    return divider[cpuId].remainder;
+                    return (uint)divider[cpuId].remainder;
                 }, name: "DIV_REMAINDER");
             Registers.DIV_CSR.Define(this)
                 .WithFlag(0, FieldMode.Read, valueProviderCallback: _ =>

@@ -9,11 +9,15 @@ sram0: Memory.MappedMemory @ sysbus 0x20000000
 
 cpu0: CPU.CortexM @ sysbus
     cpuType: "cortex-m0+"
+    id: 0
     nvic: nvic0
 
 cpu1: CPU.CortexM @ sysbus
     cpuType: "cortex-m0+"
+    id: 1
     nvic: nvic1
+    init:
+        IsHalted true
 
 nvic0: IRQControllers.NVIC @ sysbus new Bus.BusPointRegistration {
         address: 0xe000e000;
@@ -25,8 +29,8 @@ nvic0: IRQControllers.NVIC @ sysbus new Bus.BusPointRegistration {
 nvic1: IRQControllers.NVIC @ sysbus new Bus.BusPointRegistration {
     address: 0xe000e000;
     cpu: cpu1
-    } 
-    systickFrequency: 72000000 
+    }
+    systickFrequency: 72000000
     -> cpu1@0
 
 uart0: UART.PL011 @ sysbus 0x40034000
@@ -40,7 +44,6 @@ uart0_bitmask_set_alias: Memory.RP2040BitmaskSetRegisterAlias @ sysbus 0x4003600
 uart0_bitmask_clear_alias: Memory.RP2040BitmaskClearRegisterAlias @ sysbus 0x40037000 {
     original_address: 0x40034000
 }
-
 
 
 // raspberrypi,rp2040 overlay
@@ -74,7 +77,10 @@ clocks_bitmask_clear_alias: Memory.RP2040BitmaskClearRegisterAlias @ sysbus 0x40
 }
 
 timer: Timers.RP2040Timer @ sysbus 0x40054000
-    -> nvic0@3
+    IRQ0 -> nvic0@0
+    IRQ1 -> nvic0@1
+    IRQ2 -> nvic0@2
+    IRQ3 -> nvic0@3
 
 timer_xor_alias: Memory.RP2040XorRegisterAlias @ sysbus 0x40055000 {
     original_address: 0x40054000
@@ -85,18 +91,3 @@ timer_bitmask_set_alias: Memory.RP2040BitmaskSetRegisterAlias @ sysbus 0x4005600
 timer_bitmask_clear_alias: Memory.RP2040BitmaskClearRegisterAlias @ sysbus 0x40057000 {
     original_address: 0x40054000
 }
-
-
-
-
-// cpu0_sio_mem: Miscellaneous.RP2040SIO @ sysbus new Bus.BusPointRegistration {
-//     address: 0xd0000000;
-//     cpu: cpu0
-// }
-//
-// cpu1_sio_mem: Miscellaneous.RP2040SIO @ sysbus new Bus.BusPointRegistration {
-//     address: 0xd0000000;
-//     cpu: cpu1
-// }
-
-
