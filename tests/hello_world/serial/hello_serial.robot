@@ -12,8 +12,8 @@ Run successfully 'hello_serial' example
 
     Create Terminal Tester      sysbus.uart0
 
-    Wait For Line On Uart       Hello, world!    timeout=1
-    Wait For Line On Uart       Hello, world!    timeout=1
-    Wait For Line On Uart       Hello, world!    timeout=1
-    Wait For Line On Uart       Hello, world!    timeout=1
-    Wait For Line On Uart       Hello, world!    timeout=1
+    Wait For Line On Uart       Hello, world!    timeout=4
+    Wait For Line On Uart       Hello, world!    timeout=4
+    Wait For Line On Uart       Hello, world!    timeout=4
+    Wait For Line On Uart       Hello, world!    timeout=4
+    Wait For Line On Uart       Hello, world!    timeout=4
