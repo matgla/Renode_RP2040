@@ -1,66 +1,57 @@
-/*
- *   Copyright (c) 2024
- *   All rights reserved.
- */
 using Antmicro.Renode.Core;
-using Antmicro.Renode.Logging;
 using Antmicro.Renode.Core.Structure.Registers;
 using System;
 using Antmicro.Renode.Time;
-using System.IO;
+using Xwt;
+using Antmicro.Renode.Logging;
 
 namespace Antmicro.Renode.Peripherals.Timers
 {
 
     public class Alarm
     {
-        public ulong Value {get; set;}
-        public bool Armed {get;set;}
         public bool IrqEnabled{get;set;}
         public GPIO Irq {get;set;}
 
         public bool Fired {get; set;}
+        public LimitTimer Clock{get; private set;}
 
-        public Alarm()
+        public Alarm(RP2040Timer timer, Machine machine, int id)
         {
             Irq = new GPIO();
-            Armed = false;
             IrqEnabled = false;
-        }
-        public void Run(ulong Current)
-        {
-            if (Armed)
+
+            Clock = new LimitTimer(machine.ClockSource, 1000000, timer, "AlarmTimer" + id, direction: Direction.Ascending, enabled: false, workMode: WorkMode.OneShot, eventEnabled: true, autoUpdate: true)
             {
-                if (Current > Value)
-                {
-                    if (IrqEnabled)
-                    {
-                        Fired = true;
-                        Irq.Set(true);
-                    }
-                    Armed = false;
-                }
-            }
+                AutoUpdate = true,
+                Value = 0
+            };
+            Clock.LimitReached += OnCounterFired;
         }
 
-        public void Reset()
+        public void Enable(bool value)
         {
+            Clock.Enabled = value;
+        }
+        public void SetAlarm(ulong currentTicks, ulong limit)
+        {
+            Fired = false;
+            Clock.Limit = limit;
+            Clock.Value = currentTicks;
+        }
+
+        private void OnCounterFired()
+        {
+            if (IrqEnabled)
+            {
+                Fired = true;
+                Clock.Enabled = false;
+                Irq.Set(true);
+            }
         }
     }
     public class RP2040Timer : BasicDoubleWordPeripheral, IKnownSize
     {
-        private IClockSource clockSource;
-
-        private ulong counter;
-        private void OnCounterFired()
-        {
-            counter += 1000;
-
-            foreach (var alarm in alarms)
-            {
-                alarm.Run(counter);
-            }
-        }
         private enum Registers
         {
             ALARM0 = 0x10,
@@ -85,7 +76,6 @@ namespace Antmicro.Renode.Peripherals.Timers
                 IRQs[i] = new GPIO();
             }
             alarms = new Alarm[4];
-            this.clockSource = machine.ClockSource;
             Reset();
             DefineRegisters();
         }
@@ -97,205 +87,78 @@ namespace Antmicro.Renode.Peripherals.Timers
         public GPIO IRQ2 => IRQs[2];
         public GPIO IRQ3 => IRQs[3];
 
-
-
-
-
+        private LimitTimer Clock;
         public override void Reset()
         {
-            // 1us timer counter
-            ClockEntry clock = new ClockEntry(1, 1000, OnCounterFired, this, "SystemClock", true, Direction.Ascending, WorkMode.Periodic, 1L);
-            clock.Value = 0;
-            clockSource.ExchangeClockEntryWith(OnCounterFired, (ClockEntry x) => clock, () => clock);
-            // timer.LimitReached += () => UpdateTimer();
+            Clock = new LimitTimer(machine.ClockSource, 1000000, this, "SystemClock", limit: 0xffffffffffffffff, direction: Direction.Ascending, eventEnabled: false, enabled: true, workMode: WorkMode.Periodic); 
             for (int i = 0; i < alarms.Length; ++i)
             {
-                alarms[i] = new Alarm()
+                alarms[i] = new Alarm(this, machine, i)
                 {
                     Irq = IRQs[i]
                 };
             }
         }
-
-        private void UpdateTimer()
-        {
-            this.Log(LogLevel.Error, "Timer updated");
-        }
-
-        private ClockEntry FindClock(string name)
-        {
-            foreach (ClockEntry e in machine.ClockSource.GetAllClockEntries())
-            {
-                if (e.LocalName == name)
-                {
-                    return e;
-                }
-            }
-            throw new InvalidDataException();
-        }
         public void DefineRegisters()
         {
             Registers.TIMERAWH.Define(this)
-                .WithValueField(0, 32, FieldMode.Read, valueProviderCallback: _ =>
-                {
-                    return (counter >> 32) & 0xffffffff;
-                },
-                name: "TIMERAWH");
+                .WithValueField(0, 32, FieldMode.Read, 
+                    valueProviderCallback: _ => (Clock.Value >> 32) & 0xffffffff,
+                    name: "TIMERAWH");
             Registers.TIMERAWL.Define(this)
-                .WithValueField(0, 32, FieldMode.Read, valueProviderCallback: _ =>
-                {
-                    return counter & 0xffffffff;
-                },
-                name: "TIMERAWL");
+                .WithValueField(0, 32, FieldMode.Read, 
+                    valueProviderCallback: _ => Clock.Value & 0xffffffff,
+                    name: "TIMERAWL");
+
             Registers.INTR.Define(this)
-                .WithFlag(0, FieldMode.Write, writeCallback: (_, value) =>
-                {
-                    if (value == false)
+                .WithFlags(0, 4, FieldMode.Write, 
+                    writeCallback: (i, _, value) => 
                     {
-                        alarms[0].Irq.Unset();
-                    }
-                }, name: "INTR0")
-                .WithFlag(1, FieldMode.Write, writeCallback: (_, value) =>
-                {
-                    if (value == false)
-                    {
-                        alarms[1].Irq.Unset();
-                    }
-                }, name: "INTR1")
-                .WithFlag(2, FieldMode.Write, writeCallback: (_, value) =>
-                {
-                    if (value == false)
-                    {
-                        alarms[2].Irq.Unset();
-                    }
-                }, name: "INTR2")
-                .WithFlag(3, FieldMode.Write, writeCallback: (_, value) =>
-                {
-                    if (value == false)
-                    {
-                        alarms[3].Irq.Unset();
-                    }
-                }, name: "INTR3");
+                        if (value == false) 
+                        {
+                            alarms[i].Irq.Unset();
+                        } 
+                    },
+                    name: "INTR");
+            
             Registers.ARMED.Define(this)
-                .WithFlag(0, FieldMode.Write, writeCallback: (_, value) =>
-                {
-                    alarms[0].Armed = !value;
-                })
-                .WithFlag(1, FieldMode.Write, writeCallback: (_, value) =>
-                {
-                    alarms[1].Armed = !value;
-                })
-                .WithFlag(2, FieldMode.Write, writeCallback: (_, value) =>
-                {
-                    alarms[2].Armed = !value;
-                })
-                .WithFlag(3, FieldMode.Write, writeCallback: (_, value) =>
-                {
-                    alarms[3].Armed = !value;
-                },
-                name: "ARMED");
+                .WithFlags(0, 4, FieldMode.Write, 
+                    writeCallback: (i, _, value) => alarms[i].Enable(!value),
+                    name: "ARMED");
 
             Registers.INTS.Define(this)
-                .WithFlag(0, FieldMode.Read, valueProviderCallback: _ =>
-                {
-                    return alarms[0].IrqEnabled;
-                }, name: "INTS0")
-                .WithFlag(1, FieldMode.Read, valueProviderCallback: _ =>
-                {
-                    return alarms[1].IrqEnabled;
-                }, name: "INTS1")
-                .WithFlag(2, FieldMode.Read, valueProviderCallback: _ =>
-                {
-                    return alarms[2].IrqEnabled;
-                }, name: "INTS2")
-                .WithFlag(3, FieldMode.Read, valueProviderCallback: _ =>
-                {
-                    return alarms[3].IrqEnabled;
-                }, name: "INTS3");
+                .WithFlags(0, 4, FieldMode.Read, 
+                    valueProviderCallback: (i, _) => alarms[i].IrqEnabled,
+                    name: "INTS");
 
             Registers.INTE.Define(this)
-                .WithFlag(0, FieldMode.Write | FieldMode.Read, writeCallback: (_, value) =>
-                {
-                    alarms[0].IrqEnabled = true;
-                }, valueProviderCallback: _ =>
-                {
-                    return alarms[0].IrqEnabled;
-                }, name: "INTF0")
-                .WithFlag(1, FieldMode.Write | FieldMode.Read, writeCallback: (_, value) =>
-                {
-                    alarms[1].IrqEnabled = true;
-                }, valueProviderCallback: _ =>
-                {
-                    return alarms[1].IrqEnabled;
-                }, name: "INTF1")
-                .WithFlag(2, FieldMode.Write | FieldMode.Read, writeCallback: (_, value) =>
-                {
-                    alarms[2].IrqEnabled = true;
-                }, valueProviderCallback: _ =>
-                {
-                    return alarms[2].IrqEnabled;
-                }, name: "INTF2")
-                .WithFlag(3, FieldMode.Write | FieldMode.Read, writeCallback: (_, value) =>
-                {
-                    alarms[3].IrqEnabled = true;
-                }, valueProviderCallback: _ =>
-                {
-                    return alarms[3].IrqEnabled;
-                }, name: "INTF3");
+                .WithFlags(0, 4, FieldMode.Write | FieldMode.Read, 
+                    writeCallback: (i, _, value) => alarms[i].IrqEnabled = true, 
+                    name: "INTE");
 
             Registers.INTF.Define(this)
-                .WithFlag(0, FieldMode.Write | FieldMode.Read, writeCallback: (_, value) =>
-                {
-                    alarms[0].Irq.Set(value);
-                }, valueProviderCallback: _ =>
-                {
-                    return false;
-                }, name: "INTF0")
-                .WithFlag(1, FieldMode.Write | FieldMode.Read, writeCallback: (_, value) =>
-                {
-                    alarms[1].Irq.Set(value);
-                }, valueProviderCallback: _ =>
-                {
-                    return false;
-                }, name: "INTF1")
-                .WithFlag(2, FieldMode.Write | FieldMode.Read, writeCallback: (_, value) =>
-                {
-                    alarms[2].Irq.Set(value);
-                }, valueProviderCallback: _ =>
-                {
-                    return false;
-                }, name: "INTF2")
-                .WithFlag(3, FieldMode.Write | FieldMode.Read, writeCallback: (_, value) =>
-                {
-                    alarms[3].Irq.Set(value);
-                }, valueProviderCallback: _ =>
-                {
-                    return false;
-                }, name: "INTF3");
+                .WithFlags(0, 4, FieldMode.Write | FieldMode.Read, 
+                    writeCallback: (i, _, value) => alarms[i].Irq.Set(value), 
+                    name: "INTF");
 
-            int alarm_number = 0;
+            int alarmNumber = 0;
             foreach (Registers r in Enum.GetValues(typeof(Registers)))
             {
                 if (r >= Registers.ALARM0 && r <= Registers.ALARM3)
                 {
-                    int id = alarm_number;
+                    int id = alarmNumber;
                     r.Define(this)
                         .WithValueField(0, 32, FieldMode.Write | FieldMode.Read,
-                        writeCallback: (_, val) =>
-                        {
-                            alarms[id].Armed = true;
-                            alarms[id].Value = val;
-                        },
-                        valueProviderCallback: _ =>
-                        {
-                            return alarms[id].Value;
-                        },
-                        name: "ALARM" + id);
-                    alarm_number++;
+                            writeCallback: (_, val) =>
+                            {
+                                alarms[id].SetAlarm(Clock.Value, val);
+                                alarms[id].Enable(true);
+                            },
+                            valueProviderCallback: _ => alarms[id].Clock.Value,
+                            name: "ALARM" + id);
+                    alarmNumber++;
                 }
             }
-
-
         }
     }
 }

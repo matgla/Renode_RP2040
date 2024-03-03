@@ -36,13 +36,13 @@ nvic1: IRQControllers.NVIC @ sysbus new Bus.BusPointRegistration {
 uart0: UART.PL011 @ sysbus 0x40034000
     ->nvic0@20
 uart0_xor_alias: Memory.RP2040XorRegisterAlias @ sysbus 0x40035000 {
-    original_address: 0x40034000
+    originalAddress: 0x40034000
 }
 uart0_bitmask_set_alias: Memory.RP2040BitmaskSetRegisterAlias @ sysbus 0x40036000 {
-    original_address: 0x40034000
+    originalAddress: 0x40034000
 }
 uart0_bitmask_clear_alias: Memory.RP2040BitmaskClearRegisterAlias @ sysbus 0x40037000 {
-    original_address: 0x40034000
+    originalAddress: 0x40034000
 }
 
 
@@ -67,13 +67,13 @@ sio: Miscellaneous.RP2040SIO @ sysbus 0xd0000000
 
 clocks: Miscellaneous.RP2040Clocks @ sysbus 0x40008000
 clocks_xor_alias: Memory.RP2040XorRegisterAlias @ sysbus 0x40009000 {
-    original_address: 0x40008000
+    originalAddress: 0x40008000
 }
 clocks_bitmask_set_alias: Memory.RP2040BitmaskSetRegisterAlias @ sysbus 0x4000a000 {
-    original_address: 0x40008000
+    originalAddress: 0x40008000
 }
 clocks_bitmask_clear_alias: Memory.RP2040BitmaskClearRegisterAlias @ sysbus 0x4000b000 {
-    original_address: 0x40008000
+    originalAddress: 0x40008000
 }
 
 timer: Timers.RP2040Timer @ sysbus 0x40054000
@@ -83,11 +83,11 @@ timer: Timers.RP2040Timer @ sysbus 0x40054000
     IRQ3 -> nvic0@3
 
 timer_xor_alias: Memory.RP2040XorRegisterAlias @ sysbus 0x40055000 {
-    original_address: 0x40054000
+    originalAddress: 0x40054000
 }
 timer_bitmask_set_alias: Memory.RP2040BitmaskSetRegisterAlias @ sysbus 0x40056000 {
-    original_address: 0x40054000
+    originalAddress: 0x40054000
 }
 timer_bitmask_clear_alias: Memory.RP2040BitmaskClearRegisterAlias @ sysbus 0x40057000 {
-    original_address: 0x40054000
+    originalAddress: 0x40054000
 }

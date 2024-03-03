@@ -1,55 +1,50 @@
-/*
- *   Copyright (c) 2024
- *   All rights reserved.
- */
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using Antmicro.Renode.Core;
 using Antmicro.Renode.Core.Structure.Registers;
-using Antmicro.Renode.Logging;
 using Antmicro.Renode.Peripherals.Bus;
-using Lucene.Net.Util;
 
 namespace Antmicro.Renode.Peripherals.Miscellaneous
 {
     class FifoStatus
     {
-        public bool roe{get; set;}
-        public bool wof{get; set;}
-        public bool rdy{get; set;}
-        public bool vld{get; set;}
+        public bool Roe{get; set;}
+        public bool Wof{get; set;}
+        public bool Rdy{get; set;}
+        public bool Vld{get; set;}
     }
 
     class Divider
     {
-        public long dividend{get; set;}
-        public long divisor{get; set;}
-        public long quotient{get; set;}
-        public long remainder{get; set;}
+        public long Dividend{get; set;}
+        public long Divisor{get; set;}
+        public long Quotient{get; set;}
+        public long Remainder{get; set;}
 
-        public bool ready{get; set;}
-        public bool dirty{get; set;}
+        public bool Ready{get; set;}
+        public bool Dirty{get; set;}
 
         public void CalculateSigned()
         {
-            if (divisor != 0)
+            if (Divisor != 0)
             {
-                quotient = dividend / divisor;
-                remainder = dividend % divisor;
+                Quotient = Dividend / Divisor;
+                Remainder = Dividend % Divisor;
             }
-            ready = true;
+            Ready = true;
         }
         public void CalculateUnsigned()
         {
-            if (divisor != 0)
+            if (Divisor != 0)
             {
-                quotient = dividend / divisor;
-                remainder = dividend % divisor;
+                Quotient = Dividend / Divisor;
+                Remainder = Dividend % Divisor;
             }
-            ready = true;
+            Ready = true;
         }
     }
+
     [AllowedTranslations(AllowedTranslation.ByteToDoubleWord)]
     public class RP2040SIO : BasicDoubleWordPeripheral, IKnownSize
     {
@@ -105,7 +100,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             SPINLOCK_31 = 0x17c,
         }
 
-        bool[] spinlocks;
+        private bool[] spinlocks;
         public RP2040SIO(Machine machine) : base(machine)
         {
             cpuFifo = new Queue<long>[2];
@@ -122,199 +117,187 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                 cpuFifo[i] = new Queue<long>();
                 fifoStatus[i] = new FifoStatus
                 {
-                    roe = false,
-                    wof = false,
-                    rdy = true,
-                    vld = false
+                    Roe = false,
+                    Wof = false,
+                    Rdy = true,
+                    Vld = false
                 };
             }
 
             DefineRegisters();
         }
 
+        private int CurrentCpu()
+        {
+            machine.SystemBus.TryGetCurrentCPUId(out var cpuId);
+            return cpuId;
+        }
+
+        private int OtherCpu()
+        {
+            machine.SystemBus.TryGetCurrentCPUId(out var cpuId);
+            return cpuId == 0 ? 1 : 0;
+        }
+
         private void DefineRegisters()
         {
             Registers.CPUID.Define(this)
-                .WithFlag(0, FieldMode.Read, valueProviderCallback: _ =>
-                {
-                    machine.SystemBus.TryGetCurrentCPUId(out var cpuId);
-                    // how to determine callers cpu?
-                    return cpuId == 1;
-                }, name: "CPUID");
+                .WithFlag(0, FieldMode.Read, 
+                    valueProviderCallback: _ => CurrentCpu() == 1,
+                    name: "CPUID");
+
             Registers.FIFO_ST.Define(this)
-                .WithFlag(0, FieldMode.Read, valueProviderCallback: _ =>
-                {
-                    machine.SystemBus.TryGetCurrentCPUId(out var cpuId);
-                    return fifoStatus[cpuId].vld;
-                }, name: "FIFO_ST_VLD")
-                .WithFlag(1, FieldMode.Read, valueProviderCallback: _ =>
-                {
-                    machine.SystemBus.TryGetCurrentCPUId(out var cpuId);
-                    long otherCpu = Convert.ToInt64(cpuId == 0);
-                    return fifoStatus[otherCpu].rdy;
-                }, name: "FIFO_ST_RDY")
-               .WithFlag(2, FieldMode.Read, valueProviderCallback: _ =>
-                {
-                    machine.SystemBus.TryGetCurrentCPUId(out var cpuId);
-                    long otherCpu = Convert.ToInt64(cpuId == 0);
-                    return fifoStatus[otherCpu].wof;
-                }, name: "FIFO_ST_WOF")
-                .WithFlag(3, FieldMode.Read, valueProviderCallback: _ =>
-                {
-                    machine.SystemBus.TryGetCurrentCPUId(out var cpuId);
-                    return fifoStatus[cpuId].roe;
-                }, name: "FIFO_ST_ROE");
+                .WithFlag(0, FieldMode.Read, 
+                    valueProviderCallback: _ => fifoStatus[CurrentCpu()].Vld,
+                    name: "FIFO_ST_VLD")
+                .WithFlag(1, FieldMode.Read, 
+                    valueProviderCallback: _ => fifoStatus[OtherCpu()].Rdy,
+                    name: "FIFO_ST_RDY")
+                .WithFlag(2, FieldMode.Read, 
+                    valueProviderCallback: _ => fifoStatus[OtherCpu()].Wof,
+                    name: "FIFO_ST_WOF")
+                .WithFlag(3, FieldMode.Read, 
+                    valueProviderCallback: _ => fifoStatus[CurrentCpu()].Roe,
+                    name: "FIFO_ST_ROE")
+                .WithReservedBits(4, 28);
 
             Registers.FIFO_RD.Define(this)
-                .WithValueField(0, 32, FieldMode.Read, valueProviderCallback: _ =>
-                {
-                    machine.SystemBus.TryGetCurrentCPUId(out var cpuId);
+                .WithValueField(0, 32, FieldMode.Read, 
+                    valueProviderCallback: _ =>
+                    {
+                        machine.SystemBus.TryGetCurrentCPUId(out var cpuId);
 
-                    if (cpuFifo[cpuId].Count != 0)
-                    {
-                        fifoStatus[cpuId].roe = false;
-                        ulong ret = (ulong)cpuFifo[cpuId].Dequeue();
-                        if (cpuFifo[cpuId].Count == 0)
+                        if (cpuFifo[cpuId].Count != 0)
                         {
-                            fifoStatus[cpuId].vld = false;
+                            fifoStatus[cpuId].Roe = false;
+                            ulong ret = (ulong)cpuFifo[cpuId].Dequeue();
+                            if (cpuFifo[cpuId].Count == 0)
+                            {
+                                fifoStatus[cpuId].Vld = false;
+                            }
+                            fifoStatus[cpuId].Rdy = true;
+                            return ret;
                         }
-                        fifoStatus[cpuId].rdy = true;
-                        return ret;
-                    }
-                    else
-                    {
-                        fifoStatus[cpuId].roe = true;
-                    }
-                    return 0;
-                }, name: "FIFO_RD");
+                        fifoStatus[cpuId].Roe = true;
+                        return 0;
+                    }, 
+                    name: "FIFO_RD");
+
             Registers.FIFO_WR.Define(this)
-                .WithValueField(0, 32, FieldMode.Write, writeCallback: (_, value) =>
-                {
-                    machine.SystemBus.TryGetCurrentCPUId(out var cpuId);
-                    long otherCpu = Convert.ToInt64(cpuId == 0);
-
-                    if (cpuFifo[otherCpu].Count < 7)
+                .WithValueField(0, 32, FieldMode.Write, 
+                    writeCallback: (_, value) =>
                     {
-                        cpuFifo[otherCpu].Append((long)value);
+                        machine.SystemBus.TryGetCurrentCPUId(out var cpuId);
+                        long otherCpu = Convert.ToInt64(cpuId == 0);
 
-                        fifoStatus[otherCpu].wof = false;
-                        fifoStatus[otherCpu].vld = true;
-                        if (cpuFifo[otherCpu].Count == 7)
+                        if (cpuFifo[otherCpu].Count < 7)
                         {
-                            fifoStatus[otherCpu].rdy = true;
+                            cpuFifo[otherCpu].Append((long)value);
+
+                            fifoStatus[otherCpu].Wof = false;
+                            fifoStatus[otherCpu].Vld = true;
+                            if (cpuFifo[otherCpu].Count == 7)
+                            {
+                                fifoStatus[otherCpu].Rdy = false;
+                            }
                         }
-                    }
-                    else
-                    {
-                        fifoStatus[otherCpu].wof = true;
-                    }
-                }, name: "FIFO_WR");
+                        else
+                        {
+                            fifoStatus[otherCpu].Wof = true;
+                        }
+                    }, name: "FIFO_WR");
+            
             Registers.DIV_UDIVIDEND.Define(this)
                 .WithValueField(0, 32, FieldMode.Write | FieldMode.Read,
-                writeCallback: (_, value) =>
-                {
-                    machine.SystemBus.TryGetCurrentCPUId(out var cpuId);
-                    divider[cpuId].dividend = (int)value;
-                    divider[cpuId].dirty = true;
-                    divider[cpuId].CalculateUnsigned();
-                },
-                valueProviderCallback: _ =>
-                {
-                    machine.SystemBus.TryGetCurrentCPUId(out var cpuId);
-                    return (uint)divider[cpuId].dividend;
-                }, name: "DIV_UDIVIDEND");
+                    writeCallback: (_, value) =>
+                    {
+                        machine.SystemBus.TryGetCurrentCPUId(out var cpuId);
+                        divider[cpuId].Dividend = (int)value;
+                        divider[cpuId].Dirty = true;
+                        divider[cpuId].CalculateUnsigned();
+                    },
+                    valueProviderCallback: _ => (uint)divider[CurrentCpu()].Dividend,
+                    name: "DIV_UDIVIDEND");
+            
             Registers.DIV_UDIVISOR.Define(this)
                 .WithValueField(0, 32, FieldMode.Write | FieldMode.Read,
-                writeCallback: (_, value) =>
-                {
-                    machine.SystemBus.TryGetCurrentCPUId(out var cpuId);
-                    divider[cpuId].divisor = (int)value;
-                    divider[cpuId].dirty = true;
-                    divider[cpuId].CalculateUnsigned();
-                },
-                valueProviderCallback: _ =>
-                {
-                    machine.SystemBus.TryGetCurrentCPUId(out var cpuId);
-                    return (uint)divider[cpuId].divisor;
-                }, name: "DIV_UDIVISOR");
+                    writeCallback: (_, value) =>
+                    {
+                        machine.SystemBus.TryGetCurrentCPUId(out var cpuId);
+                        divider[cpuId].Divisor = (int)value;
+                        divider[cpuId].Dirty = true;
+                        divider[cpuId].CalculateUnsigned();
+                    },
+                    valueProviderCallback: _ => (uint)divider[CurrentCpu()].Divisor, 
+                    name: "DIV_UDIVISOR");
+
             Registers.DIV_SDIVIDEND.Define(this)
                 .WithValueField(0, 32, FieldMode.Write | FieldMode.Read,
-                writeCallback: (_, value) =>
-                {
-                    machine.SystemBus.TryGetCurrentCPUId(out var cpuId);
-                    divider[cpuId].dividend = (int)value;
-                    divider[cpuId].dirty = true;
-                    divider[cpuId].CalculateSigned();
-                },
-                valueProviderCallback: _ =>
-                {
-                    machine.SystemBus.TryGetCurrentCPUId(out var cpuId);
-                    return (uint)divider[cpuId].dividend;
-                }, name: "DIV_SDIVIDEND");
+                    writeCallback: (_, value) =>
+                    {
+                        machine.SystemBus.TryGetCurrentCPUId(out var cpuId);
+                        divider[cpuId].Dividend = (int)value;
+                        divider[cpuId].Dirty = true;
+                        divider[cpuId].CalculateSigned();
+                    },
+                    valueProviderCallback: _ => (uint)divider[CurrentCpu()].Dividend,
+                    name: "DIV_SDIVIDEND");
+            
             Registers.DIV_SDIVISOR.Define(this)
                 .WithValueField(0, 32, FieldMode.Write | FieldMode.Read,
-                writeCallback: (_, value) =>
-                {
-                    machine.SystemBus.TryGetCurrentCPUId(out var cpuId);
-                    divider[cpuId].divisor = (int)value;
-                    divider[cpuId].CalculateSigned();
-                },
-                valueProviderCallback: _ =>
-                {
-                    machine.SystemBus.TryGetCurrentCPUId(out var cpuId);
-                    return (uint)divider[cpuId].divisor;
-                }, name: "DIV_SDIVISOR");
+                    writeCallback: (_, value) =>
+                    {
+                        machine.SystemBus.TryGetCurrentCPUId(out var cpuId);
+                        divider[cpuId].Divisor = (int)value;
+                        divider[cpuId].CalculateSigned();
+                    },
+                    valueProviderCallback: _ => (uint)divider[CurrentCpu()].Divisor,
+                    name: "DIV_SDIVISOR");
+           
             Registers.DIV_QUOTIENT.Define(this)
                 .WithValueField(0, 32, FieldMode.Write | FieldMode.Read,
-                writeCallback: (_, value) =>
-                {
-                    machine.SystemBus.TryGetCurrentCPUId(out var cpuId);
-                    divider[cpuId].dirty = true;
-                    divider[cpuId].quotient = (int)value;
-                },
-                valueProviderCallback: _ =>
-                {
-                    machine.SystemBus.TryGetCurrentCPUId(out var cpuId);
-                    divider[cpuId].dirty = false;
-                    return (uint)divider[cpuId].quotient;
-                }, name: "DIV_QUOTIENT");
+                    writeCallback: (_, value) =>
+                    {
+                        machine.SystemBus.TryGetCurrentCPUId(out var cpuId);
+                        divider[cpuId].Dirty = true;
+                        divider[cpuId].Quotient = (int)value;
+                    },
+                    valueProviderCallback: _ =>
+                    {
+                        machine.SystemBus.TryGetCurrentCPUId(out var cpuId);
+                        divider[cpuId].Dirty = false;
+                        return (uint)divider[cpuId].Quotient;
+                    }, name: "DIV_QUOTIENT");
+
             Registers.DIV_REMAINDER.Define(this)
                 .WithValueField(0, 32, FieldMode.Write | FieldMode.Read,
-                writeCallback: (_, value) =>
-                {
-                    machine.SystemBus.TryGetCurrentCPUId(out var cpuId);
-                    divider[cpuId].dirty = true;
-                    divider[cpuId].remainder = (int)value;
-                },
-                valueProviderCallback: _ =>
-                {
-                    machine.SystemBus.TryGetCurrentCPUId(out var cpuId);
-                    return (uint)divider[cpuId].remainder;
-                }, name: "DIV_REMAINDER");
+                    writeCallback: (_, value) =>
+                    {
+                        machine.SystemBus.TryGetCurrentCPUId(out var cpuId);
+                        divider[cpuId].Dirty = true;
+                        divider[cpuId].Remainder = (int)value;
+                    },
+                    valueProviderCallback: _ => (uint)divider[CurrentCpu()].Remainder,
+                    name: "DIV_REMAINDER");
+            
             Registers.DIV_CSR.Define(this)
-                .WithFlag(0, FieldMode.Read, valueProviderCallback: _ =>
-                {
-                    machine.SystemBus.TryGetCurrentCPUId(out var cpuId);
-                    return divider[cpuId].ready;
-                }, name: "DIV_CSR_READY")
-                .WithFlag(1, FieldMode.Read, valueProviderCallback: _ =>
-                {
-                    machine.SystemBus.TryGetCurrentCPUId(out var cpuId);
-                    return divider[cpuId].dirty;
-                }, name: "DIV_CSR_DIRTY");
+                .WithFlag(0, FieldMode.Read, 
+                    valueProviderCallback: _ => divider[CurrentCpu()].Ready,
+                    name: "DIV_CSR_READY")
+                .WithFlag(1, FieldMode.Read, 
+                    valueProviderCallback: _ => divider[CurrentCpu()].Dirty,
+                    name: "DIV_CSR_DIRTY")
+                .WithReservedBits(2, 30);
 
-            int spinlock_number = 0;
+            int spinlockNumber = 0;
             foreach (Registers r in Enum.GetValues(typeof(Registers)))
             {
                 if (r >= Registers.SPINLOCK_0 && r <= Registers.SPINLOCK_31)
                 {
-                    int id = spinlock_number;
+                    int id = spinlockNumber;
                     r.Define(this)
                         .WithValueField(0, 32, FieldMode.Write | FieldMode.Read,
-                            writeCallback: (_, value) =>
-                            {
-                                spinlocks[id] = false;
-                            },
+                            writeCallback: (_, value) => spinlocks[id] = false,
                             valueProviderCallback: _ =>
                             {
                                 if (spinlocks[id] == false)
@@ -325,8 +308,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                                 return 0;
                             },
                             name: r.ToString());
-
-                    spinlock_number++;
+                    spinlockNumber++;
                 }
             }
         }

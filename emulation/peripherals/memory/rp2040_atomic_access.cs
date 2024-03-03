@@ -1,23 +1,18 @@
-/*
- *   Copyright (c) 2024
- *   All rights reserved.
- */
-
 using Antmicro.Renode.Peripherals.Bus;
 using Antmicro.Renode.Core;
 
 namespace Antmicro.Renode.Peripherals.Memory
 {
-    public class RP2040XorRegisterAlias : IDoubleWordPeripheral, IKnownSize, IMemory
+    public class RP2040XorRegisterAlias : IDoubleWordPeripheral, IKnownSize, IMemory 
     {
         public long Size { get { return 0x1000; }}
 
         private Machine machine;
         private ulong address;
-        public RP2040XorRegisterAlias(Machine machine, ulong original_address)
+        public RP2040XorRegisterAlias(Machine machine, ulong originalAddress)
         {
             this.machine = machine;
-            address = original_address;
+            address = originalAddress;
         }
 
         public uint ReadDoubleWord(long offset)
@@ -35,7 +30,6 @@ namespace Antmicro.Renode.Peripherals.Memory
 
         public void Reset()
         {
-            // nothing happens
         }
     }
 
@@ -45,10 +39,10 @@ namespace Antmicro.Renode.Peripherals.Memory
 
         private Machine machine;
         private ulong address;
-        public RP2040BitmaskSetRegisterAlias(Machine machine, ulong original_address)
+        public RP2040BitmaskSetRegisterAlias(Machine machine, ulong originalAddress)
         {
             this.machine = machine;
-            address = original_address;
+            address = originalAddress;
         }
 
         public uint ReadDoubleWord(long offset)
@@ -66,7 +60,6 @@ namespace Antmicro.Renode.Peripherals.Memory
 
         public void Reset()
         {
-            // nothing happens
         }
     }
     public class RP2040BitmaskClearRegisterAlias : IDoubleWordPeripheral, IKnownSize, IMemory
@@ -75,10 +68,10 @@ namespace Antmicro.Renode.Peripherals.Memory
 
         private Machine machine;
         private ulong address;
-        public RP2040BitmaskClearRegisterAlias(Machine machine, ulong original_address)
+        public RP2040BitmaskClearRegisterAlias(Machine machine, ulong originalAddress)
         {
             this.machine = machine;
-            address = original_address;
+            address = originalAddress;
         }
 
         public uint ReadDoubleWord(long offset)
@@ -96,7 +89,6 @@ namespace Antmicro.Renode.Peripherals.Memory
 
         public void Reset()
         {
-            // nothing happens
         }
     }
 }
