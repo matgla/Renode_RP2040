@@ -1,5 +1,4 @@
 *** Settings ***
-Resource    ../../prepare.robot
 
 Suite Setup     Setup
 Suite Teardown  Teardown
