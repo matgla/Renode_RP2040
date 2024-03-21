@@ -23,14 +23,14 @@ nvic0: IRQControllers.NVIC @ sysbus new Bus.BusPointRegistration {
         address: 0xe000e000;
         cpu: cpu0
     }
-    systickFrequency: 72000000
+    systickFrequency: 125000000
     -> cpu0@0
 
 nvic1: IRQControllers.NVIC @ sysbus new Bus.BusPointRegistration {
     address: 0xe000e000;
     cpu: cpu1
     }
-    systickFrequency: 72000000
+    systickFrequency: 125000000
     -> cpu1@0
 
 uart0: UART.PL011 @ sysbus 0x40034000
