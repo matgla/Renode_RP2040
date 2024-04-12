@@ -55,9 +55,6 @@ sysbus:
         Tag <0x40024004 4> "XOSC_STATUS" 0xFFFFFFFF
         Tag <0x40028000 4> "PLL_SYS_CS" 0xFFFFFFFF
         Tag <0x4002C000 4> "PLL_USB_CS" 0xFFFFFFFF
-        Machine PyDevFromFile @scripts/pydev/rolling-bit.py 0x40008038 4 True "CLK_REF_SELECTED"
-        Machine PyDevFromFile @scripts/pydev/rolling-bit.py 0x40008044 4 True "CLK_SYS_SELECTED"
-        Tag <0x40008048 4> "CLK_PERI_CTRL" 0x880
 // cortex-m overlay
 
 dwt: Miscellaneous.DWT @ sysbus 0xE0001000
