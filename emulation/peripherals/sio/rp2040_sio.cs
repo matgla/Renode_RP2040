@@ -129,13 +129,14 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
 
         private int CurrentCpu()
         {
-            machine.SystemBus.TryGetCurrentCPUId(out var cpuId);
-            return cpuId;
+            var cpu = machine.SystemBus.GetCurrentCPU();
+            return machine.SystemBus.GetCPUId(cpu);
         }
 
         private int OtherCpu()
         {
-            machine.SystemBus.TryGetCurrentCPUId(out var cpuId);
+            var cpu = machine.SystemBus.GetCurrentCPU();
+            var cpuId = machine.SystemBus.GetCPUId(cpu); 
             return cpuId == 0 ? 1 : 0;
         }
 
@@ -165,7 +166,8 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                 .WithValueField(0, 32, FieldMode.Read, 
                     valueProviderCallback: _ =>
                     {
-                        machine.SystemBus.TryGetCurrentCPUId(out var cpuId);
+                        var cpu = machine.SystemBus.GetCurrentCPU();
+                        var cpuId = machine.SystemBus.GetCPUId(cpu); 
 
                         if (cpuFifo[cpuId].Count != 0)
                         {
@@ -187,7 +189,9 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                 .WithValueField(0, 32, FieldMode.Write, 
                     writeCallback: (_, value) =>
                     {
-                        machine.SystemBus.TryGetCurrentCPUId(out var cpuId);
+                        var cpu = machine.SystemBus.GetCurrentCPU();
+                        var cpuId = machine.SystemBus.GetCPUId(cpu); 
+
                         long otherCpu = Convert.ToInt64(cpuId == 0);
 
                         if (cpuFifo[otherCpu].Count < 7)
@@ -211,7 +215,9 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                 .WithValueField(0, 32, FieldMode.Write | FieldMode.Read,
                     writeCallback: (_, value) =>
                     {
-                        machine.SystemBus.TryGetCurrentCPUId(out var cpuId);
+                        var cpu = machine.SystemBus.GetCurrentCPU();
+                        var cpuId = machine.SystemBus.GetCPUId(cpu); 
+
                         divider[cpuId].Dividend = (int)value;
                         divider[cpuId].Dirty = true;
                         divider[cpuId].CalculateUnsigned();
@@ -223,7 +229,9 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                 .WithValueField(0, 32, FieldMode.Write | FieldMode.Read,
                     writeCallback: (_, value) =>
                     {
-                        machine.SystemBus.TryGetCurrentCPUId(out var cpuId);
+                        var cpu = machine.SystemBus.GetCurrentCPU();
+                        var cpuId = machine.SystemBus.GetCPUId(cpu); 
+
                         divider[cpuId].Divisor = (int)value;
                         divider[cpuId].Dirty = true;
                         divider[cpuId].CalculateUnsigned();
@@ -235,7 +243,9 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                 .WithValueField(0, 32, FieldMode.Write | FieldMode.Read,
                     writeCallback: (_, value) =>
                     {
-                        machine.SystemBus.TryGetCurrentCPUId(out var cpuId);
+                        var cpu = machine.SystemBus.GetCurrentCPU();
+                        var cpuId = machine.SystemBus.GetCPUId(cpu); 
+
                         divider[cpuId].Dividend = (int)value;
                         divider[cpuId].Dirty = true;
                         divider[cpuId].CalculateSigned();
@@ -247,7 +257,9 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                 .WithValueField(0, 32, FieldMode.Write | FieldMode.Read,
                     writeCallback: (_, value) =>
                     {
-                        machine.SystemBus.TryGetCurrentCPUId(out var cpuId);
+                        var cpu = machine.SystemBus.GetCurrentCPU();
+                        var cpuId = machine.SystemBus.GetCPUId(cpu); 
+
                         divider[cpuId].Divisor = (int)value;
                         divider[cpuId].CalculateSigned();
                     },
@@ -258,13 +270,17 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                 .WithValueField(0, 32, FieldMode.Write | FieldMode.Read,
                     writeCallback: (_, value) =>
                     {
-                        machine.SystemBus.TryGetCurrentCPUId(out var cpuId);
+                        var cpu = machine.SystemBus.GetCurrentCPU();
+                        var cpuId = machine.SystemBus.GetCPUId(cpu); 
+
                         divider[cpuId].Dirty = true;
                         divider[cpuId].Quotient = (int)value;
                     },
                     valueProviderCallback: _ =>
                     {
-                        machine.SystemBus.TryGetCurrentCPUId(out var cpuId);
+                        var cpu = machine.SystemBus.GetCurrentCPU();
+                        var cpuId = machine.SystemBus.GetCPUId(cpu); 
+
                         divider[cpuId].Dirty = false;
                         return (uint)divider[cpuId].Quotient;
                     }, name: "DIV_QUOTIENT");
@@ -273,7 +289,9 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                 .WithValueField(0, 32, FieldMode.Write | FieldMode.Read,
                     writeCallback: (_, value) =>
                     {
-                        machine.SystemBus.TryGetCurrentCPUId(out var cpuId);
+                        var cpu = machine.SystemBus.GetCurrentCPU();
+                        var cpuId = machine.SystemBus.GetCPUId(cpu); 
+
                         divider[cpuId].Dirty = true;
                         divider[cpuId].Remainder = (int)value;
                     },

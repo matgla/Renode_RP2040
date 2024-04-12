@@ -16,7 +16,7 @@ namespace Antmicro.Renode.Peripherals.Timers
         public bool Fired {get; set;}
         public LimitTimer Clock{get; private set;}
 
-        public Alarm(RP2040Timer timer, Machine machine, int id)
+        public Alarm(RP2040Timer timer, IMachine machine, int id)
         {
             Irq = new GPIO();
             IrqEnabled = false;
