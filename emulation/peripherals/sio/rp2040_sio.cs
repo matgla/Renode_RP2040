@@ -4,7 +4,7 @@ using System.Linq;
 using Antmicro.Renode.Core;
 using Antmicro.Renode.Core.Structure.Registers;
 using Antmicro.Renode.Peripherals.Bus;
-
+using Antmicro.Renode.Logging;
 namespace Antmicro.Renode.Peripherals.Miscellaneous
 {
     class FifoStatus
@@ -100,16 +100,16 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             SPINLOCK_31 = 0x17c,
         }
 
-        private bool[] spinlocks;
+        private int[] spinlocks;
         public RP2040SIO(Machine machine) : base(machine)
         {
             cpuFifo = new Queue<long>[2];
             fifoStatus = new FifoStatus[2];
             divider = new Divider[2];
-            spinlocks = new bool[32];
+            spinlocks = new int[32];
             for (int i = 0; i < 32; ++i)
             {
-                spinlocks[i] = false;
+                spinlocks[i] = 0;
             }
             for (int i = 0; i < 2; ++i)
             {
@@ -220,8 +220,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
 
                         divider[cpuId].Dividend = (int)value;
                         divider[cpuId].Dirty = true;
-                        divider[cpuId].CalculateUnsigned();
-                    },
+                        divider[cpuId].CalculateUnsigned(); },
                     valueProviderCallback: _ => (uint)divider[CurrentCpu()].Dividend,
                     name: "DIV_UDIVIDEND");
             
@@ -315,12 +314,22 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                     int id = spinlockNumber;
                     r.Define(this)
                         .WithValueField(0, 32, FieldMode.Write | FieldMode.Read,
-                            writeCallback: (_, value) => spinlocks[id] = false,
+                            writeCallback: (_, value) => 
+                            { 
+                                this.Log(LogLevel.Warning, "Writing {0}", id);     
+                                var cpu = CurrentCpu();
+                                if (cpu == spinlocks[id])
+                                {
+                                    spinlocks[id] = 0;
+                                }
+                            },
                             valueProviderCallback: _ =>
                             {
-                                if (spinlocks[id] == false)
+                                var cpu = CurrentCpu();     
+                                this.Log(LogLevel.Warning, "Reading {0} from {1}", id, cpu);     
+                                if (spinlocks[id] == 0 || spinlocks[id] == cpu)
                                 {
-                                    spinlocks[id] = true;
+                                    spinlocks[id] = cpu;
                                     return (ulong)(1 << id);
                                 }
                                 return 0;
