@@ -4,7 +4,7 @@ using System.Linq;
 using Antmicro.Renode.Core;
 using Antmicro.Renode.Core.Structure.Registers;
 using Antmicro.Renode.Peripherals.Bus;
-using Antmicro.Renode.Logging;
+
 namespace Antmicro.Renode.Peripherals.Miscellaneous
 {
     class FifoStatus
@@ -316,7 +316,6 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                         .WithValueField(0, 32, FieldMode.Write | FieldMode.Read,
                             writeCallback: (_, value) => 
                             { 
-                                this.Log(LogLevel.Warning, "Writing {0}", id);     
                                 var cpu = CurrentCpu();
                                 if (cpu == spinlocks[id])
                                 {
@@ -326,7 +325,6 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                             valueProviderCallback: _ =>
                             {
                                 var cpu = CurrentCpu();     
-                                this.Log(LogLevel.Warning, "Reading {0} from {1}", id, cpu);     
                                 if (spinlocks[id] == 0 || spinlocks[id] == cpu)
                                 {
                                     spinlocks[id] = cpu;
