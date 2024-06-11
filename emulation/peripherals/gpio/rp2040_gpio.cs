@@ -18,41 +18,179 @@ public class RP2040GPIO: BaseGPIOPort, IDoubleWordPeripheral, IGPIOReceiver, IKn
         registers = CreateRegisters();
         this.Log(LogLevel.Error, "Construction");
         Reset();
+        functionSelect = new int[NumberOfPins];
     }
 
     public long Size { get { return 0x1000; }}
+    public int[] functionSelect;
 
-    private const int NumberOfPins = 29;
+    public const int NumberOfPins = 29;
     
     private DoubleWordRegisterCollection CreateRegisters()
     {
         var registersMap = new Dictionary<long, DoubleWordRegister>();
 
-        for (int i = 0; i < NumberOfPins; ++i)
+        for (int p = 0; p < NumberOfPins; ++p)
         {
+            int i = p;
             registersMap[i * 8] = new DoubleWordRegister(this)
-                .WithValueFields(0, 4, 8, name: "AA",
-                    writeCallback: (x, _, val) => {},
-                    valueProviderCallback: (x, _) => {return 0;} 
-                    );
+                .WithReservedBits(0, 8) 
+                .WithFlag(8, FieldMode.Read,
+                    valueProviderCallback: _ => State[i],
+                    name: "GPIO" + i + "_STATUS_OUTFROMPERI") 
+                .WithFlag(9, FieldMode.Read,
+                    valueProviderCallback: _ => State[i],
+                    name: "GPIO" + i + "_STATUS_OUTTOPAD") 
+                .WithReservedBits(10, 2)
+                .WithFlag(12, FieldMode.Read,
+                    valueProviderCallback: _ => State[i],
+                    name: "GPIO" + i + "_STATUS_OEFROMPERI") 
+                .WithFlag(13, FieldMode.Read,
+                    valueProviderCallback: _ => State[i],
+                    name: "GPIO" + i + "_STATUS_OETOPAD") 
+                .WithReservedBits(14, 3)
+                .WithFlag(17, FieldMode.Read,
+                    valueProviderCallback: _ => State[i],
+                    name: "GPIO" + i + "_STATUS_INFROMPAD") 
+                .WithReservedBits(18, 1)
+                .WithFlag(19, FieldMode.Read,
+                    valueProviderCallback: _ => State[i],
+                    name: "GPIO" + i + "_STATUS_INTOPERI")
+                .WithReservedBits(20, 4)
+                .WithFlag(24, FieldMode.Read,
+                    valueProviderCallback: _ => State[i],
+                    name: "GPIO" + i + "_STATUS_IRQFROMPAD")
+                .WithReservedBits(25, 1)
+                .WithFlag(26, FieldMode.Read,
+                    valueProviderCallback: _ => State[i],
+                    name: "GPIO" + i + "_STATUS_IRQTOPROC")
+                .WithReservedBits(27, 5);
+
+            registersMap[i * 8 + 0x04] = new DoubleWordRegister(this)
+                .WithValueField(0, 5, FieldMode.Read | FieldMode.Write,
+                    valueProviderCallback: _ => { 
+                        return (ulong)functionSelect[i];
+                    },
+                    writeCallback: (_, value) => {
+                        functionSelect[i] = (int)value;
+                    },
+                    name: "GPIO" + i + "_CTRL_FUNCSEL") 
+                .WithReservedBits(5, 3)
+                .WithValueField(8, 2, FieldMode.Read | FieldMode.Write,
+                    valueProviderCallback: _ => {
+                        if (State[i]) 
+                        {
+                            return 0x02;
+                        }
+                        return 0x03;
+                    },
+                    writeCallback: (_, value) => {
+                        if (value == 0x02)
+                        {
+                            WritePin(i, false);
+                        }
+                        else if (value == 0x03)
+                        {
+                            WritePin(i, true); 
+                        }
+                    },
+                    name: "GPIO" + i + "_CTRL_OUTOVER") 
+                .WithReservedBits(10, 2)
+                .WithValueField(12, 2, FieldMode.Read | FieldMode.Write,
+                    valueProviderCallback: _ => { 
+                        return 0;
+                    },
+                    writeCallback: (_, value) => {
+                    },
+                    name: "GPIO" + i + "_CTRL_OEOVER") 
+                .WithReservedBits(14, 2)
+                .WithValueField(16, 2, FieldMode.Read | FieldMode.Write,
+                    valueProviderCallback: _ => {
+                        return 0;
+                    },
+                    writeCallback: (_, value) => {
+                    },
+                    name: "GPIO" + i + "_CTRL_INOVER")
+                .WithReservedBits(18, 10)
+                .WithValueField(28, 2, FieldMode.Read | FieldMode.Write,
+                    valueProviderCallback: _ => {
+                        return 0;
+                    },
+                    name: "GPIO" + i + "_CTRL_IRQOVER")
+                .WithReservedBits(30, 2);
+
         }
         
         return new DoubleWordRegisterCollection(this, registersMap);
     }
 
-    private enum Registers
+    public bool GetGpioState(uint number)
     {
-        Mode                  = 0x00, //GPIOx_MODE    Mode register
-        OutputType            = 0x04, //GPIOx_OTYPER  Output type register
-        OutputSpeed           = 0x08, //GPIOx_OSPEEDR Output speed register
-        PullUpPullDown        = 0x0C, //GPIOx_PUPDR   Pull-up/pull-down register
-        InputData             = 0x10, //GPIOx_IDR     Input data register
-        OutputData            = 0x14, //GPIOx_ODR     Output data register
-        BitSet                = 0x18, //GPIOx_BSRR    Bit set/reset register
-        ConfigurationLock     = 0x1C, //GPIOx_LCKR    Configuration lock register
-        AlternateFunctionLow  = 0x20, //GPIOx_AFRL    Alternate function low register
-        AlternateFunctionHigh = 0x24, //GPIOx_AFRH    Alternate function high register
-        BitReset              = 0x28, //GPIOx_BRR     Bit reset register
+        return State[number];
+    }
+
+    public uint GetGpioStateBitmap()
+    {
+        uint output = 0;
+        for (int i = 0; i < NumberOfPins; ++i)
+        {
+            output |= Convert.ToUInt32(State[i]) << i;
+        }
+        return output;
+    }
+
+    public void SetGpioBitmap(ulong bitmap)
+    {
+        for (int i = 0; i < NumberOfPins; ++i)
+        {
+            if ((bitmap & (1UL << i)) != 0)
+            {
+                WritePin(i, true);
+            }
+            else 
+            {
+                WritePin(i, false);
+            }
+        }
+    }
+
+    public void SetGpioBitset(ulong bitset)
+    {
+        for (int i = 0; i < NumberOfPins; ++i)
+        {
+            if ((bitset & (1UL << i)) != 0)
+            {
+                WritePin(i, true);
+            }
+        }
+    }
+
+    public void ClearGpioBitset(ulong bitset)
+    {
+        for (int i = 0; i < NumberOfPins; ++i)
+        {
+            if ((bitset & (1UL << i)) != 0)
+            {
+                WritePin(i, false);
+            }
+        }
+    }
+
+    public void XorGpioBitset(ulong bitset)
+    {
+        for (int i = 0; i < NumberOfPins; ++i)
+        {
+            bool state = State[i];
+            if ((bitset & (1UL << i)) != 0)
+            {
+                state = state ^ true;
+            }
+            else 
+            {
+                state = state ^ false;
+            }
+            WritePin(i, state);
+        }
     }
 
     public uint ReadDoubleWord(long offset)

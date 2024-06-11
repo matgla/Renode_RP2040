@@ -125,6 +125,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
 
         private int[] spinlocks;
         private IPeripheral gpioPeripheral;
+        private RP2040GPIO gpio;
         public RP2040SIO(Machine machine, RP2040GPIO gpio) : base(machine)
         {
             cpuFifo = new Queue<long>[2];
@@ -147,15 +148,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                     Vld = false
                 };
             }
-            gpio.OnGPIO(0, true);
-
-            //var cpu = machine.SystemBus.GetCurrentCPU();
-            //var periphs = machine.SystemBus.GetRegisteredPeripherals(cpu);
-
-            // for (int i = 0; i < periphs.Count(); ++i)
-            // {
-            //     this.Log(LogLevel.Error, "Periph: " + periphs.ElementAt(i).Name);
-            // }
+            this.gpio = gpio;
             DefineRegisters();
         }
 
@@ -174,9 +167,49 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
 
         private void DefineRegisters()
         {
-          //  Registers.GPIO_IN.Define(this)
-          //      .WithValueField(0, 30, FieldMode.Read | FieldMode.Write,
-          //          valueProviderCallback: _ => )
+            Registers.GPIO_IN.Define(this)
+                .WithValueField(0, 30, FieldMode.Read,
+                    valueProviderCallback: _ => {
+                        return gpio.GetGpioStateBitmap();
+                    },
+                    name: "GPIO_IN");
+
+            Registers.GPIO_OUT.Define(this)
+                .WithValueField(0, 30, FieldMode.Read | FieldMode.Write,
+                    valueProviderCallback: _ => {
+                        return gpio.GetGpioStateBitmap();
+                    },
+                    writeCallback: (_, value) => {
+                        gpio.SetGpioBitmap(value);
+                    },
+                    name: "GPIO_OUT")
+                .WithReservedBits(30, 2);
+ 
+            Registers.GPIO_OUT_SET.Define(this)
+                .WithValueField(0, 30, FieldMode.Write,
+                    writeCallback: (_, value) => {
+                        gpio.SetGpioBitset(value);     
+                    },
+                    name: "GPIO_OUT_SET")
+                .WithReservedBits(30, 2);
+
+            Registers.GPIO_OUT_CLR.Define(this)
+                .WithValueField(0, 30, FieldMode.Write,
+                    writeCallback: (_, value) => {
+                        gpio.ClearGpioBitset(value);     
+                    },
+                    name: "GPIO_OUT_CLR")
+                .WithReservedBits(30, 2);
+
+            Registers.GPIO_OUT_XOR.Define(this)
+                .WithValueField(0, 30, FieldMode.Write,
+                    writeCallback: (_, value) => {
+                        gpio.XorGpioBitset(value);     
+                    },
+                    name: "GPIO_OUT_XOR")
+                    .WithReservedBits(30, 2);
+
+
             Registers.CPUID.Define(this)
                 .WithFlag(0, FieldMode.Read, 
                     valueProviderCallback: _ => CurrentCpu() == 1,
