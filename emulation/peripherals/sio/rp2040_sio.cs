@@ -1,9 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+
+
 using Antmicro.Renode.Core;
 using Antmicro.Renode.Core.Structure.Registers;
+using Antmicro.Renode.Logging;
 using Antmicro.Renode.Peripherals.Bus;
+
+using Antmicro.Renode.Peripherals.GPIOPort;
 
 namespace Antmicro.Renode.Peripherals.Miscellaneous
 {
@@ -56,6 +61,24 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
         private enum Registers
         {
             CPUID = 0x0,
+            GPIO_IN = 0x04,
+            GPIO_HI_IN = 0x08,
+            GPIO_OUT = 0x10,
+            GPIO_OUT_SET = 0x14,
+            GPIO_OUT_CLR = 0x18,
+            GPIO_OUT_XOR = 0x1c,
+            GPIO_OE = 0x20,
+            GPIO_OE_SET = 0x24,
+            GPIO_OE_CLR = 0x28,
+            GPIO_OE_XOR = 0x2c, 
+            GPIO_HI_OUT = 0x30,
+            GPIO_HI_OUT_SET = 0x34,
+            GPIO_HI_OUT_CLR = 0x38,
+            GPIO_HI_OUT_XOR = 0x3c,
+            GPIO_HI_OE = 0x40,
+            GPIO_HI_OE_SET = 0x44,
+            GPIO_HI_OE_CLR = 0x48,
+            GPIO_HI_OE_XOR = 0x4c,
             FIFO_ST = 0x50,
             FIFO_WR = 0x54,
             FIFO_RD = 0x58,
@@ -101,7 +124,8 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
         }
 
         private int[] spinlocks;
-        public RP2040SIO(Machine machine) : base(machine)
+        private IPeripheral gpioPeripheral;
+        public RP2040SIO(Machine machine, RP2040GPIO gpio) : base(machine)
         {
             cpuFifo = new Queue<long>[2];
             fifoStatus = new FifoStatus[2];
@@ -123,7 +147,15 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                     Vld = false
                 };
             }
+            gpio.OnGPIO(0, true);
 
+            //var cpu = machine.SystemBus.GetCurrentCPU();
+            //var periphs = machine.SystemBus.GetRegisteredPeripherals(cpu);
+
+            // for (int i = 0; i < periphs.Count(); ++i)
+            // {
+            //     this.Log(LogLevel.Error, "Periph: " + periphs.ElementAt(i).Name);
+            // }
             DefineRegisters();
         }
 
@@ -142,6 +174,9 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
 
         private void DefineRegisters()
         {
+          //  Registers.GPIO_IN.Define(this)
+          //      .WithValueField(0, 30, FieldMode.Read | FieldMode.Write,
+          //          valueProviderCallback: _ => )
             Registers.CPUID.Define(this)
                 .WithFlag(0, FieldMode.Read, 
                     valueProviderCallback: _ => CurrentCpu() == 1,

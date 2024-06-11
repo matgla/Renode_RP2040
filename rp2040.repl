@@ -60,7 +60,6 @@ sysbus:
 dwt: Miscellaneous.DWT @ sysbus 0xE0001000
     frequency: 72000000
 
-sio: Miscellaneous.RP2040SIO @ sysbus 0xd0000000
 
 clocks: Miscellaneous.RP2040Clocks @ sysbus 0x40008000
 clocks_xor_alias: Memory.RP2040XorRegisterAlias @ sysbus 0x40009000 {
@@ -87,4 +86,24 @@ timer_bitmask_set_alias: Memory.RP2040BitmaskSetRegisterAlias @ sysbus 0x4005600
 }
 timer_bitmask_clear_alias: Memory.RP2040BitmaskClearRegisterAlias @ sysbus 0x40057000 {
     originalAddress: 0x40054000
+}
+
+gpio: GPIOPort.RP2040GPIO @ sysbus 0x40014000  
+
+gpio_xor_alias: Memory.RP2040XorRegisterAlias @ sysbus 0x40015000 {
+    originalAddress: 0x40014000
+}
+
+gpio_bitmask_set_alias: Memory.RP2040BitmaskSetRegisterAlias @ sysbus 0x40016000 {
+    originalAddress: 0x40014000
+}
+gpio_bitmask_clear_alias: Memory.RP2040BitmaskClearRegisterAlias @ sysbus 0x40017000 {
+    originalAddress: 0x40014000
+}
+
+poweron: Miscellaneous.PowerOnInput @ sysbus 
+
+
+sio: Miscellaneous.RP2040SIO @ sysbus 0xd0000000 {
+    gpio: gpio
 }
