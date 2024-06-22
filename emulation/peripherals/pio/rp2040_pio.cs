@@ -10,11 +10,10 @@ using System.Linq;
 
 namespace Antmicro.Renode.Peripherals.Miscellaneous
 {
-    public class PioStatemachine 
+    public class PioStateMachine 
     {
-        public PioStatemachine(Machine machine)
+        public PioStateMachine(Machine machine)
         {
-            this.log = log;
             Logger.Log(LogLevel.Error, "Hello from statemachine");
         }
     }
@@ -77,17 +76,17 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                 RxFifos[i] = new Queue<long>();
             }
 
-            StateMachines = new PioStatemachine[4];
+            StateMachines = new PioStateMachine[4];
             for (int i = 0; i < StateMachines.Length; ++i)
             {
-                StateMachines[i] = new StateMachine(machine); 
+                StateMachines[i] = new PioStateMachine(machine); 
             }
 
             DefineRegisters();
             Reset();
         }
        
-        private PioStatemachine[] StateMachines;
+        private PioStateMachine[] StateMachines;
         private Queue<long>[] TxFifos;
         private Queue<long>[] RxFifos;
         public long Size { get { return 0x1000; } }
