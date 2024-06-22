@@ -16,7 +16,6 @@ public class RP2040GPIO: BaseGPIOPort, IDoubleWordPeripheral, IGPIOReceiver, IKn
     public RP2040GPIO(IMachine machine) : base(machine, NumberOfPins)
     {
         registers = CreateRegisters();
-        this.Log(LogLevel.Error, "Construction");
         Reset();
         functionSelect = new int[NumberOfPins];
     }

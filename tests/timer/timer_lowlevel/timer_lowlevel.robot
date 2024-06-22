@@ -7,7 +7,7 @@ Test Timeout    90 seconds
 
 *** Test Cases ***
 Run successfully 'timer_lowlevel' example
-    Execute Command             include @${CURDIR}/timer_lowlevel.repl
+    Execute Command             include @${CURDIR}/timer_lowlevel.resc
 
     Create Terminal Tester      sysbus.uart0
 

@@ -7,7 +7,7 @@ Test Timeout    90 seconds
 
 *** Test Cases ***
 Run successfully 'hello_divider' example
-    Execute Command             include @${CURDIR}/hello_divider.repl
+    Execute Command             include @${CURDIR}/hello_divider.resc
 
     Create Terminal Tester      sysbus.uart0
 

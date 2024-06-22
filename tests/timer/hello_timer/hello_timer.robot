@@ -7,7 +7,7 @@ Test Timeout    90 seconds
 
 *** Test Cases ***
 Run successfully 'hello_timer' example
-    Execute Command             include @${CURDIR}/hello_timer.repl
+    Execute Command             include @${CURDIR}/hello_timer.resc
 
     Create Terminal Tester      sysbus.uart0
 

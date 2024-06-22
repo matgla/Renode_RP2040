@@ -1,4 +1,4 @@
 $global.TEST_FILE=$ORIGIN/../../../pico-examples/build/hello_world/serial/hello_serial.elf
 
-include $ORIGIN/../../prepare.repl
+include $ORIGIN/../../prepare.resc
 showAnalyzer sysbus.uart0
