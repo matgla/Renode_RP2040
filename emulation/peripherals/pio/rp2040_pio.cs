@@ -12,9 +12,28 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
 {
     public class PioStateMachine 
     {
-        public PioStateMachine(Machine machine)
+        public PioStateMachine(IMachine machine, ushort[] program)
         {
-            Logger.Log(LogLevel.Error, "Hello from statemachine");
+            long frequency = machine.ClockSource.GetAllClockEntries().First().Frequency;
+
+            this.Enabled = false;
+            executionThread = machine.ObtainManagedThread(Step, (uint)frequency, "piosm");
+            this.program = program;
+        }
+
+        private IManagedThread executionThread;
+        private ushort[] program;
+        public bool Enabled {get; private set;}
+        
+        protected void Step()
+        {
+            var cmd = new PioDecodedInstruction(instruction);
+        }
+
+        public void Enable()
+        {
+            Enabled = true;
+            executionThread.Start();
         }
     }
 
@@ -63,7 +82,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             {
                 IRQs[i] = new GPIO();
             }
-            Instructions = new short[32];
+            Instructions = new ushort[32];
             TxFifos = new Queue<long>[4];
             RxFifos = new Queue<long>[4];
             for (int i = 0; i < TxFifos.Length; ++i)
@@ -79,7 +98,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             StateMachines = new PioStateMachine[4];
             for (int i = 0; i < StateMachines.Length; ++i)
             {
-                StateMachines[i] = new PioStateMachine(machine); 
+                StateMachines[i] = new PioStateMachine(machine, Instructions); 
             }
 
             DefineRegisters();
@@ -93,23 +112,43 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
         public GPIO[] IRQs { get; private set;}
         public GPIO IRQ0 => IRQs[0];
         public GPIO IRQ1 => IRQs[1];
-        private short[] Instructions;
+        private ushort[] Instructions;
         public override void Reset()
         {
         }
 
         public void DefineRegisters()
         {
+            Registers.CTRL.Define(this)
+                .WithValueField(0, 4, FieldMode.Read | FieldMode.Write,
+                    writeCallback: (_, value) => {
+                        for (int i = 0; i < StateMachines.Length; ++i)
+                        {
+                            if (((1ul << i) & (ulong)value) != 0ul)
+                            {
+                                StateMachines[i].Enable();
+                            }
+                        }
+                    },
+                    valueProviderCallback: _ => {
+                        ulong enabledStateMachines = 0;
+                        for (int i = 0; i < StateMachines.Length; ++i) 
+                        {
+                            enabledStateMachines |= Convert.ToUInt32(StateMachines[i].Enabled) << i;    
+                        }
+                        return enabledStateMachines;
+                    },
+                    name: "CTRL");
             for (int i = 0; i < Instructions.Length; ++i)
             {
                 int key = i;
                 var reg = new DoubleWordRegister(this)
                     .WithValueField(0, 32, FieldMode.Write,
                         writeCallback: (_, value) => {
-                            Instructions[key] = (short)value;
+                            Instructions[key] = (ushort)value;
                         },
                     name: "INSTR_MEM" + i);
-                RegistersCollection.AddRegister(0x0c8 + i * 4, reg);
+                RegistersCollection.AddRegister(0x048 + i * 4, reg);
             }
             
             Registers.FSTAT.Define(this)

@@ -5,6 +5,9 @@ include $ORIGIN/emulation/peripherals/clocks/rp2040_clocks.cs
 include $ORIGIN/emulation/peripherals/timer/rp2040_timer.cs
 include $ORIGIN/emulation/peripherals/power/power.cs
 include $ORIGIN/emulation/peripherals/gpio/rp2040_gpio.cs
+
+include $ORIGIN/emulation/peripherals/pio/pio_instruction_decoder.cs
+EnsureTypeIsLoaded "Antmicro.Renode.Peripherals.Miscellaneous.PioDecodedInstruction"
 include $ORIGIN/emulation/peripherals/pio/rp2040_pio.cs
 
 EnsureTypeIsLoaded "Antmicro.Renode.Peripherals.GPIOPort.RP2040GPIO"
