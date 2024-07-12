@@ -10,7 +10,7 @@ using System.Linq;
 
 namespace Antmicro.Renode.Peripherals.Miscellaneous
 {
-    public class PioStateMachine 
+    public class PioStateMachine
     {
         public PioStateMachine(IMachine machine, ushort[] program)
         {
@@ -24,8 +24,8 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
 
         private IManagedThread executionThread;
         private ushort[] program;
-        public bool Enabled {get; private set;}
-        
+        public bool Enabled { get; private set; }
+
         protected void Step()
         {
             var instruction = program[pc];
@@ -39,19 +39,64 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             switch (cmd.OpCode)
             {
                 case PioDecodedInstruction.Opcode.Jmp:
-                {
-                    ushort address = cmd.ImmediateData & 0x1f;
-                    ushort condition = (cmd.ImmediateData >> 5) & 0x07;
-                    
-                    break; 
-                }
+                    {
+                        ushort address = (ushort)(cmd.ImmediateData & 0x1f);
+                        ushort condition = (ushort)((cmd.ImmediateData >> 5) & 0x07);
+
+                        switch (condition)
+                        {
+                            case 1:
+                                {
+                                    if (x != 0) return;
+                                    break;
+                                }
+                            case 2:
+                                {
+                                    if (x-- == 0) return;
+                                    break;
+                                }
+                            case 3:
+                                {
+                                    if (y != 0) return;
+                                    break;
+                                }
+                            case 4:
+                                {
+                                    if (y-- == 0) return;
+                                    break;
+                                }
+                            case 5:
+                                {
+                                    if (y == x) return;
+                                    break;
+                                }
+                            case 6:
+                                {
+                                    // pin not supported yet
+                                    break;
+                                }
+                            case 7:
+                                {
+                                    // osre not supported yet
+                                    break;
+                                }
+                            default:
+                                {
+                                    break;
+                                }
+                        }
+
+                        pc = address;
+                        break;
+                    }
+
                 default:
-                {
-                    Logger.Log(LogLevel.Error, "Unknown: ");
-                    break;
-                }
+                    {
+                        Logger.Log(LogLevel.Error, "Unknown: ");
+                        break;
+                    }
             }
-            
+
             Logger.Log(LogLevel.Error, "D/SS: " + cmd.DelayOrSideSet + ", data: " + cmd.ImmediateData);
 
         }
@@ -150,18 +195,18 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             StateMachines = new PioStateMachine[4];
             for (int i = 0; i < StateMachines.Length; ++i)
             {
-                StateMachines[i] = new PioStateMachine(machine, Instructions); 
+                StateMachines[i] = new PioStateMachine(machine, Instructions);
             }
 
             DefineRegisters();
             Reset();
         }
-       
+
         private PioStateMachine[] StateMachines;
         private Queue<long>[] TxFifos;
         private Queue<long>[] RxFifos;
         public long Size { get { return 0x1000; } }
-        public GPIO[] IRQs { get; private set;}
+        public GPIO[] IRQs { get; private set; }
         public GPIO IRQ0 => IRQs[0];
         public GPIO IRQ1 => IRQs[1];
         private ushort[] Instructions;
@@ -176,7 +221,8 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                 int key = i;
                 var reg = new DoubleWordRegister(this)
                     .WithValueField(0, 16, FieldMode.Write | FieldMode.Read,
-                        writeCallback: (_, value) => {
+                        writeCallback: (_, value) =>
+                        {
                             StateMachines[key].Stop();
                             StateMachines[key].ExecuteInstruction((ushort)value);
                             StateMachines[key].Resume();
@@ -185,10 +231,11 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                     name: "SM" + i + "_INSTR");
                 RegistersCollection.AddRegister(0x0d8 + i * 0x18, reg);
             }
- 
+
             Registers.CTRL.Define(this)
                 .WithValueField(0, 4, FieldMode.Read | FieldMode.Write,
-                    writeCallback: (_, value) => {
+                    writeCallback: (_, value) =>
+                    {
                         for (int i = 0; i < StateMachines.Length; ++i)
                         {
                             if (((1ul << i) & (ulong)value) != 0ul)
@@ -197,11 +244,12 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                             }
                         }
                     },
-                    valueProviderCallback: _ => {
+                    valueProviderCallback: _ =>
+                    {
                         ulong enabledStateMachines = 0;
-                        for (int i = 0; i < StateMachines.Length; ++i) 
+                        for (int i = 0; i < StateMachines.Length; ++i)
                         {
-                            enabledStateMachines |= Convert.ToUInt32(StateMachines[i].Enabled) << i;    
+                            enabledStateMachines |= Convert.ToUInt32(StateMachines[i].Enabled) << i;
                         }
                         return enabledStateMachines;
                     },
@@ -211,16 +259,18 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                 int key = i;
                 var reg = new DoubleWordRegister(this)
                     .WithValueField(0, 32, FieldMode.Write,
-                        writeCallback: (_, value) => {
+                        writeCallback: (_, value) =>
+                        {
                             Instructions[key] = (ushort)value;
                         },
                     name: "INSTR_MEM" + i);
                 RegistersCollection.AddRegister(0x048 + i * 4, reg);
             }
-            
+
             Registers.FSTAT.Define(this)
-                .WithValueField(0, 4, FieldMode.Read, 
-                    valueProviderCallback: _ => {
+                .WithValueField(0, 4, FieldMode.Read,
+                    valueProviderCallback: _ =>
+                    {
                         ulong ret = 0;
                         for (int i = 0; i < RxFifos.Length; ++i)
                         {
@@ -233,7 +283,8 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                     }, name: "RXFULL")
                 .WithReservedBits(4, 4)
                 .WithValueField(8, 4, FieldMode.Read,
-                    valueProviderCallback: _ => {
+                    valueProviderCallback: _ =>
+                    {
                         ulong ret = 0;
                         for (int i = 0; i < RxFifos.Length; ++i)
                         {
@@ -246,7 +297,8 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                     }, name: "RXEMPTY")
                 .WithReservedBits(12, 4)
                 .WithValueField(16, 4, FieldMode.Read,
-                    valueProviderCallback: _ => {
+                    valueProviderCallback: _ =>
+                    {
                         ulong ret = 0;
                         for (int i = 0; i < TxFifos.Length; ++i)
                         {
@@ -259,7 +311,8 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                     }, name: "TXFULL")
                 .WithReservedBits(20, 4)
                 .WithValueField(24, 4, FieldMode.Read,
-                    valueProviderCallback: _ => {
+                    valueProviderCallback: _ =>
+                    {
                         ulong ret = 0;
                         for (int i = 0; i < TxFifos.Length; ++i)
                         {
