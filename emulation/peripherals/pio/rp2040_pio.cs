@@ -19,6 +19,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             this.Enabled = false;
             executionThread = machine.ObtainManagedThread(Step, (uint)frequency, "piosm");
             this.program = program;
+            pc = 0;
         }
 
         private IManagedThread executionThread;
@@ -27,14 +28,65 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
         
         protected void Step()
         {
+            var instruction = program[pc];
+            if (immediateInstruction.HasValue)
+            {
+                Logger.Log(LogLevel.Error, "Execute immediate");
+                instruction = immediateInstruction.Value;
+                immediateInstruction = null;
+            }
             var cmd = new PioDecodedInstruction(instruction);
+            switch (cmd.OpCode)
+            {
+                case PioDecodedInstruction.Opcode.Jmp:
+                {
+                    ushort address = cmd.ImmediateData & 0x1f;
+                    ushort condition = (cmd.ImmediateData >> 5) & 0x07;
+                    
+                    break; 
+                }
+                default:
+                {
+                    Logger.Log(LogLevel.Error, "Unknown: ");
+                    break;
+                }
+            }
+            
+            Logger.Log(LogLevel.Error, "D/SS: " + cmd.DelayOrSideSet + ", data: " + cmd.ImmediateData);
+
         }
 
         public void Enable()
         {
             Enabled = true;
+            stopped = false;
             executionThread.Start();
         }
+
+        public void Stop()
+        {
+            stopped = true;
+        }
+
+        public void Resume()
+        {
+            stopped = false;
+        }
+
+        public void SetProgramCounter(ushort pc)
+        {
+            this.pc = pc;
+        }
+
+        public void ExecuteInstruction(ushort instruction)
+        {
+            immediateInstruction = instruction;
+        }
+        private ushort? immediateInstruction;
+        private ushort pc;
+        private bool stopped;
+        private uint x;
+        private uint y;
     }
 
 
@@ -119,6 +171,21 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
 
         public void DefineRegisters()
         {
+            for (int i = 0; i < StateMachines.Length; ++i)
+            {
+                int key = i;
+                var reg = new DoubleWordRegister(this)
+                    .WithValueField(0, 16, FieldMode.Write | FieldMode.Read,
+                        writeCallback: (_, value) => {
+                            StateMachines[key].Stop();
+                            StateMachines[key].ExecuteInstruction((ushort)value);
+                            StateMachines[key].Resume();
+                        },
+
+                    name: "SM" + i + "_INSTR");
+                RegistersCollection.AddRegister(0x0d8 + i * 0x18, reg);
+            }
+ 
             Registers.CTRL.Define(this)
                 .WithValueField(0, 4, FieldMode.Read | FieldMode.Write,
                     writeCallback: (_, value) => {
