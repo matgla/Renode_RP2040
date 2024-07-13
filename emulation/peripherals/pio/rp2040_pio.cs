@@ -36,6 +36,39 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
         public int SetCount { get; set; }
         public int SidesetCount { get; set; }
         public uint OutputShiftRegister { get; private set; }
+        public bool AutoPush { get; set; }
+        public bool AutoPull { get; set; }
+        public bool InShiftDirection { get; set; }
+        public bool OutShiftDirection { get; set; }
+        public uint PushThreshold { get; set; }
+        public uint PullThreshold { get; set; }
+        public void JoinTxFifo(bool join)
+        {
+            if (join)
+            {
+                TxFifoSize = 8;
+                RxFifoSize = 0;
+            }
+        }
+
+        public void JoinRxFifo(bool join)
+        {
+            if (join)
+            {
+                RxFifoSize = 8;
+                TxFifoSize = 0;
+            }
+        }
+
+        public bool IsTxFifoJoined()
+        {
+            return TxFifoSize == 8;
+        }
+
+        public bool IsRxFifoJoined()
+        {
+            return RxFifoSize == 8;
+        }
 
         private int TxFifoSize = 4;
         private int RxFifoSize = 4;
@@ -266,6 +299,25 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                         writeCallback: (_, value) => StateMachines[key].PushFifo((uint)value),
                     name: "TXF" + i);
                 RegistersCollection.AddRegister(0x10 + i * 0x4, reg);
+            }
+
+            for (int i = 0; i < StateMachines.Length; ++i)
+            {
+                int key = i;
+                var reg = new DoubleWordRegister(this)
+                    .WithReservedBits(0, 16)
+                    .WithFlag(16, out StateMachines[key].AutoPush, name: "SM" + key + "_SHIFTCTRL_AUTOPUSH")
+                    .WithFlag(17, out StateMachines[key].AutoPull, name: "SM" + key + "_SHIFTCTRL_AUTOPULL")
+                    .WithFlag(18, out StateMachines[key].InShiftDirection, name: "SM" + key + "_SHIFTCTRL_IN_SHIFTDIR")
+                    .WithFlag(19, out StateMachines[key].OutShiftDirection, name: "SM" + key + "_SHIFTCTRL_OUT_SHIFTDIR")
+                    .WithValueField(20, 5, out StateMachines[key].PushThreshold, name: "SM" + key + "_PUSH_THRESH")
+                    .WithValueField(25, 5, out StateMachines[key].PullThreshold, name: "SM" + key + "_PULL_THRESH")
+                    .WithFlag(30, writeCallback: (_, value) => StateMachines[key].JoinTxFifo((bool)value),
+                        valueProviderCallback: _ => StateMachines[key].IsTxFifoJoined())
+                    .WithFlag(31, writeCallback: (_, value) => StateMachines[key].JoinRxFifo((bool)value),
+                        valueProviderCallback: _ => StateMachines[key].IsRxFifoJoined());
+
+                RegistersCollection.AddRegister(0x0d0 + i * 0x18, reg);
             }
 
             for (int i = 0; i < StateMachines.Length; ++i)
