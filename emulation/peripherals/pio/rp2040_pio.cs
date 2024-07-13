@@ -16,6 +16,9 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
         {
             long frequency = machine.ClockSource.GetAllClockEntries().First().Frequency;
 
+            TxFifo = new Queue<uint>();
+            RxFifo = new Queue<uint>();
+
             this.Enabled = false;
             executionThread = machine.ObtainManagedThread(Step, (uint)frequency, "piosm");
             this.program = program;
@@ -25,8 +28,76 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
         private IManagedThread executionThread;
         private ushort[] program;
         public bool Enabled { get; private set; }
+        public int OutBase { get; set; }
+        public int SetBase { get; set; }
+        public int SidesetBase { get; set; }
+        public int InBase { get; set; }
+        public int OutCount { get; set; }
+        public int SetCount { get; set; }
+        public int SidesetCount { get; set; }
+        public uint OutputShiftRegister { get; private set; }
 
-        protected void Step()
+        private int TxFifoSize = 4;
+        private int RxFifoSize = 4;
+
+        private Queue<uint> TxFifo;
+        private Queue<uint> RxFifo;
+
+        public bool FullRxFifo()
+        {
+            return RxFifo.Count() == RxFifoSize;
+        }
+
+        public bool EmptyRxFifo()
+        {
+            return RxFifo.Count() == 0;
+        }
+
+        public bool FullTxFifo()
+        {
+            return TxFifo.Count() == TxFifoSize;
+        }
+
+        public bool EmptyTxFifo()
+        {
+            return TxFifo.Count() == 0;
+        }
+
+        private int delay;
+        private bool jumpCondition(ushort condition)
+        {
+            switch (condition)
+            {
+                case 0: return true;
+                case 1: return x == 0;
+                case 2: return x-- != 0;
+                case 3: return y == 0;
+                case 4: return y-- != 0;
+                case 5: return x != y;
+                case 6: return true; // pin not supported yet
+                case 7: return OutputShiftRegister != 0; // osre not supported yet
+                default: return true;
+            }
+        }
+
+        private void processJump(ushort condition, ushort address)
+        {
+            if (condition != 0) { Logger.Log(LogLevel.Error, "Jump with cond: " + condition); }
+            if (jumpCondition(condition))
+            {
+                pc = address;
+            }
+        }
+
+        public void PushFifo(uint value)
+        {
+            if (TxFifo.Count() != TxFifoSize)
+            {
+                TxFifo.Enqueue(value);
+            }
+        }
+
+        public ushort GetCurrentInstruction()
         {
             var instruction = program[pc];
             if (immediateInstruction.HasValue)
@@ -35,61 +106,46 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                 instruction = immediateInstruction.Value;
                 immediateInstruction = null;
             }
-            var cmd = new PioDecodedInstruction(instruction);
+            return instruction;
+        }
+
+        private bool ProcessDelaySideSet(int data)
+        {
+            int delayBits = 5 - SidesetCount;
+            int delayMask = (1 << delayBits) - 1;
+            int delay = data & delayMask;
+
+            // TODO: side-set implementation
+            if (delay != 0)
+            {
+                this.delay = delay;
+                return true;
+            }
+            return false;
+        }
+
+        protected void Step()
+        {
+            var cmd = new PioDecodedInstruction(GetCurrentInstruction());
+            if (delay-- != 0)
+            {
+                return;
+            }
+
+            if (ProcessDelaySideSet((int)cmd.DelayOrSideSet))
+            {
+                return;
+            }
+
             switch (cmd.OpCode)
             {
                 case PioDecodedInstruction.Opcode.Jmp:
                     {
                         ushort address = (ushort)(cmd.ImmediateData & 0x1f);
                         ushort condition = (ushort)((cmd.ImmediateData >> 5) & 0x07);
-
-                        switch (condition)
-                        {
-                            case 1:
-                                {
-                                    if (x != 0) return;
-                                    break;
-                                }
-                            case 2:
-                                {
-                                    if (x-- == 0) return;
-                                    break;
-                                }
-                            case 3:
-                                {
-                                    if (y != 0) return;
-                                    break;
-                                }
-                            case 4:
-                                {
-                                    if (y-- == 0) return;
-                                    break;
-                                }
-                            case 5:
-                                {
-                                    if (y == x) return;
-                                    break;
-                                }
-                            case 6:
-                                {
-                                    // pin not supported yet
-                                    break;
-                                }
-                            case 7:
-                                {
-                                    // osre not supported yet
-                                    break;
-                                }
-                            default:
-                                {
-                                    break;
-                                }
-                        }
-
-                        pc = address;
-                        break;
+                        processJump(address, condition);
+                        return;
                     }
-
                 default:
                     {
                         Logger.Log(LogLevel.Error, "Unknown: ");
@@ -180,18 +236,6 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                 IRQs[i] = new GPIO();
             }
             Instructions = new ushort[32];
-            TxFifos = new Queue<long>[4];
-            RxFifos = new Queue<long>[4];
-            for (int i = 0; i < TxFifos.Length; ++i)
-            {
-                TxFifos[i] = new Queue<long>();
-            }
-
-            for (int i = 0; i < RxFifos.Length; ++i)
-            {
-                RxFifos[i] = new Queue<long>();
-            }
-
             StateMachines = new PioStateMachine[4];
             for (int i = 0; i < StateMachines.Length; ++i)
             {
@@ -203,8 +247,6 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
         }
 
         private PioStateMachine[] StateMachines;
-        private Queue<long>[] TxFifos;
-        private Queue<long>[] RxFifos;
         public long Size { get { return 0x1000; } }
         public GPIO[] IRQs { get; private set; }
         public GPIO IRQ0 => IRQs[0];
@@ -220,17 +262,79 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             {
                 int key = i;
                 var reg = new DoubleWordRegister(this)
+                    .WithValueField(0, 32, FieldMode.Write,
+                        writeCallback: (_, value) => StateMachines[key].PushFifo((uint)value),
+                    name: "TXF" + i);
+                RegistersCollection.AddRegister(0x10 + i * 0x4, reg);
+            }
+
+            for (int i = 0; i < StateMachines.Length; ++i)
+            {
+                int key = i;
+                var reg = new DoubleWordRegister(this)
                     .WithValueField(0, 16, FieldMode.Write | FieldMode.Read,
                         writeCallback: (_, value) =>
                         {
-                            StateMachines[key].Stop();
                             StateMachines[key].ExecuteInstruction((ushort)value);
-                            StateMachines[key].Resume();
                         },
-
+                        valueProviderCallback: _ =>
+                        {
+                            return StateMachines[key].GetCurrentInstruction();
+                        },
                     name: "SM" + i + "_INSTR");
                 RegistersCollection.AddRegister(0x0d8 + i * 0x18, reg);
             }
+
+            for (int i = 0; i < StateMachines.Length; ++i)
+            {
+                int key = i;
+                var reg = new DoubleWordRegister(this)
+                    .WithValueField(0, 5, FieldMode.Write | FieldMode.Read,
+                        writeCallback: (_, value) =>
+                            StateMachines[key].OutBase = (int)value,
+                        valueProviderCallback: _ =>
+                            (uint)StateMachines[key].OutBase,
+                    name: "SM" + i + "_PINCTRL_OUTBASE")
+                    .WithValueField(5, 5, FieldMode.Write | FieldMode.Read,
+                        writeCallback: (_, value) =>
+                            StateMachines[key].SetBase = (int)value,
+                        valueProviderCallback: _ =>
+                            (uint)StateMachines[key].SetBase,
+                    name: "SM" + i + "_PINCTRL_SETBASE")
+                    .WithValueField(10, 5, FieldMode.Write | FieldMode.Read,
+                        writeCallback: (_, value) =>
+                            StateMachines[key].SidesetBase = (int)value,
+                        valueProviderCallback: _ =>
+                            (uint)StateMachines[key].SidesetBase,
+                    name: "SM" + i + "_PINCTRL_SIDESETBASE")
+                    .WithValueField(15, 5, FieldMode.Write | FieldMode.Read,
+                        writeCallback: (_, value) =>
+                            StateMachines[key].InBase = (int)value,
+                        valueProviderCallback: _ =>
+                            (uint)StateMachines[key].InBase,
+                    name: "SM" + i + "_PINCTRL_INBASE")
+                    .WithValueField(20, 6, FieldMode.Write | FieldMode.Read,
+                        writeCallback: (_, value) =>
+                            StateMachines[key].OutCount = (int)value,
+                        valueProviderCallback: _ =>
+                            (uint)StateMachines[key].OutCount,
+                    name: "SM" + i + "_PINCTRL_OUTCOUNT")
+                    .WithValueField(26, 3, FieldMode.Write | FieldMode.Read,
+                        writeCallback: (_, value) =>
+                            StateMachines[key].SetCount = (int)value,
+                        valueProviderCallback: _ =>
+                            (uint)StateMachines[key].SetCount,
+                    name: "SM" + i + "_PINCTRL_SETCOUNT")
+                    .WithValueField(29, 3, FieldMode.Write | FieldMode.Read,
+                        writeCallback: (_, value) =>
+                            StateMachines[key].SidesetCount = (int)value,
+                        valueProviderCallback: _ =>
+                            (uint)StateMachines[key].SidesetCount,
+                    name: "SM" + i + "_PINCTRL_SIDESETCOUNT");
+
+                RegistersCollection.AddRegister(0x0dc + i * 0x18, reg);
+            }
+
 
             Registers.CTRL.Define(this)
                 .WithValueField(0, 4, FieldMode.Read | FieldMode.Write,
@@ -272,9 +376,9 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                     valueProviderCallback: _ =>
                     {
                         ulong ret = 0;
-                        for (int i = 0; i < RxFifos.Length; ++i)
+                        for (int i = 0; i < StateMachines.Length; ++i)
                         {
-                            if (RxFifos[i].Count == 4)
+                            if (StateMachines[i].FullRxFifo())
                             {
                                 ret |= (1ul << i);
                             }
@@ -286,9 +390,9 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                     valueProviderCallback: _ =>
                     {
                         ulong ret = 0;
-                        for (int i = 0; i < RxFifos.Length; ++i)
+                        for (int i = 0; i < StateMachines.Length; ++i)
                         {
-                            if (RxFifos[i].Count == 0)
+                            if (StateMachines[i].EmptyRxFifo())
                             {
                                 ret |= (1ul << i);
                             }
@@ -300,9 +404,9 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                     valueProviderCallback: _ =>
                     {
                         ulong ret = 0;
-                        for (int i = 0; i < TxFifos.Length; ++i)
+                        for (int i = 0; i < StateMachines.Length; ++i)
                         {
-                            if (TxFifos[i].Count == 4)
+                            if (StateMachines[i].FullTxFifo())
                             {
                                 ret |= (1ul << i);
                             }
@@ -314,9 +418,9 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                     valueProviderCallback: _ =>
                     {
                         ulong ret = 0;
-                        for (int i = 0; i < TxFifos.Length; ++i)
+                        for (int i = 0; i < StateMachines.Length; ++i)
                         {
-                            if (TxFifos[i].Count == 0)
+                            if (StateMachines[i].EmptyTxFifo())
                             {
                                 ret |= (1ul << i);
                             }
