@@ -12,7 +12,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
 {
     public class PioStateMachine
     {
-        public PioStateMachine(IMachine machine, ushort[] program)
+        public PioStateMachine(IMachine machine, ushort[] program, int id)
         {
             long frequency = machine.ClockSource.GetAllClockEntries().First().Frequency;
 
@@ -23,6 +23,12 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             executionThread = machine.ObtainManagedThread(Step, (uint)frequency, "piosm");
             this.program = program;
             pc = 0;
+            OutputShiftRegisterCounter = 0xfffffff;
+            TxFifoSize = 4;
+            RxFifoSize = 4;
+            Id = id;
+            WrapTop = 31;
+            WrapBottom = 0;
         }
 
         private IManagedThread executionThread;
@@ -36,16 +42,32 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
         public int SetCount { get; set; }
         public int SidesetCount { get; set; }
         public uint OutputShiftRegister { get; private set; }
+        public uint InputShiftRegister { get; private set; }
         public bool AutoPush { get; set; }
         public bool AutoPull { get; set; }
         public bool InShiftDirection { get; set; }
         public bool OutShiftDirection { get; set; }
         public uint PushThreshold { get; set; }
         public uint PullThreshold { get; set; }
+        public uint Status { get; set; }
+        public bool StatusSelect { get; set; }
+        public uint WrapBottom { get; set; }
+        public uint WrapTop { get; set; }
+        public bool OutSticky { get; set; }
+        public bool InlineOutEnable { get; set; }
+        public uint OutEnableSelect { get; set; }
+        public uint JumpPin { get; set; }
+        public bool SidePinDirection { get; set; }
+        public bool SideEnable { get; set; }
+
+        private int Id;
+        private uint OutputShiftRegisterCounter;
+        private uint InputShiftRegisterCounter;
         public void JoinTxFifo(bool join)
         {
             if (join)
             {
+                Logger.Log(LogLevel.Error, "Joining TX" + Id);
                 TxFifoSize = 8;
                 RxFifoSize = 0;
             }
@@ -55,6 +77,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
         {
             if (join)
             {
+                Logger.Log(LogLevel.Error, "Joining RX" + Id);
                 RxFifoSize = 8;
                 TxFifoSize = 0;
             }
@@ -70,8 +93,8 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             return RxFifoSize == 8;
         }
 
-        private int TxFifoSize = 4;
-        private int RxFifoSize = 4;
+        private int TxFifoSize;
+        private int RxFifoSize;
 
         private Queue<uint> TxFifo;
         private Queue<uint> RxFifo;
@@ -88,6 +111,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
 
         public bool FullTxFifo()
         {
+            // Logger.Log(LogLevel.Error, "Fifo TX size: " + TxFifo.Count() + ",l: " + TxFifoSize);
             return TxFifo.Count() == TxFifoSize;
         }
 
@@ -108,17 +132,20 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                 case 4: return y-- != 0;
                 case 5: return x != y;
                 case 6: return true; // pin not supported yet
-                case 7: return OutputShiftRegister != 0; // osre not supported yet
+                case 7: return OutputShiftRegisterCounter < PullThreshold;
                 default: return true;
             }
         }
 
         private void processJump(ushort condition, ushort address)
         {
-            if (condition != 0) { Logger.Log(LogLevel.Error, "Jump with cond: " + condition); }
             if (jumpCondition(condition))
             {
                 pc = address;
+            }
+            else
+            {
+                IncrementProgramCounter();
             }
         }
 
@@ -130,12 +157,32 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             }
         }
 
+        public uint PopFifo()
+        {
+            if (RxFifo.Count() != 0)
+            {
+                return RxFifo.Dequeue();
+            }
+            return 0;
+        }
+
+        private void IncrementProgramCounter()
+        {
+            if (pc == WrapTop)
+            {
+                pc = (ushort)WrapBottom;
+            }
+            else
+            {
+                pc += 1;
+            }
+        }
         public ushort GetCurrentInstruction()
         {
             var instruction = program[pc];
             if (immediateInstruction.HasValue)
             {
-                Logger.Log(LogLevel.Error, "Execute immediate");
+                Logger.Log(LogLevel.Error, "Execute immediate: " + immediateInstruction.Value);
                 instruction = immediateInstruction.Value;
                 immediateInstruction = null;
             }
@@ -144,6 +191,15 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
 
         private bool ProcessDelaySideSet(int data)
         {
+            if (this.delay-- == 1)
+            {
+                return false;
+            }
+
+            if (this.delay-- > 0)
+            {
+                return true;
+            }
             int delayBits = 5 - SidesetCount;
             int delayMask = (1 << delayBits) - 1;
             int delay = data & delayMask;
@@ -157,13 +213,112 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             return false;
         }
 
+        private uint GetFromSource(ushort source)
+        {
+            switch (source)
+            {
+                case 0: return 0; // pins not supported yet 
+                case 1: return x;
+                case 2: return y;
+                case 3: return 0;
+                case 4: return 0;
+                case 5: return Status;
+                case 6: return InputShiftRegister;
+                case 7: return OutputShiftRegister;
+            }
+            return 0;
+        }
+
+        uint BitReverse(uint data)
+        {
+            uint o = 0;
+            for (int i = 0; i < 32; ++i)
+            {
+                if (Convert.ToBoolean(data & (1 << i)))
+                {
+                    o |= (uint)(1 << (31 - i));
+                }
+            }
+            return o;
+        }
+        private bool ProcessMov(ushort immediateData)
+        {
+            ushort destination = (ushort)((immediateData >> 5) & 0x7);
+            ushort source = (ushort)(immediateData & 0x7);
+            ushort operation = (ushort)((immediateData >> 3) & 0x03);
+
+            uint from = GetFromSource(source);
+
+
+            if (operation == 1)
+            {
+                from = ~from;
+            }
+            else if (operation == 2)
+            {
+                from = BitReverse(from);
+            }
+
+            switch (destination)
+            {
+                case 0:
+                    {
+                        // TODO pins support
+                        return true;
+                    }
+                case 1:
+                    {
+                        x = from;
+                        return true;
+                    }
+                case 2:
+                    {
+                        y = from;
+                        return true;
+                    }
+                case 3:
+                    {
+                        return true;
+                    }
+                case 4:
+                    {
+                        immediateInstruction = (ushort)from;
+                        return false;
+                    }
+                case 5:
+                    {
+                        pc = (ushort)from;
+                        return false;
+                    }
+                case 6:
+                    {
+                        InputShiftRegister = from;
+                        InputShiftRegisterCounter = 0;
+                        return true;
+                    }
+                case 7:
+                    {
+                        OutputShiftRegister = from;
+                        OutputShiftRegisterCounter = 0;
+                        return true;
+                    }
+            }
+
+            return true;
+        }
+
         protected void Step()
         {
-            var cmd = new PioDecodedInstruction(GetCurrentInstruction());
-            if (delay-- != 0)
+            if (AutoPull)
             {
-                return;
+                if (OutputShiftRegisterCounter >= PullThreshold && TxFifo.Count() > 0)
+                {
+                    OutputShiftRegisterCounter = 0;
+                    OutputShiftRegister = TxFifo.Dequeue();
+                    Logger.Log(LogLevel.Error, "Got data from TX FIFO");
+                }
             }
+            var cmd = new PioDecodedInstruction(GetCurrentInstruction());
 
             if (ProcessDelaySideSet((int)cmd.DelayOrSideSet))
             {
@@ -176,12 +331,72 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                     {
                         ushort address = (ushort)(cmd.ImmediateData & 0x1f);
                         ushort condition = (ushort)((cmd.ImmediateData >> 5) & 0x07);
-                        processJump(address, condition);
+                        processJump(condition, address);
+                        return;
+                    }
+                case PioDecodedInstruction.Opcode.PushPull:
+                    {
+                        bool block = Convert.ToBoolean((cmd.ImmediateData >> 5) & 0x1);
+                        bool isPull = Convert.ToBoolean((cmd.ImmediateData >> 7) & 0x1);
+
+                        if (!isPull)
+                        {
+                            bool ifFull = Convert.ToBoolean((cmd.ImmediateData >> 6) & 0x1);
+                            if (ifFull && (InputShiftRegisterCounter < PushThreshold))
+                            {
+                                return;
+                            }
+                            if (!FullRxFifo())
+                            {
+                                RxFifo.Enqueue(InputShiftRegister);
+                                IncrementProgramCounter();
+                                return;
+                            }
+                            else if (!block)
+                            {
+                                IncrementProgramCounter();
+                                return;
+                            }
+                            return;
+                        }
+                        else
+                        {
+                            bool ifEmpty = Convert.ToBoolean((cmd.ImmediateData >> 6) & 0x1);
+                            if (ifEmpty && OutputShiftRegister < PullThreshold)
+                            {
+                                return;
+                            }
+                            if (!EmptyTxFifo())
+                            {
+                                OutputShiftRegister = TxFifo.Dequeue();
+                                OutputShiftRegisterCounter = 0;
+                                IncrementProgramCounter();
+                                return;
+                            }
+                            else
+                            {
+                                if (!block)
+                                {
+                                    OutputShiftRegister = x;
+                                    OutputShiftRegisterCounter = 0;
+                                    IncrementProgramCounter();
+                                    return;
+                                }
+                                return;
+                            }
+                        }
+                    }
+                case PioDecodedInstruction.Opcode.Mov:
+                    {
+                        if (ProcessMov((ushort)cmd.ImmediateData))
+                        {
+                            IncrementProgramCounter();
+                        }
                         return;
                     }
                 default:
                     {
-                        Logger.Log(LogLevel.Error, "Unknown: ");
+                        Logger.Log(LogLevel.Error, "Unknown: " + cmd.OpCode);
                         break;
                     }
             }
@@ -272,7 +487,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             StateMachines = new PioStateMachine[4];
             for (int i = 0; i < StateMachines.Length; ++i)
             {
-                StateMachines[i] = new PioStateMachine(machine, Instructions);
+                StateMachines[i] = new PioStateMachine(machine, Instructions, i);
             }
 
             DefineRegisters();
@@ -296,7 +511,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                 int key = i;
                 var reg = new DoubleWordRegister(this)
                     .WithValueField(0, 32, FieldMode.Write,
-                        writeCallback: (_, value) => StateMachines[key].PushFifo((uint)value),
+                        writeCallback: (_, value) => { StateMachines[key].PushFifo((uint)value); },
                     name: "TXF" + i);
                 RegistersCollection.AddRegister(0x10 + i * 0x4, reg);
             }
@@ -305,16 +520,106 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             {
                 int key = i;
                 var reg = new DoubleWordRegister(this)
+                    .WithValueField(0, 32, FieldMode.Read,
+                        valueProviderCallback: _ => StateMachines[key].PopFifo(),
+                    name: "RXF" + i);
+                RegistersCollection.AddRegister(0x20 + i * 0x4, reg);
+            }
+
+            for (int i = 0; i < StateMachines.Length; ++i)
+            {
+                int key = i;
+                var reg = new DoubleWordRegister(this)
+                    .WithValueField(0, 4,
+                        valueProviderCallback: _ => StateMachines[key].Status,
+                        writeCallback: (_, value) => StateMachines[key].Status = (uint)value,
+                        name: "SM" + key + "_EXECCTRL_STATUS_N")
+                    .WithFlag(4,
+                        valueProviderCallback: _ => StateMachines[key].StatusSelect,
+                        writeCallback: (_, value) => StateMachines[key].StatusSelect = (bool)value,
+                        name: "SM" + key + "_EXECCTRL_STATUS_SELECT")
+                    .WithReservedBits(5, 2)
+                    .WithValueField(7, 5,
+                        valueProviderCallback: _ => StateMachines[key].WrapBottom,
+                        writeCallback: (_, value) => StateMachines[key].WrapBottom = (uint)value,
+                        name: "SM" + key + "_EXECCTRL_WRAP_BOTTOM")
+                    .WithValueField(12, 5,
+                        valueProviderCallback: _ => StateMachines[key].WrapTop,
+                        writeCallback: (_, value) => StateMachines[key].WrapTop = (uint)value,
+                        name: "SM" + key + "_EXECCTRL_WRAP_TOP")
+                    .WithFlag(17,
+                        valueProviderCallback: _ => StateMachines[key].OutSticky,
+                        writeCallback: (_, value) => StateMachines[key].OutSticky = (bool)value,
+                        name: "SM" + key + "_EXECCTRL_OUT_STICKY")
+                    .WithFlag(18,
+                        valueProviderCallback: _ => StateMachines[key].InlineOutEnable,
+                        writeCallback: (_, value) => StateMachines[key].InlineOutEnable = (bool)value)
+                    .WithValueField(19, 5,
+                        valueProviderCallback: _ => StateMachines[key].OutEnableSelect,
+                        writeCallback: (_, value) => StateMachines[key].OutEnableSelect = (uint)value)
+                    .WithValueField(24, 5,
+                        valueProviderCallback: _ => StateMachines[key].JumpPin,
+                        writeCallback: (_, value) => StateMachines[key].JumpPin = (uint)value)
+                    .WithFlag(29,
+                        valueProviderCallback: _ => StateMachines[key].SidePinDirection,
+                        writeCallback: (_, value) => StateMachines[key].SidePinDirection = (bool)value)
+                    .WithFlag(30,
+                        valueProviderCallback: _ => StateMachines[key].SideEnable,
+                        writeCallback: (_, value) => StateMachines[key].SideEnable = (bool)value)
+                    .WithFlag(31, FieldMode.Read,
+                        valueProviderCallback: _ => { return false; });
+
+                RegistersCollection.AddRegister(0x0cc + i * 0x18, reg);
+            }
+
+
+
+            for (int i = 0; i < StateMachines.Length; ++i)
+            {
+                int key = i;
+                var reg = new DoubleWordRegister(this)
                     .WithReservedBits(0, 16)
-                    .WithFlag(16, out StateMachines[key].AutoPush, name: "SM" + key + "_SHIFTCTRL_AUTOPUSH")
-                    .WithFlag(17, out StateMachines[key].AutoPull, name: "SM" + key + "_SHIFTCTRL_AUTOPULL")
-                    .WithFlag(18, out StateMachines[key].InShiftDirection, name: "SM" + key + "_SHIFTCTRL_IN_SHIFTDIR")
-                    .WithFlag(19, out StateMachines[key].OutShiftDirection, name: "SM" + key + "_SHIFTCTRL_OUT_SHIFTDIR")
-                    .WithValueField(20, 5, out StateMachines[key].PushThreshold, name: "SM" + key + "_PUSH_THRESH")
-                    .WithValueField(25, 5, out StateMachines[key].PullThreshold, name: "SM" + key + "_PULL_THRESH")
+                    .WithFlag(16,
+                        valueProviderCallback: _ => StateMachines[key].AutoPush,
+                        writeCallback: (_, value) => StateMachines[key].AutoPush = (bool)value,
+                        name: "SM" + key + "_SHIFTCTRL_AUTOPUSH")
+                    .WithFlag(17,
+                        valueProviderCallback: _ => StateMachines[key].AutoPull,
+                        writeCallback: (_, value) => StateMachines[key].AutoPull = (bool)value,
+                        name: "SM" + key + "_SHIFTCTRL_AUTOPULL")
+                    .WithFlag(18,
+                        valueProviderCallback: _ => StateMachines[key].InShiftDirection,
+                        writeCallback: (_, value) => StateMachines[key].InShiftDirection = (bool)value,
+                        name: "SM" + key + "_SHIFTCTRL_IN_SHIFTDIR")
+                    .WithFlag(19,
+                        valueProviderCallback: _ => StateMachines[key].OutShiftDirection,
+                        writeCallback: (_, value) => StateMachines[key].OutShiftDirection = (bool)value,
+                        name: "SM" + key + "_SHIFTCTRL_OUT_SHIFTDIR")
+                    .WithValueField(20, 5,
+                        valueProviderCallback: _ => StateMachines[key].PushThreshold == 32 ? 0 : StateMachines[key].PushThreshold,
+                        writeCallback: (_, value) =>
+                        {
+                            StateMachines[key].PushThreshold = (uint)value;
+                            if (value == 0)
+                            {
+                                StateMachines[key].PushThreshold = 32;
+                            }
+                        },
+                        name: "SM" + key + "_SHIFTCTRL_PUSH_THRESH")
+                    .WithValueField(25, 5,
+                        valueProviderCallback: _ => StateMachines[key].PullThreshold == 32 ? 0 : StateMachines[key].PullThreshold,
+                        writeCallback: (_, value) =>
+                        {
+                            StateMachines[key].PullThreshold = (uint)value;
+                            if (value == 0)
+                            {
+                                StateMachines[key].PullThreshold = 32;
+                            }
+                        },
+                        name: "SM" + key + "_SHIFTCTRL_PULL_THRESH")
                     .WithFlag(30, writeCallback: (_, value) => StateMachines[key].JoinTxFifo((bool)value),
                         valueProviderCallback: _ => StateMachines[key].IsTxFifoJoined())
-                    .WithFlag(31, writeCallback: (_, value) => StateMachines[key].JoinRxFifo((bool)value),
+                    .WithFlag(31, writeCallback: (_, value) => Logger.Log(LogLevel.Error, "Joining + " + value) /*StateMachines[key].JoinRxFifo((bool)value)*/,
                         valueProviderCallback: _ => StateMachines[key].IsRxFifoJoined());
 
                 RegistersCollection.AddRegister(0x0d0 + i * 0x18, reg);

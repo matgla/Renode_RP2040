@@ -11,4 +11,11 @@ Run successfully 'pio_addition' example
 
     Create Terminal Tester      sysbus.uart0
 
-    Wait For Line On Uart       Done  timeout=5
+    Wait For Line On Uart       Doing some random additions:
+    FOR  ${i}  IN RANGE  10
+    ${p}    Wait For Next Line On Uart    
+    @{words} =  Split String    ${p.line}           
+    ${result}  evaluate  ${words}[0] + ${words}[2] 
+    Should Be Equal As Numbers  ${result}  ${words}[4]
+    END
+
