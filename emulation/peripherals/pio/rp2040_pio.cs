@@ -4,6 +4,7 @@ using System;
 using Antmicro.Renode.Logging;
 using Antmicro.Renode.Peripherals.GPIOPort;
 
+using Antmicro.Renode.Peripherals.Miscellaneous.RP2040PIORegisters;
 
 namespace Antmicro.Renode.Peripherals.Miscellaneous
 {
@@ -84,7 +85,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                 int key = i;
                 var reg = new DoubleWordRegister(this)
                     .WithValueField(0, 32, FieldMode.Write,
-                        writeCallback: (_, value) => { StateMachines[key].PushFifo((uint)value); },
+                        writeCallback: (_, value) => StateMachines[key].ShiftControl.PushTxFifo((uint)value),
                     name: "TXF" + i);
                 RegistersCollection.AddRegister(0x10 + i * 0x4, reg);
             }
@@ -94,7 +95,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                 int key = i;
                 var reg = new DoubleWordRegister(this)
                     .WithValueField(0, 32, FieldMode.Read,
-                        valueProviderCallback: _ => StateMachines[key].PopFifo(),
+                        valueProviderCallback: _ => StateMachines[key].ShiftControl.PopRxFifo(),
                     name: "RXF" + i);
                 RegistersCollection.AddRegister(0x20 + i * 0x4, reg);
             }
@@ -104,41 +105,41 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                 int key = i;
                 var reg = new DoubleWordRegister(this)
                     .WithValueField(0, 4,
-                        valueProviderCallback: _ => StateMachines[key].Status,
-                        writeCallback: (_, value) => StateMachines[key].Status = (uint)value,
+                        valueProviderCallback: _ => StateMachines[key].ExecutionControl.StatusLevel,
+                        writeCallback: (_, value) => StateMachines[key].ExecutionControl.StatusLevel = (byte)value,
                         name: "SM" + key + "_EXECCTRL_STATUS_N")
                     .WithFlag(4,
-                        valueProviderCallback: _ => StateMachines[key].StatusSelect,
-                        writeCallback: (_, value) => StateMachines[key].StatusSelect = (bool)value,
+                        valueProviderCallback: _ => StateMachines[key].ExecutionControl.StatusSelect,
+                        writeCallback: (_, value) => StateMachines[key].ExecutionControl.StatusSelect = (bool)value,
                         name: "SM" + key + "_EXECCTRL_STATUS_SELECT")
                     .WithReservedBits(5, 2)
                     .WithValueField(7, 5,
-                        valueProviderCallback: _ => StateMachines[key].WrapBottom,
-                        writeCallback: (_, value) => StateMachines[key].WrapBottom = (uint)value,
+                        valueProviderCallback: _ => StateMachines[key].ExecutionControl.WrapBottom,
+                        writeCallback: (_, value) => StateMachines[key].ExecutionControl.WrapBottom = (byte)value,
                         name: "SM" + key + "_EXECCTRL_WRAP_BOTTOM")
                     .WithValueField(12, 5,
-                        valueProviderCallback: _ => StateMachines[key].WrapTop,
-                        writeCallback: (_, value) => StateMachines[key].WrapTop = (uint)value,
+                        valueProviderCallback: _ => StateMachines[key].ExecutionControl.WrapTop,
+                        writeCallback: (_, value) => StateMachines[key].ExecutionControl.WrapTop = (byte)value,
                         name: "SM" + key + "_EXECCTRL_WRAP_TOP")
                     .WithFlag(17,
-                        valueProviderCallback: _ => StateMachines[key].OutSticky,
-                        writeCallback: (_, value) => StateMachines[key].OutSticky = (bool)value,
+                        valueProviderCallback: _ => StateMachines[key].ExecutionControl.OutSticky,
+                        writeCallback: (_, value) => StateMachines[key].ExecutionControl.OutSticky = (bool)value,
                         name: "SM" + key + "_EXECCTRL_OUT_STICKY")
                     .WithFlag(18,
-                        valueProviderCallback: _ => StateMachines[key].InlineOutEnable,
-                        writeCallback: (_, value) => StateMachines[key].InlineOutEnable = (bool)value)
+                        valueProviderCallback: _ => StateMachines[key].ExecutionControl.OutInlineEnable,
+                        writeCallback: (_, value) => StateMachines[key].ExecutionControl.OutInlineEnable = (bool)value)
                     .WithValueField(19, 5,
-                        valueProviderCallback: _ => StateMachines[key].OutEnableSelect,
-                        writeCallback: (_, value) => StateMachines[key].OutEnableSelect = (uint)value)
+                        valueProviderCallback: _ => StateMachines[key].ExecutionControl.OutEnableSelect,
+                        writeCallback: (_, value) => StateMachines[key].ExecutionControl.OutEnableSelect = (byte)value)
                     .WithValueField(24, 5,
-                        valueProviderCallback: _ => StateMachines[key].JumpPin,
-                        writeCallback: (_, value) => StateMachines[key].JumpPin = (uint)value)
+                        valueProviderCallback: _ => StateMachines[key].ExecutionControl.JumpPin,
+                        writeCallback: (_, value) => StateMachines[key].ExecutionControl.JumpPin = (byte)value)
                     .WithFlag(29,
-                        valueProviderCallback: _ => StateMachines[key].SidePinDirection,
-                        writeCallback: (_, value) => StateMachines[key].SidePinDirection = (bool)value)
+                        valueProviderCallback: _ => StateMachines[key].ExecutionControl.SidePinDirection,
+                        writeCallback: (_, value) => StateMachines[key].ExecutionControl.SidePinDirection = (bool)value)
                     .WithFlag(30,
-                        valueProviderCallback: _ => StateMachines[key].SideEnable,
-                        writeCallback: (_, value) => StateMachines[key].SideEnable = (bool)value)
+                        valueProviderCallback: _ => StateMachines[key].ExecutionControl.SideEnabled,
+                        writeCallback: (_, value) => StateMachines[key].ExecutionControl.SideEnabled = (bool)value)
                     .WithFlag(31, FieldMode.Read,
                         valueProviderCallback: _ => { return false; });
 
@@ -153,47 +154,47 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                 var reg = new DoubleWordRegister(this)
                     .WithReservedBits(0, 16)
                     .WithFlag(16,
-                        valueProviderCallback: _ => StateMachines[key].AutoPush,
-                        writeCallback: (_, value) => StateMachines[key].AutoPush = (bool)value,
+                        valueProviderCallback: _ => StateMachines[key].ShiftControl.AutoPush,
+                        writeCallback: (_, value) => StateMachines[key].ShiftControl.AutoPush = (bool)value,
                         name: "SM" + key + "_SHIFTCTRL_AUTOPUSH")
                     .WithFlag(17,
-                        valueProviderCallback: _ => StateMachines[key].AutoPull,
-                        writeCallback: (_, value) => StateMachines[key].AutoPull = (bool)value,
+                        valueProviderCallback: _ => StateMachines[key].ShiftControl.AutoPull,
+                        writeCallback: (_, value) => StateMachines[key].ShiftControl.AutoPull = (bool)value,
                         name: "SM" + key + "_SHIFTCTRL_AUTOPULL")
                     .WithFlag(18,
-                        valueProviderCallback: _ => StateMachines[key].InShiftDirection,
-                        writeCallback: (_, value) => StateMachines[key].InShiftDirection = (bool)value,
+                        valueProviderCallback: _ => StateMachines[key].ShiftControl.InShiftDirection == StateMachineShiftControl.Direction.Left ? false : true,
+                        writeCallback: (_, value) => StateMachines[key].ShiftControl.InShiftDirection = value ? StateMachineShiftControl.Direction.Right : StateMachineShiftControl.Direction.Left,
                         name: "SM" + key + "_SHIFTCTRL_IN_SHIFTDIR")
                     .WithFlag(19,
-                        valueProviderCallback: _ => StateMachines[key].OutShiftDirection,
-                        writeCallback: (_, value) => StateMachines[key].OutShiftDirection = (bool)value,
+                        valueProviderCallback: _ => StateMachines[key].ShiftControl.OutShiftDirection == StateMachineShiftControl.Direction.Left ? false : true,
+                        writeCallback: (_, value) => StateMachines[key].ShiftControl.OutShiftDirection = value ? StateMachineShiftControl.Direction.Right : StateMachineShiftControl.Direction.Left,
                         name: "SM" + key + "_SHIFTCTRL_OUT_SHIFTDIR")
                     .WithValueField(20, 5,
-                        valueProviderCallback: _ => StateMachines[key].PushThreshold == 32 ? 0 : StateMachines[key].PushThreshold,
+                        valueProviderCallback: _ => StateMachines[key].ShiftControl.PushThreshold == 32 ? 0UL : (ulong)StateMachines[key].ShiftControl.PushThreshold,
                         writeCallback: (_, value) =>
                         {
-                            StateMachines[key].PushThreshold = (uint)value;
+                            StateMachines[key].ShiftControl.PushThreshold = (byte)value;
                             if (value == 0)
                             {
-                                StateMachines[key].PushThreshold = 32;
+                                StateMachines[key].ShiftControl.PushThreshold = 32;
                             }
                         },
                         name: "SM" + key + "_SHIFTCTRL_PUSH_THRESH")
                     .WithValueField(25, 5,
-                        valueProviderCallback: _ => StateMachines[key].PullThreshold == 32 ? 0 : StateMachines[key].PullThreshold,
+                        valueProviderCallback: _ => StateMachines[key].ShiftControl.PullThreshold == 32 ? 0UL : (ulong)StateMachines[key].ShiftControl.PullThreshold,
                         writeCallback: (_, value) =>
                         {
-                            StateMachines[key].PullThreshold = (uint)value;
+                            StateMachines[key].ShiftControl.PullThreshold = (byte)value;
                             if (value == 0)
                             {
-                                StateMachines[key].PullThreshold = 32;
+                                StateMachines[key].ShiftControl.PullThreshold = 32;
                             }
                         },
                         name: "SM" + key + "_SHIFTCTRL_PULL_THRESH")
-                    .WithFlag(30, writeCallback: (_, value) => StateMachines[key].JoinTxFifo((bool)value),
-                        valueProviderCallback: _ => StateMachines[key].IsTxFifoJoined())
-                    .WithFlag(31, writeCallback: (_, value) => StateMachines[key].JoinRxFifo((bool)value),
-                        valueProviderCallback: _ => StateMachines[key].IsRxFifoJoined());
+                    .WithFlag(30, writeCallback: (_, value) => StateMachines[key].ShiftControl.JoinTxFifo((bool)value),
+                        valueProviderCallback: _ => StateMachines[key].ShiftControl.FifoTxJoin)
+                    .WithFlag(31, writeCallback: (_, value) => StateMachines[key].ShiftControl.JoinRxFifo((bool)value),
+                        valueProviderCallback: _ => StateMachines[key].ShiftControl.FifoRxJoin);
 
                 RegistersCollection.AddRegister(0x0d0 + i * 0x18, reg);
             }
@@ -221,45 +222,45 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                 var reg = new DoubleWordRegister(this)
                     .WithValueField(0, 5, FieldMode.Write | FieldMode.Read,
                         writeCallback: (_, value) =>
-                            StateMachines[key].OutBase = (int)value,
+                            StateMachines[key].PinControl.OutBase = (byte)value,
                         valueProviderCallback: _ =>
-                            (uint)StateMachines[key].OutBase,
+                            (uint)StateMachines[key].PinControl.OutBase,
                     name: "SM" + i + "_PINCTRL_OUTBASE")
                     .WithValueField(5, 5, FieldMode.Write | FieldMode.Read,
                         writeCallback: (_, value) =>
-                            StateMachines[key].SetBase = (int)value,
+                            StateMachines[key].PinControl.SetBase = (byte)value,
                         valueProviderCallback: _ =>
-                            (uint)StateMachines[key].SetBase,
+                            (uint)StateMachines[key].PinControl.SetBase,
                     name: "SM" + i + "_PINCTRL_SETBASE")
                     .WithValueField(10, 5, FieldMode.Write | FieldMode.Read,
                         writeCallback: (_, value) =>
-                            StateMachines[key].SidesetBase = (int)value,
+                            StateMachines[key].PinControl.SideSetBase = (byte)value,
                         valueProviderCallback: _ =>
-                            (uint)StateMachines[key].SidesetBase,
+                            (uint)StateMachines[key].PinControl.SideSetBase,
                     name: "SM" + i + "_PINCTRL_SIDESETBASE")
                     .WithValueField(15, 5, FieldMode.Write | FieldMode.Read,
                         writeCallback: (_, value) =>
-                            StateMachines[key].InBase = (int)value,
+                            StateMachines[key].PinControl.InBase = (byte)value,
                         valueProviderCallback: _ =>
-                            (uint)StateMachines[key].InBase,
+                            (uint)StateMachines[key].PinControl.InBase,
                     name: "SM" + i + "_PINCTRL_INBASE")
                     .WithValueField(20, 6, FieldMode.Write | FieldMode.Read,
                         writeCallback: (_, value) =>
-                            StateMachines[key].OutCount = (int)value,
+                            StateMachines[key].PinControl.OutCount = (byte)value,
                         valueProviderCallback: _ =>
-                            (uint)StateMachines[key].OutCount,
+                            (uint)StateMachines[key].PinControl.OutCount,
                     name: "SM" + i + "_PINCTRL_OUTCOUNT")
                     .WithValueField(26, 3, FieldMode.Write | FieldMode.Read,
                         writeCallback: (_, value) =>
-                            StateMachines[key].SetCount = (int)value,
+                            StateMachines[key].PinControl.SetCount = (byte)value,
                         valueProviderCallback: _ =>
-                            (uint)StateMachines[key].SetCount,
+                            (uint)StateMachines[key].PinControl.SetCount,
                     name: "SM" + i + "_PINCTRL_SETCOUNT")
                     .WithValueField(29, 3, FieldMode.Write | FieldMode.Read,
                         writeCallback: (_, value) =>
-                            StateMachines[key].SidesetCount = (int)value,
+                            StateMachines[key].PinControl.SideSetCount = (byte)value,
                         valueProviderCallback: _ =>
-                            (uint)StateMachines[key].SidesetCount,
+                            (uint)StateMachines[key].PinControl.SideSetCount,
                     name: "SM" + i + "_PINCTRL_SIDESETCOUNT");
 
                 RegistersCollection.AddRegister(0x0dc + i * 0x18, reg);
@@ -308,7 +309,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                         ulong ret = 0;
                         for (int i = 0; i < StateMachines.Length; ++i)
                         {
-                            if (StateMachines[i].FullRxFifo())
+                            if (StateMachines[i].ShiftControl.RxFifoFull())
                             {
                                 ret |= (1ul << i);
                             }
@@ -322,7 +323,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                         ulong ret = 0;
                         for (int i = 0; i < StateMachines.Length; ++i)
                         {
-                            if (StateMachines[i].EmptyRxFifo())
+                            if (StateMachines[i].ShiftControl.RxFifoEmpty())
                             {
                                 ret |= (1ul << i);
                             }
@@ -336,7 +337,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                         ulong ret = 0;
                         for (int i = 0; i < StateMachines.Length; ++i)
                         {
-                            if (StateMachines[i].FullTxFifo())
+                            if (StateMachines[i].ShiftControl.TxFifoFull())
                             {
                                 ret |= (1ul << i);
                             }
@@ -350,7 +351,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                         ulong ret = 0;
                         for (int i = 0; i < StateMachines.Length; ++i)
                         {
-                            if (StateMachines[i].EmptyTxFifo())
+                            if (StateMachines[i].ShiftControl.TxFifoEmpty())
                             {
                                 ret |= (1ul << i);
                             }

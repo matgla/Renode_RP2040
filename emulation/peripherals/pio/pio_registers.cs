@@ -131,6 +131,76 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous.RP2040PIORegisters
             }
         }
 
+        public bool TxFifoFull()
+        {
+            return _txFifo.Count == TxFifoSize;
+        }
+
+        public bool TxFifoEmpty()
+        {
+            return _txFifo.Count == 0;
+        }
+
+        public bool RxFifoFull()
+        {
+            return _rxFifo.Count == RxFifoSize;
+        }
+
+        public bool RxFifoEmpty()
+        {
+            return _rxFifo.Count == 0;
+        }
+
+        public void PushTxFifo(uint value)
+        {
+            if (!TxFifoFull())
+            {
+                _txFifo.Enqueue(value);
+            }
+        }
+
+        public uint PopTxFifo()
+        {
+            if (!TxFifoEmpty())
+            {
+                return _txFifo.Dequeue();
+            }
+            return 0;
+        }
+
+        public void PushRxFifo(uint value)
+        {
+            if (!RxFifoFull())
+            {
+                _rxFifo.Enqueue(value);
+            }
+        }
+
+        public uint PopRxFifo()
+        {
+            if (!RxFifoEmpty())
+            {
+                return _rxFifo.Dequeue();
+            }
+            return 0;
+        }
+
+        public void PushInputShiftRegister()
+        {
+            PushRxFifo((uint)InputShiftRegister);
+            InputShiftRegister = 0;
+        }
+
+        public void LoadOutputShiftRegister(int value)
+        {
+            OutputShiftRegister = value;
+        }
+
+        public void LoadOutputShiftRegister()
+        {
+            OutputShiftRegister = (int)PopRxFifo();
+        }
+
         private Action<LogLevel, string> _log;
         private Queue<uint> _txFifo;
         public int TxFifoSize { get; private set; }

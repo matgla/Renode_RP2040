@@ -30,7 +30,7 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
         public int[] functionSelect;
 
         public const int NumberOfPins = 29;
-        public enum Direction : byte 
+        public enum Direction : byte
         {
             Input,
             Output
@@ -196,23 +196,17 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
             }
         }
 
-        public void SetPinDirectionsBitset(ulong bitset)
+        public void SetPinDirectionBitset(ulong bitset)
         {
             for (int i = 0; i < NumberOfPins; ++i)
             {
                 if ((bitset & (1UL << i)) != 0)
                 {
-                    if (State[i] == false)
-                    {
-                        WritePin(i, true);
-                    }
+                    PinDirections[i] = Direction.Output;
                 }
                 else
                 {
-                    if (State[i] == true)
-                    {
-                        WritePin(i, false);
-                    }
+                    PinDirections[i] = Direction.Input;
                 }
 
             }
