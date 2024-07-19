@@ -45,7 +45,9 @@ uart0_bitmask_clear_alias: Memory.RP2040BitmaskClearRegisterAlias @ sysbus 0x400
     originalAddress: 0x40034000
 }
 
-pio0: Miscellaneous.RP2040PIO @ sysbus 0x50200000
+pio0: Miscellaneous.RP2040PIO @ sysbus 0x50200000 {
+    gpio: gpio
+}
 pio0_xor_alias: Memory.RP2040XorRegisterAlias @ sysbus 0x50201000 {
     originalAddress: 0x50200000
 }
@@ -56,7 +58,9 @@ pio0_bitmask_clear_alias: Memory.RP2040BitmaskClearRegisterAlias @ sysbus 0x5020
     originalAddress: 0x50200000
 }
 
-pio1: Miscellaneous.RP2040PIO @ sysbus 0x50300000
+pio1: Miscellaneous.RP2040PIO @ sysbus 0x50300000 {
+    gpio: gpio
+}
 pio1_xor_alias: Memory.RP2040XorRegisterAlias @ sysbus 0x50301000 {
     originalAddress: 0x50300000
 }
@@ -66,7 +70,6 @@ pio1_bitmask_set_alias: Memory.RP2040BitmaskSetRegisterAlias @ sysbus 0x50302000
 pio1_bitmask_clear_alias: Memory.RP2040BitmaskClearRegisterAlias @ sysbus 0x50303000 {
     originalAddress: 0x50300000
 }
-
 
 
 // raspberrypi,rp2040 overlay
@@ -111,7 +114,8 @@ timer_bitmask_clear_alias: Memory.RP2040BitmaskClearRegisterAlias @ sysbus 0x400
     originalAddress: 0x40054000
 }
 
-gpio: GPIOPort.RP2040GPIO @ sysbus 0x40014000  
+gpio: GPIOPort.RP2040GPIO @ sysbus 0x40014000
+    
 
 gpio_xor_alias: Memory.RP2040XorRegisterAlias @ sysbus 0x40015000 {
     originalAddress: 0x40014000

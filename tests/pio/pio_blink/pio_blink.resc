@@ -1,0 +1,14 @@
+$global.TEST_FILE=$ORIGIN/../../../pico-examples/build/pio/pio_blink/pio_blink.elf
+
+$machine_name="pico_tests"
+path add $ORIGIN/../..
+include $ORIGIN/../../../initialize_common.resc
+machine LoadPlatformDescription $ORIGIN/raspberry_pico_with_more_leds.repl
+sysbus LoadELF $ORIGIN/../../../b2.elf
+
+
+sysbus LoadELF $global.TEST_FILE
+sysbus.cpu0 VectorTableOffset `sysbus GetSymbolAddress "__VECTOR_TABLE"`
+sysbus.cpu1 VectorTableOffset `sysbus GetSymbolAddress "__VECTOR_TABLE"`
+
+showAnalyzer sysbus.uart0

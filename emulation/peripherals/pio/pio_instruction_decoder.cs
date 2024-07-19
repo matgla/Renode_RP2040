@@ -1,8 +1,5 @@
-using Antmicro.Renode.Logging;
-
 namespace Antmicro.Renode.Peripherals.Miscellaneous
 {
-
     public class PioDecodedInstruction
     {
         public enum Opcode
@@ -27,5 +24,4 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             ImmediateData = (uint)(instruction & 0xff);
         }
     }
-
 }

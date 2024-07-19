@@ -1,5 +1,6 @@
 $machine_name="pico_tests"
-include $ORIGIN/../initialize_rp2040.resc
+path add $ORIGIN/..
+include $ORIGIN/../initialize_raspberry_pico.resc
 sysbus LoadELF $global.TEST_FILE
 sysbus.cpu0 VectorTableOffset `sysbus GetSymbolAddress "__VECTOR_TABLE"`
 sysbus.cpu1 VectorTableOffset `sysbus GetSymbolAddress "__VECTOR_TABLE"`

@@ -1,0 +1,11 @@
+using "../../../rp2040.repl"
+
+led1: Miscellaneous.LED @ gpio 1
+led3: Miscellaneous.LED @ gpio 3
+led4: Miscellaneous.LED @ gpio 4
+
+gpio: 
+    1 -> led1@0
+    3 -> led3@0
+    4 -> led4@0
+
