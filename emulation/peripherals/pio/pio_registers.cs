@@ -131,6 +131,16 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous.RP2040PIORegisters
             }
         }
 
+        public int TxFifoCount()
+        {
+            return _txFifo.Count;
+        }
+
+        public int RxFifoCount()
+        {
+            return _rxFifo.Count;
+        }
+
         public bool TxFifoFull()
         {
             return _txFifo.Count == TxFifoSize;
@@ -185,21 +195,75 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous.RP2040PIORegisters
             return 0;
         }
 
+        public void WriteInputShiftRegister(int bits, uint data)
+        {
+            if (InShiftDirection == Direction.Left)
+            {
+                InputShiftRegister = ((InputShiftRegister << bits) | data);
+            }
+            else
+            {
+                InputShiftRegister = (InputShiftRegister >> bits) | (data << (32 - bits));
+            }
+            InputShiftRegisterCounter += (byte)bits;
+
+            if (AutoPush && InputShiftRegisterCounter >= PushThreshold)
+            {
+                PushInputShiftRegister();
+            }
+        }
+
+        public uint ReadOutputShiftRegister(int bits)
+        {
+            uint data = 0;
+            if (OutShiftDirection == Direction.Left)
+            {
+                data = OutputShiftRegister >> (32 - bits);
+            }
+            else
+            {
+                data = OutputShiftRegister & ((1u << bits) - 1u);
+            }
+
+            OutputShiftRegisterCounter += (byte)bits;
+            if (OutputShiftRegisterCounter >= PullThreshold)
+            {
+                LoadOutputShiftRegister();
+            }
+
+            return data;
+        }
+
         public void PushInputShiftRegister()
         {
             PushRxFifo((uint)InputShiftRegister);
             InputShiftRegister = 0;
+            InputShiftRegisterCounter = 0;
         }
 
-        public void LoadOutputShiftRegister(int value)
+        public void SetInputShiftRegister(uint data, int counter)
+        {
+            InputShiftRegister = data;
+            InputShiftRegisterCounter = (byte)counter;
+        }
+
+        public void SetOutputShiftRegister(uint data, int counter)
+        {
+            OutputShiftRegister = data;
+            OutputShiftRegisterCounter = (byte)counter;
+        }
+
+        public void LoadOutputShiftRegister(uint value)
         {
             OutputShiftRegister = value;
         }
 
         public void LoadOutputShiftRegister()
         {
-            OutputShiftRegister = (int)PopRxFifo();
+            OutputShiftRegister = PopTxFifo();
+            OutputShiftRegisterCounter = 0;
         }
+
 
         private Action<LogLevel, string> _log;
         private Queue<uint> _txFifo;
@@ -208,9 +272,9 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous.RP2040PIORegisters
         public int RxFifoSize { get; private set; }
 
         public byte OutputShiftRegisterCounter { get; private set; }
-        public int OutputShiftRegister { get; private set; }
+        public uint OutputShiftRegister { get; private set; }
         public byte InputShiftRegisterCounter { get; private set; }
-        public int InputShiftRegister { get; private set; }
+        public uint InputShiftRegister { get; private set; }
 
         public bool FifoTxJoin { get; private set; }
         public bool FifoRxJoin { get; private set; }
@@ -243,5 +307,57 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous.RP2040PIORegisters
         public byte SideSetBase { get; set; }
         public byte SetBase { get; set; }
         public byte OutBase { get; set; }
+    }
+
+    public class PIOIRQ
+    {
+        public PIOIRQ()
+        {
+            this.SM3 = null;
+            this.SM2 = null;
+            this.SM1 = null;
+            this.SM0 = null;
+            this.SM3_TXNFULL = null;
+            this.SM2_TXNFULL = null;
+            this.SM1_TXNFULL = null;
+            this.SM0_TXNFULL = null;
+            this.SM3_RXNEMPTY = null;
+            this.SM2_RXNEMPTY = null;
+            this.SM1_RXNEMPTY = null;
+            this.SM0_RXNEMPTY = null;
+        }
+
+        public bool? GetByIndex(int index)
+        {
+            switch (index)
+            {
+                case 0: return SM0_RXNEMPTY;
+                case 1: return SM1_RXNEMPTY;
+                case 2: return SM2_RXNEMPTY;
+                case 3: return SM3_RXNEMPTY;
+                case 4: return SM0_TXNFULL;
+                case 5: return SM1_TXNFULL;
+                case 6: return SM2_TXNFULL;
+                case 7: return SM3_TXNFULL;
+                case 8: return SM0;
+                case 9: return SM1;
+                case 10: return SM2;
+                case 11: return SM3;
+            }
+            return null;
+        }
+
+        public bool? SM3 { get; set; }
+        public bool? SM2 { get; set; }
+        public bool? SM1 { get; set; }
+        public bool? SM0 { get; set; }
+        public bool? SM3_TXNFULL { get; set; }
+        public bool? SM2_TXNFULL { get; set; }
+        public bool? SM1_TXNFULL { get; set; }
+        public bool? SM0_TXNFULL { get; set; }
+        public bool? SM3_RXNEMPTY { get; set; }
+        public bool? SM2_RXNEMPTY { get; set; }
+        public bool? SM1_RXNEMPTY { get; set; }
+        public bool? SM0_RXNEMPTY { get; set; }
     }
 }

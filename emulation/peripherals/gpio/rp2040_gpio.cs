@@ -174,10 +174,15 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
             }
         }
 
-        public void SetGpioBitset(ulong bitset)
+        public void SetGpioBitset(ulong bitset, ulong bitmask = 0xfffffff)
         {
             for (int i = 0; i < NumberOfPins; ++i)
             {
+                if ((bitmask & (1UL << i)) == 0)
+                {
+                    continue;
+                }
+
                 if ((bitset & (1UL << i)) != 0)
                 {
                     if (State[i] == false)
@@ -196,10 +201,15 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
             }
         }
 
-        public void SetPinDirectionBitset(ulong bitset)
+        public void SetPinDirectionBitset(ulong bitset, ulong bitmask = 0xffffffff)
         {
             for (int i = 0; i < NumberOfPins; ++i)
             {
+                if ((bitmask & (1UL << i)) == 0)
+                {
+                    continue;
+                }
+
                 if ((bitset & (1UL << i)) != 0)
                 {
                     PinDirections[i] = Direction.Output;

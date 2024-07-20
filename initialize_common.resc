@@ -12,6 +12,7 @@ EnsureTypeIsLoaded "Antmicro.Renode.Peripherals.Miscellaneous.RP2040PIORegisters
 EnsureTypeIsLoaded "Antmicro.Renode.Peripherals.Miscellaneous.RP2040PIORegisters.StateMachineExecutionControl"
 EnsureTypeIsLoaded "Antmicro.Renode.Peripherals.Miscellaneous.RP2040PIORegisters.StateMachineShiftControl"
 EnsureTypeIsLoaded "Antmicro.Renode.Peripherals.Miscellaneous.RP2040PIORegisters.StateMachinePinControl"
+EnsureTypeIsLoaded "Antmicro.Renode.Peripherals.Miscellaneous.RP2040PIORegisters.PIOIRQ"
 include $ORIGIN/emulation/peripherals/pio/pio_instruction_decoder.cs
 EnsureTypeIsLoaded "Antmicro.Renode.Peripherals.Miscellaneous.PioDecodedInstruction"
 include $ORIGIN/emulation/peripherals/pio/pio_statemachine.cs

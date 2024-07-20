@@ -58,9 +58,11 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             StateMachines = new PioStateMachine[4];
 
             this.gpio = gpio;
+            this._irq = new PIOIRQ();
+            this._pioIrqs = new bool[8];
             for (int i = 0; i < StateMachines.Length; ++i)
             {
-                StateMachines[i] = new PioStateMachine(machine, Instructions, i, gpio, this.Log);
+                StateMachines[i] = new PioStateMachine(machine, Instructions, i, gpio, this.Log, this._pioIrqs);
             }
 
             DefineRegisters();
@@ -74,6 +76,9 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
         public GPIO IRQ1 => IRQs[1];
         private RP2040GPIO gpio;
         private ushort[] Instructions;
+        private PIOIRQ _irq;
+        private bool[] _pioIrqs;
+
         public override void Reset()
         {
         }
