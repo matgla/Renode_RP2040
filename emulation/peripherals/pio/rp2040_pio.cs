@@ -118,15 +118,21 @@ namespace Antmicro.Renode.Peripherals.CPU
             }
         }
 
-        public RP2040PIOCPU(string cpuType, IMachine machine, ulong address, Endianess endianness = Endianess.LittleEndian, CpuBitness bitness = CpuBitness.Bits32)
+        public RP2040PIOCPU(string cpuType, IMachine machine, ulong address, GPIOPort.RP2040GPIO gpio, Endianess endianness = Endianess.LittleEndian, CpuBitness bitness = CpuBitness.Bits32)
             : base(0, cpuType, machine, endianness, bitness)
         {
             CompilePioSim();
             string libraryFile = GetPioSimLibraryPath();
             binder = new NativeBinder(this, libraryFile);
             machine.GetSystemBus(this).Register(this, new BusRangeRegistration(new Antmicro.Renode.Core.Range(address, (ulong)Size)));
+            this.gpio = gpio;
         }
 
+        ~RP2040PIOCPU()
+        {
+            this.Log(LogLevel.Error, "Qqq");
+            PioDeinitialize();
+        }
         public override void Start()
         {
             base.Start();
@@ -136,6 +142,7 @@ namespace Antmicro.Renode.Peripherals.CPU
 
         public override void Reset()
         {
+            this.Log(LogLevel.Error, "Reset");
             base.Reset();
 
             instructionsExecutedThisRound = 0;
@@ -157,6 +164,8 @@ namespace Antmicro.Renode.Peripherals.CPU
 
         public override void Dispose()
         {
+            PioDeinitialize();
+
             base.Dispose();
             // [Here goes an invocation disposing the external simulator (if needed)]
             // [This can be used to clean all unmanaged resources used to communicate with the simulator]
@@ -230,6 +239,19 @@ namespace Antmicro.Renode.Peripherals.CPU
             this.Log((LogLevel)level, s);
         }
 
+        [Export]
+        protected virtual void GpioPinWriteBitset(uint bitset, uint bitmap)
+        {
+            this.gpio.SetGpioBitset(bitset, bitmap);
+        }
+
+        [Export]
+        protected virtual void GpioPindirWriteBitset(uint bitset, uint bitmap)
+        {
+            this.gpio.SetPinDirectionBitset(bitset, bitmap);
+        }
+
+        private GPIOPort.RP2040GPIO gpio;
 
         public override ulong ExecutedInstructions => totalExecutedInstructions;
 
@@ -246,6 +268,10 @@ namespace Antmicro.Renode.Peripherals.CPU
 
         [Import]
         private Action PioInitialize;
+
+        [Import]
+        private Action PioDeinitialize;
+
 
         [Import]
         private FuncUInt32UInt32 PioExecute;

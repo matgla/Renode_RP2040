@@ -48,6 +48,7 @@ uart0_bitmask_clear_alias: Memory.RP2040BitmaskClearRegisterAlias @ sysbus 0x400
 piocpu0: CPU.RP2040PIOCPU @ sysbus
     cpuType: "rp2040_pio"
     address: 0x50200000
+    gpio: gpio
 
 // pio0: Miscellaneous.RP2040PIO @ sysbus 0x50200000 {
 //     gpio: gpio

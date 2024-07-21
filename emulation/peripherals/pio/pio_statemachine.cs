@@ -275,9 +275,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             {
                 ShiftControl.LoadOutputShiftRegister();
             }
-            Log(LogLevel.Info, "PC: " + _programCounter);
             IncrementProgramCounter();
-            Log(LogLevel.Info, "PC: " + _programCounter);
             return true;
         }
 
@@ -625,13 +623,6 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
 
         protected void Step()
         {
-            if (_scratchX++ == 125000)
-            {
-                Log(LogLevel.Info, "Jump done: " + _scratchX);
-                _scratchX = 0;
-            }
-            return;
-
             if (!ProcessDelay())
             {
                 return;
