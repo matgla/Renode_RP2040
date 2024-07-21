@@ -27,6 +27,7 @@ struct RegisterHolder
 class PioRegisters
 {
 public:
+  PioRegisters();
   void add(RegisterHolder &&holder);
 
 private:

@@ -33,7 +33,15 @@ namespace Antmicro.Renode.Peripherals.CPU
         private static string GetPioSimLibraryPath()
         {
             string libraryName = "";
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                libraryName = "libpiosim.dll";
+            }
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            {
+                libraryName = "libpiosim.dylib";
+            }
+            else
             {
                 libraryName = "libpiosim.so";
             }
@@ -53,7 +61,16 @@ namespace Antmicro.Renode.Peripherals.CPU
                 Directory.CreateDirectory(buildPath);
             }
             Process find_cmake = new Process();
-            find_cmake.StartInfo.FileName = "which";
+
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                find_cmake.StartInfo.FileName = "where";
+            }
+            else
+            {
+                find_cmake.StartInfo.FileName = "which";
+
+            }
             find_cmake.StartInfo.Arguments = "cmake";
             find_cmake.StartInfo.UseShellExecute = false;
             find_cmake.StartInfo.RedirectStandardOutput = true;
@@ -80,17 +97,25 @@ namespace Antmicro.Renode.Peripherals.CPU
             configure.StartInfo.WorkingDirectory = buildPath;
             configure.Start();
             configure.WaitForExit();
+            if (configure.ExitCode != 0)
+            {
+                throw new Exception("CMake configuration failed");
+            }
 
 
             Directory.CreateDirectory(buildPath);
             Process build = new Process();
-            build.StartInfo.FileName = "/usr/bin/cmake";
+            build.StartInfo.FileName = cmake_command;
             build.StartInfo.Arguments = "--build .";
             build.StartInfo.CreateNoWindow = false;
             build.StartInfo.UseShellExecute = true;
             build.StartInfo.WorkingDirectory = buildPath;
             build.Start();
             build.WaitForExit();
+            if (build.ExitCode != 0)
+            {
+                throw new Exception("CMake build failed");
+            }
         }
 
         public RP2040PIOCPU(string cpuType, IMachine machine, ulong address, Endianess endianness = Endianess.LittleEndian, CpuBitness bitness = CpuBitness.Bits32)
@@ -99,7 +124,7 @@ namespace Antmicro.Renode.Peripherals.CPU
             CompilePioSim();
             string libraryFile = GetPioSimLibraryPath();
             binder = new NativeBinder(this, libraryFile);
-            machine.GetSystemBus(this).Register(this, new BusRangeRegistration(new Range(address, (ulong)Size)));
+            machine.GetSystemBus(this).Register(this, new BusRangeRegistration(new Antmicro.Renode.Core.Range(address, (ulong)Size)));
         }
 
         public override void Start()

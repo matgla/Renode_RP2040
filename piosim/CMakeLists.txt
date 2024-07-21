@@ -12,11 +12,17 @@ project (piosim C CXX)
 
 add_library(piosim SHARED)
 
+set(CMAKE_CXX_STANDARD "23")
+
+set(CMAKE_CXX_FLAGS "-Wall -Wextra")
+
 target_sources(piosim
   PUBLIC
-    pio_renode_glue.hpp  
+    pio_renode_glue.hpp
+    pio_registers.hpp
     pio.hpp
   PRIVATE 
     pio_renode_glue.cpp
+    pio_registers.cpp
     pio.cpp
 )
