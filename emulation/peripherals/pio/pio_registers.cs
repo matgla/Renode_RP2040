@@ -163,6 +163,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous.RP2040PIORegisters
 
         public void PushTxFifo(uint value)
         {
+            _log(LogLevel.Info, "Push: " + value);
             if (!TxFifoFull())
             {
                 _txFifo.Enqueue(value);
@@ -216,17 +217,20 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous.RP2040PIORegisters
         public uint ReadOutputShiftRegister(int bits)
         {
             uint data = 0;
-            if (OutShiftDirection == Direction.Left)
+            uint mask = (uint)((1ul << bits) - 1);
+            if (OutShiftDirection == Direction.Right)
             {
-                data = OutputShiftRegister >> (32 - bits);
+                data = OutputShiftRegister & mask;
+                OutputShiftRegister >>= bits;
             }
             else
             {
-                data = OutputShiftRegister & ((1u << bits) - 1u);
+                data = (OutputShiftRegister >> (32 - bits)) & mask;
+                OutputShiftRegister <<= bits;
             }
 
             OutputShiftRegisterCounter += (byte)bits;
-            if (OutputShiftRegisterCounter >= PullThreshold)
+            if (OutputShiftRegisterCounter >= PullThreshold && AutoPull)
             {
                 LoadOutputShiftRegister();
             }
@@ -261,6 +265,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous.RP2040PIORegisters
         public void LoadOutputShiftRegister()
         {
             OutputShiftRegister = PopTxFifo();
+            _log(LogLevel.Info, "Readed from tx: " + OutputShiftRegister);
             OutputShiftRegisterCounter = 0;
         }
 

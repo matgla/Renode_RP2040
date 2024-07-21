@@ -28,8 +28,10 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             this.Enabled = false;
             this.Id = id;
             this._waitForInterrupt = null;
-
+            this._scratchY = 0;
+            this._scratchX = 0;
             long frequency = machine.ClockSource.GetAllClockEntries().First().Frequency;
+            log(LogLevel.Error, "freq: " + frequency);
             this._executionThread = machine.ObtainManagedThread(Step, (uint)frequency, "RP2040PIO_SM" + id);
         }
 
@@ -39,6 +41,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             ClockDivider.SetDivider(Integral, Fractal);
             long frequency = _machine.ClockSource.GetAllClockEntries().First().Frequency;
             this._executionThread.Frequency = (uint)ClockDivider.CalculateTargetFrequency(frequency);
+            this._log(LogLevel.Error, "changed freq: " + this._executionThread.Frequency);
             this._executionThread.Start();
         }
 
@@ -160,6 +163,10 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             byte address = (byte)(data & 0x1f);
             if (JumpConditionMet(condition))
             {
+                if (_scratchX % 1000 == 0)
+                {
+                    Log(LogLevel.Info, "Jump done: " + _scratchX);
+                }
                 _programCounter = address;
                 return true;
             }
@@ -255,6 +262,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                 }
             }
 
+            Log(LogLevel.Info, "Pulling with b:" + block + ", e:" + ifEmpty);
             if (ShiftControl.TxFifoEmpty())
             {
                 if (block)
@@ -267,7 +275,9 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             {
                 ShiftControl.LoadOutputShiftRegister();
             }
+            Log(LogLevel.Info, "PC: " + _programCounter);
             IncrementProgramCounter();
+            Log(LogLevel.Info, "PC: " + _programCounter);
             return true;
         }
 
@@ -339,7 +349,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
         {
             pin_base %= 32;
             uint ret = data >> pin_base;
-            uint lost = (data & ((1u << (32 - pin_base)) - 1));
+            uint lost = (data & ((1u << pin_base) - 1));
             ulong mask = (1ul << count) - 1;
             ret |= lost << (32 - pin_base);
             return (uint)(ret & mask);
@@ -351,7 +361,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             pin_base %= 32;
             uint ret = data << pin_base;
             uint lost = ((data >> (32 - pin_base)) & ((1u << (32 - pin_base)) - 1));
-            ulong mask = (1ul << count) - 1;
+            ulong mask = ((1ul << count) - 1) << pin_base;
             ret |= lost;
             return (uint)(ret & mask);
         }
@@ -368,7 +378,6 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             uint osrData = ShiftControl.ReadOutputShiftRegister(bitCount);
 
             Log(LogLevel.Info, "Out with: " + source + ", count: " + bitCount + ", data: " + osrData);
-            Log(LogLevel.Info, "OutBase: " + PinControl.OutBase + ", OutCount: " + PinControl.OutCount);
             switch (source)
             {
                 case 0:
@@ -387,6 +396,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                 case 2:
                     {
                         _scratchY = osrData;
+                        Log(LogLevel.Info, "Write to Y: " + _scratchY);
                         break;
                     }
                 case 3:
@@ -615,6 +625,13 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
 
         protected void Step()
         {
+            if (_scratchX++ == 125000)
+            {
+                Log(LogLevel.Info, "Jump done: " + _scratchX);
+                _scratchX = 0;
+            }
+            return;
+
             if (!ProcessDelay())
             {
                 return;

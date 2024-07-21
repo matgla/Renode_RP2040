@@ -1,14 +1,240 @@
 using Antmicro.Renode.Core;
 using Antmicro.Renode.Core.Structure.Registers;
 using System;
+using System.IO;
+using System.Reflection;
 using Antmicro.Renode.Logging;
 using Antmicro.Renode.Peripherals.GPIOPort;
 
+using Antmicro.Renode.Time;
+using ELFSharp.ELF;
+using Machine = Antmicro.Renode.Core.Machine;
+
 using Antmicro.Renode.Peripherals.Miscellaneous.RP2040PIORegisters;
+using Antmicro.Renode.Utilities.Binding;
+using Antmicro.Migrant;
+using Antmicro.Renode.Peripherals.Bus;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+using System.Diagnostics;
+
+namespace Antmicro.Renode.Peripherals.CPU
+{
+    // parts of this class can be left unmodified;
+    // to integrate an external simulator you need to
+    // look for comments in the code below
+    public class RP2040PIOCPU : BaseCPU, IGPIOReceiver, ITimeSink, IDisposable, IDoubleWordPeripheral, IKnownSize
+    {
+        private static string GetSourceFileDirectory([CallerFilePath] string sourceFilePath = "")
+        {
+            return Path.GetDirectoryName(sourceFilePath);
+        }
+
+        private static string GetPioSimLibraryPath()
+        {
+            string libraryName = "";
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            {
+                libraryName = "libpiosim.so";
+            }
+            return Path.GetFullPath(GetSourceFileDirectory() + "/../../../piosim/build/" + libraryName);
+        }
+
+        private static string GetPioSimDirectory()
+        {
+            return Path.GetFullPath(GetSourceFileDirectory() + "/../../../piosim");
+        }
+
+        private void CompilePioSim()
+        {
+            string buildPath = GetPioSimDirectory() + "/build";
+            if (!Directory.Exists(buildPath))
+            {
+                Directory.CreateDirectory(buildPath);
+            }
+            Process find_cmake = new Process();
+            find_cmake.StartInfo.FileName = "which";
+            find_cmake.StartInfo.Arguments = "cmake";
+            find_cmake.StartInfo.UseShellExecute = false;
+            find_cmake.StartInfo.RedirectStandardOutput = true;
+            find_cmake.StartInfo.CreateNoWindow = true;
+            find_cmake.Start();
+
+            string cmake_command = "";
+            while (!find_cmake.StandardOutput.EndOfStream)
+            {
+                cmake_command = find_cmake.StandardOutput.ReadLine();
+            }
+
+            if (!cmake_command.Contains("cmake"))
+            {
+                this.Log(LogLevel.Error, "Cannot find 'cmake' executable");
+            }
+
+
+            Process configure = new Process();
+            configure.StartInfo.FileName = cmake_command;
+            configure.StartInfo.Arguments = "..";
+            configure.StartInfo.CreateNoWindow = false;
+            configure.StartInfo.UseShellExecute = false;
+            configure.StartInfo.WorkingDirectory = buildPath;
+            configure.Start();
+            configure.WaitForExit();
+
+
+            Directory.CreateDirectory(buildPath);
+            Process build = new Process();
+            build.StartInfo.FileName = "/usr/bin/cmake";
+            build.StartInfo.Arguments = "--build .";
+            build.StartInfo.CreateNoWindow = false;
+            build.StartInfo.UseShellExecute = true;
+            build.StartInfo.WorkingDirectory = buildPath;
+            build.Start();
+            build.WaitForExit();
+        }
+
+        public RP2040PIOCPU(string cpuType, IMachine machine, ulong address, Endianess endianness = Endianess.LittleEndian, CpuBitness bitness = CpuBitness.Bits32)
+            : base(0, cpuType, machine, endianness, bitness)
+        {
+            CompilePioSim();
+            string libraryFile = GetPioSimLibraryPath();
+            binder = new NativeBinder(this, libraryFile);
+            machine.GetSystemBus(this).Register(this, new BusRangeRegistration(new Range(address, (ulong)Size)));
+        }
+
+        public override void Start()
+        {
+            base.Start();
+
+            PioInitialize();
+        }
+
+        public override void Reset()
+        {
+            base.Reset();
+
+            instructionsExecutedThisRound = 0;
+            totalExecutedInstructions = 0;
+
+            // [Here goes an invocation resetting the external simulator (if needed)]
+            // [This can be used to revert the internal state of the simulator to the initial form]
+        }
+
+        public virtual uint ReadDoubleWord(long offset)
+        {
+            return (uint)PioReadMemory((uint)offset);
+        }
+
+        public virtual void WriteDoubleWord(long offset, uint value)
+        {
+            PioWriteMemory((uint)offset, (uint)value);
+        }
+
+        public override void Dispose()
+        {
+            base.Dispose();
+            // [Here goes an invocation disposing the external simulator (if needed)]
+            // [This can be used to clean all unmanaged resources used to communicate with the simulator]
+        }
+
+        public void OnGPIO(int number, bool value)
+        {
+            if (!IsStarted)
+            {
+                return;
+            }
+
+            // [Here goes an invocation triggering an IRQ in the external simulator]
+        }
+
+        public virtual void SetRegisterValue32(int register, uint value)
+        {
+            // [Here goes an invocation setting the register value in the external simulator]
+        }
+
+        public virtual uint GetRegisterValue32(int register)
+        {
+            // [Here goes an invocation reading the register value from the external simulator]
+            return 0;
+        }
+
+        protected override ExecutionResult ExecuteInstructions(ulong numberOfInstructionsToExecute, out ulong numberOfExecutedInstructions)
+        {
+            instructionsExecutedThisRound = 0UL;
+
+            try
+            {
+                // [Here comes the invocation of the external simulator for the given amount of instructions]
+                // [This is the place where simulation of acutal instructions is to be executed]
+                instructionsExecutedThisRound = (ulong)PioExecute((uint)numberOfInstructionsToExecute);
+
+            }
+            catch (Exception)
+            {
+                this.NoisyLog("CPU exception detected, halting.");
+                //InvokeHalted(new HaltArguments(HaltReason.Abort, this));
+                return ExecutionResult.Aborted;
+            }
+            finally
+            {
+                numberOfExecutedInstructions = instructionsExecutedThisRound;
+                totalExecutedInstructions += instructionsExecutedThisRound;
+            }
+
+            return ExecutionResult.Ok;
+        }
+
+        public override string Architecture => "RP2040_PIO";
+
+        public override RegisterValue PC
+        {
+            get
+            {
+                return GetRegisterValue32(PCRegisterId);
+            }
+
+            set
+            {
+                SetRegisterValue32(PCRegisterId, value);
+            }
+        }
+
+        [Export]
+        protected virtual void LogAsCpu(int level, string s)
+        {
+            this.Log((LogLevel)level, s);
+        }
+
+
+        public override ulong ExecutedInstructions => totalExecutedInstructions;
+
+        private ulong instructionsExecutedThisRound;
+        private ulong totalExecutedInstructions;
+
+        // [This needs to be mapped to the id of the Program Counter register used by the simulator]
+        private const int PCRegisterId = 0;
+
+        [Transient]
+        private NativeBinder binder;
+
+        public long Size { get { return 0x1000; } }
+
+        [Import]
+        private Action PioInitialize;
+
+        [Import]
+        private FuncUInt32UInt32 PioExecute;
+
+        [Import]
+        private ActionUInt32UInt32 PioWriteMemory;
+
+        [Import]
+        private FuncUInt32UInt32 PioReadMemory;
+    }
+}
 
 namespace Antmicro.Renode.Peripherals.Miscellaneous
 {
-
     public class RP2040PIO : BasicDoubleWordPeripheral, IKnownSize
     {
         private enum Registers
@@ -90,7 +316,11 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                 int key = i;
                 var reg = new DoubleWordRegister(this)
                     .WithValueField(0, 32, FieldMode.Write,
-                        writeCallback: (_, value) => StateMachines[key].ShiftControl.PushTxFifo((uint)value),
+                        writeCallback: (_, value) =>
+                        {
+                            this.Log(LogLevel.Info, "Writing to SM: " + key + " FIFO, val: " + value);
+                            StateMachines[key].ShiftControl.PushTxFifo((uint)value);
+                        },
                     name: "TXF" + i);
                 RegistersCollection.AddRegister(0x10 + i * 0x4, reg);
             }
