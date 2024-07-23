@@ -264,13 +264,13 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
 
         public override void OnGPIO(int number, bool value)
         {
-            this.Log(LogLevel.Error, "GPIO " + number + " -> " + value);
             base.OnGPIO(number, value);
         }
 
         public void WritePin(int number, bool value)
         {
-            this.Log(LogLevel.Error, "WritingPin " + number + " -> " + value);
+
+            var virtualNow = machine.LocalTimeSource.ElapsedVirtualTime;
             State[number] = value;
             Connections[number].Set(value);
         }

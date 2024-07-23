@@ -23,10 +23,19 @@
 namespace piosim
 {
 
+struct IOSync
+{
+  std::mutex mutex;
+  std::condition_variable cv;
+  bool sync;
+  std::function<void(const std::function<void()> &)> schedule_action;
+};
+
 class PioStatemachine
 {
 public:
-  PioStatemachine(int id, std::span<const uint16_t> program);
+  PioStatemachine(int id, std::span<const uint16_t> program, std::span<bool> irqs,
+                  IOSync &io_sync);
 
   void enable(bool enable);
   void restart();
@@ -35,6 +44,7 @@ public:
   void step();
   void execute(uint32_t steps);
   void wait_for_done();
+  bool done() const;
 
   const Fifo &tx_fifo() const;
   const Fifo &rx_fifo() const;
@@ -70,10 +80,29 @@ private:
   void increment_program_counter();
 
   void process_sideset(uint16_t data);
+  bool jump_condition(uint8_t condition);
+  bool process_jump(uint16_t data);
+  bool process_wait(uint16_t data);
+  bool process_in(uint16_t data);
+  bool process_out(uint16_t data);
+  bool process_pushpull(uint16_t data);
+  bool process_push(uint16_t data);
+  bool process_pull(uint16_t data);
+  bool process_mov(uint16_t data);
+  bool process_irq(uint16_t data);
+  bool process_set(uint16_t data);
+
+  void push_isr();
+  void load_osr(uint32_t value);
+  void load_osr();
+  void write_isr(uint32_t bits, uint32_t data);
+  uint32_t read_osr(uint32_t bits);
+
+  uint32_t get_from_source(uint32_t source);
 
   int id_;
 
-  bool running_;
+  std::atomic<bool> running_;
   bool stop_;
   bool enabled_;
   std::atomic<double> clock_divider_;
@@ -84,10 +113,12 @@ private:
 
   uint8_t program_counter_;
   std::optional<uint16_t> immediate_instruction_;
+  std::optional<uint8_t> wait_for_irq_;
   std::span<const uint16_t> program_;
-
+  std::span<bool> irqs_;
   std::mutex mutex_;
   std::condition_variable cv_;
+
   std::thread thread_;
   uint32_t scheduleSteps_;
 
@@ -95,6 +126,8 @@ private:
   uint32_t y_;
   uint32_t osr_;
   uint32_t isr_;
+  uint32_t osr_counter_;
+  uint32_t isr_counter_;
 
   uint32_t delay_counter_;
   uint32_t delay_;
@@ -106,6 +139,8 @@ private:
   Register<SMExecControl> exec_control_register_;
   Register<SMShiftControl> shift_control_register_;
   Register<SMPinControl> pin_control_register_;
+
+  IOSync &io_sync_;
 };
 
 } // namespace piosim

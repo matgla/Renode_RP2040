@@ -49,19 +49,17 @@ piocpu0: CPU.RP2040PIOCPU @ sysbus
     cpuType: "rp2040_pio"
     address: 0x50200000
     gpio: gpio
+    PerformanceInMips: 125
 
-// pio0: Miscellaneous.RP2040PIO @ sysbus 0x50200000 {
-//     gpio: gpio
-// }
-// pio0_xor_alias: Memory.RP2040XorRegisterAlias @ sysbus 0x50201000 {
-//     originalAddress: 0x50200000
-// }
-// pio0_bitmask_set_alias: Memory.RP2040BitmaskSetRegisterAlias @ sysbus 0x50202000 {
-//     originalAddress: 0x50200000
-// }
-// pio0_bitmask_clear_alias: Memory.RP2040BitmaskClearRegisterAlias @ sysbus 0x50203000 {
-//     originalAddress: 0x50200000
-// }
+pio0_xor_alias: Memory.RP2040XorRegisterAlias @ sysbus 0x50201000 {
+    originalAddress: 0x50200000
+}
+pio0_bitmask_set_alias: Memory.RP2040BitmaskSetRegisterAlias @ sysbus 0x50202000 {
+    originalAddress: 0x50200000
+}
+pio0_bitmask_clear_alias: Memory.RP2040BitmaskClearRegisterAlias @ sysbus 0x50203000 {
+    originalAddress: 0x50200000
+}
 
 //pio1: Miscellaneous.RP2040PIO @ sysbus 0x50300000 {
 //    gpio: gpio

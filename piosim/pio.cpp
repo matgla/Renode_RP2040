@@ -10,9 +10,10 @@
 
 #include "renode_log.hpp"
 
-#include <bitset>
+#include <algorithm>
 #include <format>
 #include <functional>
+#include <iostream>
 #include <span>
 
 namespace piosim
@@ -27,6 +28,7 @@ PioSimulator &PioSimulator::get()
 PioSimulator::PioSimulator()
   // clang-format off
   : program_{}, 
+    irqs_{},
     actions_{},
     control_{
       .reg = {
@@ -37,13 +39,29 @@ PioSimulator::PioSimulator()
       }
     },
     sm_{
-      PioStatemachine{0, program_},
-      PioStatemachine{1, program_},
-      PioStatemachine{2, program_},
-      PioStatemachine{3, program_},
+      PioStatemachine{0, program_, irqs_, io_sync_},
+      PioStatemachine{1, program_, irqs_, io_sync_},
+      PioStatemachine{2, program_, irqs_, io_sync_},
+      PioStatemachine{3, program_, irqs_, io_sync_},
     }
+    , io_sync_ {}
+    , io_actions_{}
 // clang-format on
 {
+  io_sync_.schedule_action = [this](const std::function<void()> &callback) {
+    std::unique_lock lk(io_sync_.mutex);
+    io_actions_.push_back(callback);
+    io_sync_.sync = true;
+    io_sync_.cv.notify_all();
+
+    if (!io_sync_.cv.wait_for(lk, std::chrono::seconds(2), [this] {
+          return !io_sync_.sync;
+        }))
+    {
+      std::cerr << "Timeout on waiting for IO sync" << std::endl;
+    }
+  };
+
   actions_[Address::CTRL] = {
     .read = std::bind(&PioSimulator::read_control, this),
     .write = std::bind(&PioSimulator::write_control, this, std::placeholders::_1),
@@ -200,10 +218,37 @@ uint32_t PioSimulator::execute(uint32_t steps)
     sm.execute(steps);
   }
 
-  for (auto &sm : sm_)
+  bool all_done = false;
+  while (!all_done)
   {
-    sm.wait_for_done();
+    std::unique_lock lk(io_sync_.mutex);
+    for (auto &a : io_actions_)
+    {
+      a();
+    }
+    io_actions_.clear();
+    io_sync_.sync = false;
+    lk.unlock();
+    io_sync_.cv.notify_all();
+    lk.lock();
+
+    all_done = std::all_of(sm_.begin(), sm_.end(), [](const auto &sm) {
+      return sm.done();
+    });
+
+    if (all_done)
+    {
+      return steps;
+    }
+
+    if (!io_sync_.cv.wait_for(lk, std::chrono::seconds(2), [this] {
+          return io_sync_.sync;
+        }))
+    {
+      std::cerr << "Waiting for IO sync done" << std::endl;
+    }
   }
+
   return steps;
 }
 
@@ -222,10 +267,10 @@ uint32_t PioSimulator::read_control() const
 
 void PioSimulator::write_control(uint32_t value)
 {
-  const Register<Control> ctrl{.value = value};
-  const std::bitset<4> enable{ctrl.reg.sm_enable};
-  const std::bitset<4> restart{ctrl.reg.sm_restart};
-  const std::bitset<4> clkdiv_restart{ctrl.reg.clkdiv_restart};
+  control_.value = value;
+  const std::bitset<4> enable{control_.reg.sm_enable};
+  const std::bitset<4> restart{control_.reg.sm_restart};
+  const std::bitset<4> clkdiv_restart{control_.reg.clkdiv_restart};
   for (uint32_t i = 0; i < sm_.size(); ++i)
   {
     sm_[i].enable(enable.test(i));

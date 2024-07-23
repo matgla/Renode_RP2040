@@ -1,5 +1,7 @@
 include $ORIGIN/initialize_common.resc
 
 machine LoadPlatformDescription $ORIGIN/raspberry_pico.repl
+
 sysbus LoadELF $ORIGIN/b2.elf
+
 

@@ -9,8 +9,10 @@
 #pragma once
 
 #include <array>
+#include <condition_variable>
 #include <cstdint>
 #include <map>
+#include <mutex>
 
 #include "pio_registers.hpp"
 #include "pio_statemachine.hpp"
@@ -53,11 +55,14 @@ private:
   };
 
   std::array<uint16_t, 32> program_;
+  std::array<bool, 8> irqs_;
   std::map<uint32_t, RegisterHolder> actions_;
   Register<Control> control_;
 
   std::array<PioStatemachine, 4> sm_;
 
+  IOSync io_sync_;
+  std::vector<std::function<void()>> io_actions_;
   // program is read-only for statemachine, no need to synchronize thread
 };
 

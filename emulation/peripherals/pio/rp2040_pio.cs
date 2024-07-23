@@ -116,6 +116,9 @@ namespace Antmicro.Renode.Peripherals.CPU
             {
                 throw new Exception("CMake build failed");
             }
+
+
+
         }
 
         public RP2040PIOCPU(string cpuType, IMachine machine, ulong address, GPIOPort.RP2040GPIO gpio, Endianess endianness = Endianess.LittleEndian, CpuBitness bitness = CpuBitness.Bits32)
@@ -128,11 +131,6 @@ namespace Antmicro.Renode.Peripherals.CPU
             this.gpio = gpio;
         }
 
-        ~RP2040PIOCPU()
-        {
-            this.Log(LogLevel.Error, "Qqq");
-            PioDeinitialize();
-        }
         public override void Start()
         {
             base.Start();
@@ -249,6 +247,18 @@ namespace Antmicro.Renode.Peripherals.CPU
         protected virtual void GpioPindirWriteBitset(uint bitset, uint bitmap)
         {
             this.gpio.SetPinDirectionBitset(bitset, bitmap);
+        }
+
+        [Export]
+        protected virtual int GpioGetPinState(uint pin)
+        {
+            return Convert.ToInt32(this.gpio.GetGpioState(pin));
+        }
+
+        [Export]
+        protected virtual uint GetGpioPinBitmap()
+        {
+            return (uint)this.gpio.GetGpioStateBitmap();
         }
 
         private GPIOPort.RP2040GPIO gpio;
