@@ -52,13 +52,15 @@ PioSimulator::PioSimulator()
     std::unique_lock lk(io_sync_.mutex);
     io_actions_.push_back(callback);
     io_sync_.sync = true;
+    lk.unlock();
     io_sync_.cv.notify_all();
-
+    lk.lock();
     if (!io_sync_.cv.wait_for(lk, std::chrono::seconds(2), [this] {
           return !io_sync_.sync;
         }))
     {
-      std::cerr << "Timeout on waiting for IO sync" << std::endl;
+      renode_log(LogLevel::Error, std::format("Timeout on waiting for IO sync: {}",
+                                              std::this_thread::get_id()));
     }
   };
 
@@ -213,15 +215,28 @@ uint32_t PioSimulator::read_memory(uint32_t address) const
 
 uint32_t PioSimulator::execute(uint32_t steps)
 {
+  // renode_log(LogLevel::Error, std::format("Execute: {}", steps));
   for (auto &sm : sm_)
   {
     sm.execute(steps);
   }
 
-  bool all_done = false;
+  bool all_done = std::all_of(sm_.begin(), sm_.end(), [](const auto &sm) {
+    return sm.done();
+  });
+
   while (!all_done)
   {
+    // renode_log(LogLevel::Error, "Main thread trying lock");
     std::unique_lock lk(io_sync_.mutex);
+    // renode_log(LogLevel::Error, "Main thread waiting");
+    if (!io_sync_.cv.wait_for(lk, std::chrono::seconds(1), [this] {
+          return io_sync_.sync;
+        }))
+    {
+      std::cerr << "Waiting for IO sync done" << std::endl;
+    }
+
     for (auto &a : io_actions_)
     {
       a();
@@ -229,24 +244,13 @@ uint32_t PioSimulator::execute(uint32_t steps)
     io_actions_.clear();
     io_sync_.sync = false;
     lk.unlock();
+    // renode_log(LogLevel::Error, "Notifing with false");
     io_sync_.cv.notify_all();
     lk.lock();
 
     all_done = std::all_of(sm_.begin(), sm_.end(), [](const auto &sm) {
       return sm.done();
     });
-
-    if (all_done)
-    {
-      return steps;
-    }
-
-    if (!io_sync_.cv.wait_for(lk, std::chrono::seconds(2), [this] {
-          return io_sync_.sync;
-        }))
-    {
-      std::cerr << "Waiting for IO sync done" << std::endl;
-    }
   }
 
   return steps;

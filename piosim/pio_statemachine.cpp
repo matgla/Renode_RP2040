@@ -835,7 +835,18 @@ void PioStatemachine::step()
 void PioStatemachine::execute(uint32_t steps)
 {
   wait_for_done();
+  std::unique_lock lk(mutex_);
+  if (!enabled_)
+  {
+    return;
+  }
+
   scheduleSteps_ = steps;
+  if (steps > 0)
+  {
+    running_ = true;
+  }
+  lk.unlock();
   cv_.notify_one();
 }
 
@@ -977,7 +988,6 @@ void PioStatemachine::loop()
       return;
     }
 
-    running_ = true;
     for (uint32_t i = 0; i < scheduleSteps_; ++i)
     {
       if (request_pause_)

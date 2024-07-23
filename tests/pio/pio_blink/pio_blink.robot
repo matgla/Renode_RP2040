@@ -9,9 +9,9 @@ Test Timeout    90 seconds
 Run successfully 'pio_blink' example
     Execute Command             include @${CURDIR}/pio_blink.resc
     Execute Command             logLevel -1
-    ${led1}=     Create LED Tester           sysbus.gpio.led1
-    ${led2}=     Create LED Tester           sysbus.gpio.led2
-    ${led3}=     Create LED Tester           sysbus.gpio.led3
+    ${led1}=     Create LED Tester           sysbus.gpio.led1   defaultTimeout=5
+    ${led2}=     Create LED Tester           sysbus.gpio.led2   defaultTimeout=5
+    ${led3}=     Create LED Tester           sysbus.gpio.led3   defaultTimeout=5
 
 
     Assert LED Is Blinking      testDuration=2  onDuration=0.17  offDuration=0.17  testerId=${led1}
