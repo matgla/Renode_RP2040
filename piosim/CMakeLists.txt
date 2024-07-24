@@ -16,23 +16,24 @@ set(CMAKE_CXX_FLAGS "-Wall -Wextra -Werror")
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
-set(CMAKE_CXX_FLAGS_DEBUG "-g -Og")
+set(CMAKE_CXX_FLAGS_DEBUG "-Og -g")
 
 add_library(piosim SHARED)
 
 
 target_sources(piosim
   PUBLIC
-    decoder.hpp
+    opcode.hpp
     pio_renode_glue.hpp
     pio_registers.hpp
     pio_statemachine.hpp
     pio.hpp
     fifo.hpp
   PRIVATE 
-    decoder.cpp
     pio_renode_glue.cpp
     pio_statemachine.cpp
     pio.cpp
     fifo.cpp
 )
+
+# target_link_libraries(piosim PUBLIC profiler)

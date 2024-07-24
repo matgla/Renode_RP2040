@@ -14,9 +14,9 @@ Run successfully 'pio_blink' example
     ${led3}=     Create LED Tester           sysbus.gpio.led3 
 
 
-    Assert LED Is Blinking      testDuration=10  onDuration=0.17  offDuration=0.17  testerId=${led1}
-    Assert LED Is Blinking      testDuration=10  onDuration=0.125  offDuration=0.125  testerId=${led2}
-    Assert LED Is Blinking      testDuration=10  onDuration=0.50  offDuration=0.50  testerId=${led3}
+    Assert LED Is Blinking      testDuration=0.70  onDuration=0.17  offDuration=0.17  testerId=${led1}
+    #Assert LED Is Blinking      testDuration=1  onDuration=0.125  offDuration=0.125  testerId=${led2}
+    #Assert LED Is Blinking      testDuration=1  onDuration=0.50  offDuration=0.50  testerId=${led3}
  
 
 

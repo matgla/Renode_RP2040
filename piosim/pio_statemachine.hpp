@@ -43,8 +43,6 @@ public:
   void clock_divider_restart();
 
   bool step();
-  void execute(uint32_t steps);
-  bool done() const;
 
   const Fifo &tx_fifo() const;
   const Fifo &rx_fifo() const;
@@ -69,44 +67,41 @@ public:
   void execute_immediately(uint16_t instruction);
 
 private:
-  void loop();
+  inline bool run_step();
 
-  void pause();
-  void resume();
+  inline bool process_delay();
+  inline void schedule_delay(uint16_t delay);
 
-  bool process_delay();
-  void schedule_delay(uint16_t delay);
+  inline void increment_program_counter();
 
-  void increment_program_counter();
+  inline void process_sideset(uint16_t data);
+  inline bool jump_condition(uint8_t condition);
+  inline bool process_jump(uint16_t data);
+  inline bool process_wait(uint16_t data);
+  inline bool process_in(uint16_t data);
+  inline bool process_out(uint16_t data);
+  inline bool process_pushpull(uint16_t data);
+  inline bool process_push(uint16_t data);
+  inline bool process_pull(uint16_t data);
+  inline bool process_mov(uint16_t data);
+  inline bool process_irq(uint16_t data);
+  inline bool process_set(uint16_t data);
 
-  void process_sideset(uint16_t data);
-  bool jump_condition(uint8_t condition);
-  bool process_jump(uint16_t data);
-  bool process_wait(uint16_t data);
-  bool process_in(uint16_t data);
-  bool process_out(uint16_t data);
-  bool process_pushpull(uint16_t data);
-  bool process_push(uint16_t data);
-  bool process_pull(uint16_t data);
-  bool process_mov(uint16_t data);
-  bool process_irq(uint16_t data);
-  bool process_set(uint16_t data);
+  inline void push_isr();
+  inline void load_osr(uint32_t value);
+  inline void load_osr();
+  inline void write_isr(uint32_t bits, uint32_t data);
+  inline uint32_t read_osr(uint32_t bits);
 
-  void push_isr();
-  void load_osr(uint32_t value);
-  void load_osr();
-  void write_isr(uint32_t bits, uint32_t data);
-  uint32_t read_osr(uint32_t bits);
-
-  uint32_t get_from_source(uint32_t source);
+  inline uint32_t get_from_source(uint32_t source);
 
   int id_;
 
-  std::atomic<bool> running_;
+  bool running_;
   bool stop_;
   bool enabled_;
-  std::atomic<double> clock_divider_;
-  std::atomic<bool> stalled_;
+  double clock_divider_;
+  bool stalled_;
   bool sideset_done_;
   bool ignore_delay_;
   bool request_pause_;
@@ -143,7 +138,7 @@ private:
   Register<SMPinControl> pin_control_register_;
 
   IOSync &io_sync_;
-  bool request_io_;
+  uint16_t current_instruction_;
 };
 
 } // namespace piosim
