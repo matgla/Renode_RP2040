@@ -42,8 +42,8 @@ public:
   void restart();
   void clock_divider_restart();
 
-  void step();
-  void execute(uint32_t steps, bool additional = false);
+  bool step();
+  void execute(uint32_t steps);
   bool done() const;
 
   const Fifo &tx_fifo() const;
@@ -143,6 +143,7 @@ private:
   Register<SMPinControl> pin_control_register_;
 
   IOSync &io_sync_;
+  bool request_io_;
 };
 
 } // namespace piosim

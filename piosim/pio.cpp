@@ -9,9 +9,11 @@
 #include "renode_log.hpp"
 
 #include <algorithm>
+#include <bitset>
 #include <format>
 #include <functional>
 #include <iostream>
+#include <ostream>
 #include <span>
 
 namespace piosim
@@ -69,22 +71,24 @@ PioSimulator::PioSimulator()
     , io_actions_{}
 // clang-format on
 {
-  io_sync_.schedule_action = [this](const std::function<void()> &callback) {
-    std::unique_lock lk(io_sync_.mutex);
-    io_actions_.push_back(callback);
-    io_sync_.sync = true;
-    lk.unlock();
-    io_sync_.cv.notify_all();
-    lk.lock();
-    if (!io_sync_.cv.wait_for(lk, std::chrono::seconds(2), [this] {
-          return !io_sync_.sync;
-        }))
-    {
-      renode_log(LogLevel::Error, std::format("Timeout on waiting for IO sync: {}",
-                                              std::this_thread::get_id()));
-    }
-  };
-
+  //  io_sync_.schedule_action = [this](const std::function<void()> &callback) {
+  //    std::unique_lock lk(io_sync_.mutex);
+  //    io_actions_.push_back(callback);
+  //    io_sync_.sync = true;
+  //    lk.unlock();
+  //    io_sync_.cv.notify_all();
+  //    lk.lock();
+  //    if (!io_sync_.cv.wait_for(lk, std::chrono::seconds(2), [this] {
+  //          return !io_sync_.sync;
+  //        }))
+  //    {
+  //      //   renode_log(LogLevel::Error, std::format("Timeout on waiting for IO
+  //      sync:
+  //      //   {}",
+  //      //                                           std::this_thread::get_id()));
+  //    }
+  //  };
+  //
   actions_[Address::CTRL] = {
     .read = std::bind(&PioSimulator::read_control, this),
     .write = std::bind(&PioSimulator::write_control, this, std::placeholders::_1),
@@ -193,7 +197,7 @@ PioSimulator::PioSimulator()
         [this, &sm = sm_[i]](uint32_t value) {
           renode_log(LogLevel::Error, std::format("execute_immediately: {}", value));
           sm.execute_immediately(static_cast<uint16_t>(value));
-          execute(1, true);
+          execute(1);
         },
     };
 
@@ -236,41 +240,53 @@ uint32_t PioSimulator::read_memory(uint32_t address) const
   return 0;
 }
 
-uint32_t PioSimulator::execute(uint32_t steps, bool additional)
+uint32_t PioSimulator::execute(uint32_t steps)
 {
-  for (auto &sm : sm_)
+  for (uint32_t i = 0; i < steps; ++i)
   {
-    sm.execute(steps, additional);
-  }
-
-  bool all_done = std::all_of(sm_.begin(), sm_.end(), [](const auto &sm) {
-    return sm.done();
-  });
-
-  while (!all_done)
-  {
-    std::unique_lock lk(io_sync_.mutex);
-    if (!io_sync_.cv.wait_for(lk, std::chrono::seconds(1), [this] {
-          return io_sync_.sync;
-        }))
+    bool break_in_next = false;
+    for (auto &sm : sm_)
     {
-      std::cerr << "Waiting for IO sync done" << std::endl;
+      if (!sm.step())
+      {
+        break_in_next = true;
+      }
     }
 
-    for (auto &a : io_actions_)
+    if (break_in_next)
     {
-      a();
+      return i;
     }
-    io_actions_.clear();
-    io_sync_.sync = false;
-    lk.unlock();
-    io_sync_.cv.notify_all();
-    lk.lock();
-
-    all_done = std::all_of(sm_.begin(), sm_.end(), [](const auto &sm) {
-      return sm.done();
-    });
   }
+
+  // bool all_done = std::all_of(sm_.begin(), sm_.end(), [](const auto &sm) {
+  //   return sm.done();
+  // });
+
+  // while (!all_done)
+  // {
+  //   //    std::unique_lock lk(io_sync_.mutex);
+  //   //    if (!io_sync_.cv.wait_for(lk, std::chrono::seconds(1), [this] {
+  //   //          return io_sync_.sync;
+  //   //        }))
+  //   //    {
+  //   //      std::cerr << "Waiting for IO sync done" << std::endl;
+  //   //    }
+
+  //   for (auto &a : io_actions_)
+  //   {
+  //     a();
+  //   }
+  //   io_actions_.clear();
+  //   io_sync_.sync = false;
+  //   lk.unlock();
+  //   io_sync_.cv.notify_all();
+  //   lk.lock();
+
+  //   all_done = std::all_of(sm_.begin(), sm_.end(), [](const auto &sm) {
+  //     return sm.done();
+  //   });
+  // }
 
   return steps;
 }

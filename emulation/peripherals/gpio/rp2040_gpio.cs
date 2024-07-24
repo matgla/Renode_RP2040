@@ -269,7 +269,7 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
 
         public void WritePin(int number, bool value)
         {
-            this.Log(LogLevel.Noisy, "Setting GPIO" + number + " to: " + value);
+            this.Log(LogLevel.Noisy, "Setting GPIO" + number + " to: " + value + ", time: " + machine.ElapsedVirtualTime.TimeElapsed);
             var virtualNow = machine.LocalTimeSource.ElapsedVirtualTime;
             State[number] = value;
             Connections[number].Set(value);

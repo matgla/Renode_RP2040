@@ -124,18 +124,19 @@ PioStatemachine::PioStatemachine(int id, std::span<const uint16_t> program,
                                   .set_count = 5,
                                   .sideset_count = 0}}
   , io_sync_{io_sync}
+  , request_io_{false}
 {
-  thread_ = std::thread(&PioStatemachine::loop, this);
+  // thread_ = std::thread(&PioStatemachine::loop, this);
 }
 
 PioStatemachine::~PioStatemachine()
 {
-  std::unique_lock lk(mutex_);
-  stop_ = true;
-  enabled_ = false;
-  lk.unlock();
-  cv_.notify_one();
-  thread_.join();
+  // std::unique_lock lk(mutex_);
+  // stop_ = true;
+  // enabled_ = false;
+  // lk.unlock();
+  // cv_.notify_one();
+  // thread_.join();
 }
 
 void PioStatemachine::enable(bool enable)
@@ -143,15 +144,15 @@ void PioStatemachine::enable(bool enable)
   if (enable && !enabled_)
   {
     renode_log(LogLevel::Debug, std::format("enabling SM{}", id_));
-    std::unique_lock lk(mutex_);
+    // std::unique_lock lk(mutex_);
     enabled_ = true;
-    cv_.notify_one();
+    //  cv_.notify_one();
   }
   else if (!enable && enabled_)
   {
-    std::unique_lock lk(mutex_);
+    //   std::unique_lock lk(mutex_);
     enabled_ = false;
-    cv_.notify_one();
+    //    cv_.notify_one();
   }
 }
 
@@ -237,15 +238,17 @@ void PioStatemachine::process_sideset(uint16_t data)
 
         if (exec_control_register_.reg.side_pindir)
         {
-          io_sync_.schedule_action([gpio_bitset, gpio_bitmap] {
-            renode_gpio_set_pindir_bitset(gpio_bitset, gpio_bitmap);
-          });
+          //         io_sync_.schedule_action([gpio_bitset, gpio_bitmap] {
+          renode_gpio_set_pindir_bitset(gpio_bitset, gpio_bitmap);
+          request_io_ = true;
+          //        });
         }
         else
         {
-          io_sync_.schedule_action([gpio_bitset, gpio_bitmap] {
-            renode_gpio_set_pin_bitset(gpio_bitset, gpio_bitmap);
-          });
+          //       io_sync_.schedule_action([gpio_bitset, gpio_bitmap] {
+          renode_gpio_set_pin_bitset(gpio_bitset, gpio_bitmap);
+          request_io_ = true;
+          //      });
         }
       }
     }
@@ -391,8 +394,6 @@ bool PioStatemachine::process_pull(uint16_t data)
   const bool if_empty = (data & (1 << 6)) != 0;
   const bool block = (data & (1 << 5)) != 0;
 
-  renode_log(LogLevel::Error, std::format("Pull {} {}", if_empty, block));
-
   if (if_empty)
   {
     if (osr_counter_ >= shift_control_register_.reg.pull_threshold)
@@ -404,7 +405,6 @@ bool PioStatemachine::process_pull(uint16_t data)
 
   if (tx_.empty())
   {
-    renode_log(LogLevel::Error, "TX empty");
     if (block)
     {
       return false;
@@ -414,8 +414,6 @@ bool PioStatemachine::process_pull(uint16_t data)
   else
   {
     load_osr();
-
-    renode_log(LogLevel::Error, std::format("Loaded OSR {}", osr_));
   }
   increment_program_counter();
   return true;
@@ -545,9 +543,10 @@ bool PioStatemachine::process_out(uint16_t data)
     const uint32_t mask =
       rotate_left((1u << pin_control_register_.reg.out_count) - 1,
                   pin_control_register_.reg.out_base, 32);
-    io_sync_.schedule_action([pins, mask] {
-      renode_gpio_set_pin_bitset(pins, mask);
-    });
+    // io_sync_.schedule_action([pins, mask] {
+    renode_gpio_set_pin_bitset(pins, mask);
+    request_io_ = true;
+    // });
     break;
   }
   case 1: {
@@ -568,9 +567,10 @@ bool PioStatemachine::process_out(uint16_t data)
       rotate_left((1u << pin_control_register_.reg.out_count) - 1,
                   pin_control_register_.reg.out_base, 32);
 
-    io_sync_.schedule_action([pins, mask] {
-      renode_gpio_set_pindir_bitset(pins, mask);
-    });
+    // io_sync_.schedule_action([pins, mask] {
+    renode_gpio_set_pindir_bitset(pins, mask);
+    request_io_ = true;
+    // });
 
     break;
   }
@@ -664,9 +664,10 @@ bool PioStatemachine::process_mov(uint16_t immediateData)
     const uint32_t state = rotate_left(data, pin_control_register_.reg.out_base,
                                        pin_control_register_.reg.out_count);
 
-    io_sync_.schedule_action([state, mask] {
-      renode_gpio_set_pin_bitset(state, mask);
-    });
+    // io_sync_.schedule_action([state, mask] {
+    renode_gpio_set_pin_bitset(state, mask);
+    request_io_ = true;
+    // });
     break;
   }
   case 1: {
@@ -759,9 +760,10 @@ bool PioStatemachine::process_set(uint16_t immediateData)
     const uint32_t state = rotate_left(data, pin_control_register_.reg.set_base,
                                        pin_control_register_.reg.set_count);
 
-    io_sync_.schedule_action([mask, state] {
-      renode_gpio_set_pin_bitset(state, mask);
-    });
+    // io_sync_.schedule_action([mask, state] {
+    renode_gpio_set_pin_bitset(state, mask);
+    request_io_ = true;
+    // });
     break;
   }
   case 1: {
@@ -779,9 +781,10 @@ bool PioStatemachine::process_set(uint16_t immediateData)
     const uint32_t state = rotate_left(data, pin_control_register_.reg.set_base,
                                        pin_control_register_.reg.set_count);
 
-    io_sync_.schedule_action([state, mask] {
-      renode_gpio_set_pindir_bitset(state, mask);
-    });
+    // io_sync_.schedule_action([state, mask] {
+    renode_gpio_set_pindir_bitset(state, mask);
+    request_io_ = true;
+    // });
     break;
   }
   }
@@ -789,11 +792,12 @@ bool PioStatemachine::process_set(uint16_t immediateData)
   return true;
 }
 
-void PioStatemachine::step()
+bool PioStatemachine::step()
 {
+  request_io_ = false;
   if (!process_delay())
   {
-    return;
+    return true;
   }
 
   const uint16_t instruction =
@@ -857,29 +861,29 @@ void PioStatemachine::step()
   {
     stalled_ = true;
   }
+
+  if (request_io_)
+  {
+    return false;
+  }
+
+  return true;
 }
 
-void PioStatemachine::execute(uint32_t steps, bool additional)
+void PioStatemachine::execute(uint32_t steps)
 {
-  std::unique_lock lk(mutex_);
+  // std::unique_lock lk(mutex_);
   if (!enabled_ && !immediate_instruction_)
   {
     return;
   }
 
-  if (!additional)
-  {
-    scheduleSteps_ = steps * clock_divider_;
-  }
-  else
-  {
-    scheduleSteps_ += steps;
-  }
+  scheduleSteps_ += steps;
   if (steps > 0)
   {
     running_ = true;
   }
-  lk.unlock();
+  // lk.unlock();
   cv_.notify_one();
 }
 
@@ -900,16 +904,16 @@ const Fifo &PioStatemachine::rx_fifo() const
 
 void PioStatemachine::push_tx(uint32_t data)
 {
-  pause();
+  // pause();
   tx_.push(data);
-  resume();
+  // resume();
 }
 
 uint32_t PioStatemachine::pop_rx()
 {
-  pause();
+  // pause();
   uint32_t r = rx_.pop();
-  resume();
+  // resume();
   return r;
 }
 
@@ -940,9 +944,9 @@ uint32_t PioStatemachine::exec_control_register() const
 
 void PioStatemachine::exec_control_register(uint32_t data)
 {
-  pause();
+  // pause();
   exec_control_register_.value = (data & 0x7fffffff);
-  resume();
+  // resume();
 }
 
 uint32_t PioStatemachine::shift_control_register() const
@@ -952,9 +956,9 @@ uint32_t PioStatemachine::shift_control_register() const
 
 void PioStatemachine::shift_control_register(uint32_t data)
 {
-  pause();
+  // pause();
   shift_control_register_.value = data;
-  resume();
+  // resume();
 }
 
 uint32_t PioStatemachine::pin_control_register() const
@@ -964,9 +968,9 @@ uint32_t PioStatemachine::pin_control_register() const
 
 void PioStatemachine::pin_control_register(uint32_t data)
 {
-  pause();
+  // pause();
   pin_control_register_.value = data;
-  resume();
+  // resume();
 }
 
 uint8_t PioStatemachine::program_counter() const
@@ -985,71 +989,71 @@ uint16_t PioStatemachine::current_instruction() const
 
 void PioStatemachine::execute_immediately(uint16_t instruction)
 {
-  {
-    std::scoped_lock lk(mutex_);
-    immediate_instruction_ = instruction;
-  }
+  // {
+  // std::scoped_lock lk(mutex_);
+  immediate_instruction_ = instruction;
+  // }
 }
 
 void PioStatemachine::loop()
 {
-  std::unique_lock<std::mutex> lk(mutex_);
-  while (!stop_)
-  {
-    cv_.wait(lk, [this] {
-      return scheduleSteps_ > 0 || stop_;
-    });
+  // std::unique_lock<std::mutex> lk(mutex_);
+  // while (!stop_)
+  // {
+  //   cv_.wait(lk, [this] {
+  //     return scheduleSteps_ > 0 || stop_;
+  //   });
 
-    if (stop_)
-    {
-      return;
-    }
+  //   if (stop_)
+  //   {
+  //     return;
+  //   }
 
-    for (uint32_t i = 0; i < scheduleSteps_; ++i)
-    {
-      if (request_pause_)
-      {
-        running_ = false;
-        lk.unlock();
-        cv_.notify_one();
-        lk.lock();
-        if (!cv_.wait_for(lk, std::chrono::milliseconds(100), [this] {
-              return !request_pause_;
-            }))
-        {
-          std::cerr << "Pause timeout" << std::endl;
-        }
-      }
-      step();
-    }
+  //   for (uint32_t i = 0; i < scheduleSteps_; ++i)
+  //   {
+  //     if (request_pause_)
+  //     {
+  //       running_ = false;
+  //       lk.unlock();
+  //       cv_.notify_one();
+  //       lk.lock();
+  //       if (!cv_.wait_for(lk, std::chrono::milliseconds(100), [this] {
+  //             return !request_pause_;
+  //           }))
+  //       {
+  //         std::cerr << "Pause timeout" << std::endl;
+  //       }
+  //     }
+  //     step();
+  //   }
 
-    scheduleSteps_ = 0;
-    running_ = false;
+  //   scheduleSteps_ = 0;
+  //   running_ = false;
 
-    std::unique_lock iolk(io_sync_.mutex);
-    io_sync_.sync = true;
-    io_sync_.cv.notify_all();
-  }
+  //   std::unique_lock iolk(io_sync_.mutex);
+  //   io_sync_.sync = true;
+  //   io_sync_.cv.notify_all();
+  // }
 }
 
 void PioStatemachine::pause()
 {
-  std::unique_lock<std::mutex> lk(mutex_);
-  request_pause_ = true;
-  if (!cv_.wait_for(lk, std::chrono::milliseconds(100), [this] {
-        return !running_;
-      }))
-  {
-    std::cerr << "Wait for pause timeouted" << std::endl;
-  }
+  // std::unique_lock<std::mutex> lk(mutex_);
+  // request_pause_ = true;
+  // if (!cv_.wait_for(lk, std::chrono::milliseconds(100), [this] {
+  //       return !running_;
+  //     }))
+  // {
+  //   std::cerr << "Wait for pause timeouted" << std::endl;
+  // }
 }
 
 void PioStatemachine::resume()
 {
-  std::unique_lock lk(mutex_);
-  request_pause_ = false;
-  lk.unlock();
-  cv_.notify_one();
+  // std::unique_lock lk(mutex_);
+  // request_pause_ = false;
+  // lk.unlock();
+  // cv_.notify_one();
 }
 
 } // namespace piosim

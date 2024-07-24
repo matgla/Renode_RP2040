@@ -163,7 +163,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             byte address = (byte)(data & 0x1f);
             if (JumpConditionMet(condition))
             {
-                if (_scratchX % 1000 == 0)
+                if (_scratchX % 1000000 == 0)
                 {
                     Log(LogLevel.Info, "Jump done: " + _scratchX);
                 }
@@ -262,7 +262,6 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                 }
             }
 
-            Log(LogLevel.Info, "Pulling with b:" + block + ", e:" + ifEmpty);
             if (ShiftControl.TxFifoEmpty())
             {
                 if (block)

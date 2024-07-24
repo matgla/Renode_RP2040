@@ -26,7 +26,7 @@ public:
 
   void write_memory(uint32_t address, uint32_t value);
   uint32_t read_memory(uint32_t address) const;
-  uint32_t execute(uint32_t steps, bool additional = false);
+  uint32_t execute(uint32_t steps);
 
 private:
   PioSimulator();
