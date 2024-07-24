@@ -125,6 +125,17 @@ PioStatemachine::PioStatemachine(int id, std::span<const uint16_t> program,
                                   .sideset_count = 0}}
   , io_sync_{io_sync}
 {
+  thread_ = std::thread(&PioStatemachine::loop, this);
+}
+
+PioStatemachine::~PioStatemachine()
+{
+  std::unique_lock lk(mutex_);
+  stop_ = true;
+  enabled_ = false;
+  lk.unlock();
+  cv_.notify_one();
+  thread_.join();
 }
 
 void PioStatemachine::enable(bool enable)
@@ -132,18 +143,15 @@ void PioStatemachine::enable(bool enable)
   if (enable && !enabled_)
   {
     renode_log(LogLevel::Debug, std::format("enabling SM{}", id_));
+    std::unique_lock lk(mutex_);
     enabled_ = true;
-    thread_ = std::thread(&PioStatemachine::loop, this);
+    cv_.notify_one();
   }
   else if (!enable && enabled_)
   {
-    {
-      std::unique_lock lk(mutex_);
-      stop_ = true;
-      enabled_ = false;
-    }
+    std::unique_lock lk(mutex_);
+    enabled_ = false;
     cv_.notify_one();
-    thread_.join();
   }
 }
 
@@ -184,6 +192,10 @@ void PioStatemachine::schedule_delay(uint16_t data)
 
 void PioStatemachine::increment_program_counter()
 {
+  if (immediate_instruction_)
+  {
+    return;
+  }
   if (program_counter_ == exec_control_register_.reg.wrap_top)
   {
     program_counter_ = exec_control_register_.reg.wrap_bottom;
@@ -220,11 +232,10 @@ void PioStatemachine::process_sideset(uint16_t data)
           enabled = false;
         }
       }
-
       if (enabled)
       {
 
-        if (exec_control_register_.reg.side_pindir && enabled)
+        if (exec_control_register_.reg.side_pindir)
         {
           io_sync_.schedule_action([gpio_bitset, gpio_bitmap] {
             renode_gpio_set_pindir_bitset(gpio_bitset, gpio_bitmap);
@@ -272,6 +283,9 @@ bool PioStatemachine::process_jump(uint16_t data)
   const uint8_t condition = static_cast<uint8_t>((data >> 5) & 0x7);
   const uint8_t address = static_cast<uint8_t>(data & 0x1f);
 
+  // renode_log(LogLevel::Error,
+  //            std::format("Jump: {} {} {}", condition, address, program_counter_));
+
   if (jump_condition(condition))
   {
     program_counter_ = address;
@@ -289,15 +303,20 @@ bool PioStatemachine::process_wait(uint16_t data)
   const bool polarity = ((1 << 7) & data) != 0;
   const uint8_t source = static_cast<uint8_t>((data >> 5) & 0x3);
   const uint8_t index = static_cast<uint8_t>(data & 0x1f);
-
+  renode_log(LogLevel::Error, std::format("ID: {}, waiting: {}", id_, data));
   switch (source)
   {
   case 0: {
-    return renode_gpio_get_pin_state(index) == polarity;
+    bool pin_state = renode_gpio_get_pin_state(index);
+    return pin_state == polarity;
   }
   case 1: {
-    return renode_gpio_get_pin_state(
-             ((index + pin_control_register_.reg.in_base) % 32)) == polarity;
+    const int pin_index = ((index + pin_control_register_.reg.in_base) % 32);
+    const bool pin_state = renode_gpio_get_pin_state(index);
+
+    renode_log(LogLevel::Error,
+               std::format("Wait for pin: {}", pin_index, ", state: {}", pin_state));
+    return pin_state == polarity;
   }
   case 2: {
     int id = index;
@@ -372,6 +391,8 @@ bool PioStatemachine::process_pull(uint16_t data)
   const bool if_empty = (data & (1 << 6)) != 0;
   const bool block = (data & (1 << 5)) != 0;
 
+  renode_log(LogLevel::Error, std::format("Pull {} {}", if_empty, block));
+
   if (if_empty)
   {
     if (osr_counter_ >= shift_control_register_.reg.pull_threshold)
@@ -383,6 +404,7 @@ bool PioStatemachine::process_pull(uint16_t data)
 
   if (tx_.empty())
   {
+    renode_log(LogLevel::Error, "TX empty");
     if (block)
     {
       return false;
@@ -392,6 +414,8 @@ bool PioStatemachine::process_pull(uint16_t data)
   else
   {
     load_osr();
+
+    renode_log(LogLevel::Error, std::format("Loaded OSR {}", osr_));
   }
   increment_program_counter();
   return true;
@@ -509,6 +533,9 @@ bool PioStatemachine::process_out(uint16_t data)
   }
 
   uint osr_data = read_osr(bit_count);
+
+  renode_log(LogLevel::Error,
+             std::format("Processing out: {} {}", source, bit_count));
 
   switch (source)
   {
@@ -771,7 +798,6 @@ void PioStatemachine::step()
 
   const uint16_t instruction =
     immediate_instruction_ ? *immediate_instruction_ : program_[program_counter_];
-  immediate_instruction_.reset();
 
   const PioDecodedInstruction cmd{instruction};
   process_sideset(cmd.delay_or_sideset);
@@ -825,6 +851,7 @@ void PioStatemachine::step()
     ignore_delay_ = false;
     sideset_done_ = false;
     stalled_ = false;
+    immediate_instruction_ = std::nullopt;
   }
   else
   {
@@ -832,16 +859,22 @@ void PioStatemachine::step()
   }
 }
 
-void PioStatemachine::execute(uint32_t steps)
+void PioStatemachine::execute(uint32_t steps, bool additional)
 {
-  wait_for_done();
   std::unique_lock lk(mutex_);
-  if (!enabled_)
+  if (!enabled_ && !immediate_instruction_)
   {
     return;
   }
 
-  scheduleSteps_ = steps;
+  if (!additional)
+  {
+    scheduleSteps_ = steps * clock_divider_;
+  }
+  else
+  {
+    scheduleSteps_ += steps;
+  }
   if (steps > 0)
   {
     running_ = true;
@@ -852,21 +885,7 @@ void PioStatemachine::execute(uint32_t steps)
 
 bool PioStatemachine::done() const
 {
-  return !running_;
-}
-
-void PioStatemachine::wait_for_done()
-{
-  std::unique_lock<std::mutex> lk(mutex_);
-  while (running_)
-  {
-    if (!cv_.wait_for(lk, std::chrono::milliseconds(100), [this] {
-          return !running_;
-        }))
-    {
-      std::cerr << "Timeout on waiting for done" << std::endl;
-    }
-  }
+  return (!running_ || !enabled_) && !(immediate_instruction_ && scheduleSteps_ > 0);
 }
 
 const Fifo &PioStatemachine::tx_fifo() const
@@ -966,9 +985,10 @@ uint16_t PioStatemachine::current_instruction() const
 
 void PioStatemachine::execute_immediately(uint16_t instruction)
 {
-  pause();
-  immediate_instruction_ = instruction;
-  resume();
+  {
+    std::scoped_lock lk(mutex_);
+    immediate_instruction_ = instruction;
+  }
 }
 
 void PioStatemachine::loop()
@@ -976,12 +996,9 @@ void PioStatemachine::loop()
   std::unique_lock<std::mutex> lk(mutex_);
   while (!stop_)
   {
-    if (!cv_.wait_for(lk, std::chrono::seconds(20), [this] {
-          return scheduleSteps_ > 0 || stop_;
-        }))
-    {
-      std::cerr << "loop waiting for data timeout: " << id_ << std::endl;
-    }
+    cv_.wait(lk, [this] {
+      return scheduleSteps_ > 0 || stop_;
+    });
 
     if (stop_)
     {
@@ -1002,17 +1019,12 @@ void PioStatemachine::loop()
         {
           std::cerr << "Pause timeout" << std::endl;
         }
-        running_ = true;
       }
       step();
     }
 
     scheduleSteps_ = 0;
     running_ = false;
-
-    lk.unlock();
-    cv_.notify_one();
-    lk.lock();
 
     std::unique_lock iolk(io_sync_.mutex);
     io_sync_.sync = true;
@@ -1034,7 +1046,9 @@ void PioStatemachine::pause()
 
 void PioStatemachine::resume()
 {
+  std::unique_lock lk(mutex_);
   request_pause_ = false;
+  lk.unlock();
   cv_.notify_one();
 }
 

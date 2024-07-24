@@ -51,12 +51,12 @@ extern "C"
 
   void pio_initialize_ex()
   {
-    piosim::PioSimulator::get();
+    piosim::PioSimulator::init();
   }
 
   void pio_deinitialize_ex()
   {
-    piosim::PioSimulator::get().close();
+    piosim::PioSimulator::close();
   }
 
   uint32_t pio_execute_ex(uint32_t number_of_instructions)

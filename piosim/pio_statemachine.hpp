@@ -36,14 +36,14 @@ class PioStatemachine
 public:
   PioStatemachine(int id, std::span<const uint16_t> program, std::span<bool> irqs,
                   IOSync &io_sync);
+  ~PioStatemachine();
 
   void enable(bool enable);
   void restart();
   void clock_divider_restart();
 
   void step();
-  void execute(uint32_t steps);
-  void wait_for_done();
+  void execute(uint32_t steps, bool additional = false);
   bool done() const;
 
   const Fifo &tx_fifo() const;
@@ -118,6 +118,8 @@ private:
   std::span<bool> irqs_;
   std::mutex mutex_;
   std::condition_variable cv_;
+  std::condition_variable execute_immediately_cv_;
+  std::mutex execute_immediately_mutex_;
 
   std::thread thread_;
   uint32_t scheduleSteps_;

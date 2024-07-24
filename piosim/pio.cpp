@@ -5,9 +5,7 @@
  *
  * Distributed under the terms of the MIT License.
  */
-
 #include "pio.hpp"
-
 #include "renode_log.hpp"
 
 #include <algorithm>
@@ -21,8 +19,31 @@ namespace piosim
 
 PioSimulator &PioSimulator::get()
 {
-  static PioSimulator sim;
-  return sim;
+  if (!self_)
+  {
+    init();
+  }
+  return *self_;
+}
+
+void PioSimulator::init()
+{
+  self_ = std::unique_ptr<PioSimulator>(new PioSimulator());
+}
+
+void PioSimulator::close()
+{
+  if (!self_)
+  {
+    return;
+  }
+
+  for (auto &sm : self_->sm_)
+  {
+    sm.enable(false);
+  }
+
+  self_.reset();
 }
 
 PioSimulator::PioSimulator()
@@ -169,8 +190,10 @@ PioSimulator::PioSimulator()
           return sm.current_instruction();
         },
       .write =
-        [&sm = sm_[i]](uint32_t value) {
+        [this, &sm = sm_[i]](uint32_t value) {
+          renode_log(LogLevel::Error, std::format("execute_immediately: {}", value));
           sm.execute_immediately(static_cast<uint16_t>(value));
+          execute(1, true);
         },
     };
 
@@ -213,12 +236,11 @@ uint32_t PioSimulator::read_memory(uint32_t address) const
   return 0;
 }
 
-uint32_t PioSimulator::execute(uint32_t steps)
+uint32_t PioSimulator::execute(uint32_t steps, bool additional)
 {
-  // renode_log(LogLevel::Error, std::format("Execute: {}", steps));
   for (auto &sm : sm_)
   {
-    sm.execute(steps);
+    sm.execute(steps, additional);
   }
 
   bool all_done = std::all_of(sm_.begin(), sm_.end(), [](const auto &sm) {
@@ -227,9 +249,7 @@ uint32_t PioSimulator::execute(uint32_t steps)
 
   while (!all_done)
   {
-    // renode_log(LogLevel::Error, "Main thread trying lock");
     std::unique_lock lk(io_sync_.mutex);
-    // renode_log(LogLevel::Error, "Main thread waiting");
     if (!io_sync_.cv.wait_for(lk, std::chrono::seconds(1), [this] {
           return io_sync_.sync;
         }))
@@ -244,7 +264,6 @@ uint32_t PioSimulator::execute(uint32_t steps)
     io_actions_.clear();
     io_sync_.sync = false;
     lk.unlock();
-    // renode_log(LogLevel::Error, "Notifing with false");
     io_sync_.cv.notify_all();
     lk.lock();
 
@@ -254,14 +273,6 @@ uint32_t PioSimulator::execute(uint32_t steps)
   }
 
   return steps;
-}
-
-void PioSimulator::close()
-{
-  for (auto &sm : sm_)
-  {
-    sm.enable(false);
-  }
 }
 
 uint32_t PioSimulator::read_control() const
@@ -309,5 +320,7 @@ uint32_t PioSimulator::read_flevel() const
   }
   return r;
 }
+
+std::unique_ptr<PioSimulator> PioSimulator::self_ = nullptr;
 
 } // namespace piosim

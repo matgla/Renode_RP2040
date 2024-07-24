@@ -91,7 +91,7 @@ namespace Antmicro.Renode.Peripherals.CPU
 
             Process configure = new Process();
             configure.StartInfo.FileName = cmake_command;
-            configure.StartInfo.Arguments = "..";
+            configure.StartInfo.Arguments = ".. -DCMAKE_BUILD_TYPE=Relase";
             configure.StartInfo.CreateNoWindow = false;
             configure.StartInfo.UseShellExecute = false;
             configure.StartInfo.WorkingDirectory = buildPath;
@@ -116,8 +116,6 @@ namespace Antmicro.Renode.Peripherals.CPU
             {
                 throw new Exception("CMake build failed");
             }
-
-
 
         }
 

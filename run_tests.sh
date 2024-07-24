@@ -2,6 +2,11 @@
 
 if [ ! -d pico-examples ]; then
     git clone https://github.com/raspberrypi/pico-examples.git
+    for i in pico_examples_patches/*.patch; do
+        cd pico-examples 
+        git am < ../${i}
+        cd ..
+    done
 fi
 
 cd pico-examples

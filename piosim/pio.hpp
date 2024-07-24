@@ -9,26 +9,24 @@
 #pragma once
 
 #include <array>
-#include <condition_variable>
 #include <cstdint>
 #include <map>
-#include <mutex>
+#include <memory>
 
 #include "pio_registers.hpp"
 #include "pio_statemachine.hpp"
-
 namespace piosim
 {
-
 class PioSimulator
 {
 public:
   static PioSimulator &get();
+  static void init();
+  static void close();
 
   void write_memory(uint32_t address, uint32_t value);
   uint32_t read_memory(uint32_t address) const;
-  uint32_t execute(uint32_t steps);
-  void close();
+  uint32_t execute(uint32_t steps, bool additional = false);
 
 private:
   PioSimulator();
@@ -64,6 +62,8 @@ private:
   IOSync io_sync_;
   std::vector<std::function<void()>> io_actions_;
   // program is read-only for statemachine, no need to synchronize thread
+  //
+  static std::unique_ptr<PioSimulator> self_;
 };
 
 } // namespace piosim

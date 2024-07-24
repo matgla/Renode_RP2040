@@ -4,3 +4,4 @@
 - tests/hello_world/serial/hello_serial.robot
 - tests/pio/addition/addition.robot
 - tests/pio/hello_pio/hello_pio.robot
+- tests/pio/pio_blink/pio_blink.robot

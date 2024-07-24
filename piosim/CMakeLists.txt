@@ -15,6 +15,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED)
 set(CMAKE_CXX_FLAGS "-Wall -Wextra -Werror")
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+set(CMAKE_CXX_FLAGS_RELEASE "-O3")
+set(CMAKE_CXX_FLAGS_DEBUG "-g -Og")
+
 add_library(piosim SHARED)
 
 
