@@ -10,26 +10,17 @@
 
 #include <cstdint>
 
-#include <atomic>
-#include <condition_variable>
-#include <mutex>
 #include <optional>
 #include <span>
-#include <thread>
+#include <string_view>
+#include <utility>
 
 #include "fifo.hpp"
 #include "pio_registers.hpp"
+#include "renode_log.hpp"
 
 namespace piosim
 {
-
-struct IOSync
-{
-  std::mutex mutex;
-  std::condition_variable cv;
-  bool sync;
-  std::function<void(const std::function<void()> &)> schedule_action;
-};
 
 class PioStatemachine
 {
@@ -66,6 +57,7 @@ public:
   void execute_immediately(uint16_t instruction);
 
 private:
+  inline void log(LogLevel level, const std::string_view &data) const;
   inline bool run_step();
 
   inline bool process_delay();
@@ -86,10 +78,10 @@ private:
   inline bool process_irq(uint16_t data);
   inline bool process_set(uint16_t data);
 
-  inline void push_isr();
+  inline bool push_isr();
   inline void load_osr(uint32_t value);
-  inline void load_osr();
-  inline void write_isr(uint32_t bits, uint32_t data);
+  inline bool load_osr();
+  inline bool write_isr(uint32_t bits, uint32_t data);
   inline uint32_t read_osr(uint32_t bits);
 
   inline uint32_t get_from_source(uint32_t source);
@@ -103,7 +95,6 @@ private:
   bool ignore_delay_;
 
   uint8_t program_counter_;
-  std::optional<uint16_t> immediate_instruction_;
   std::optional<uint8_t> wait_for_irq_;
   std::span<const uint16_t> program_;
   std::span<bool> irqs_;
@@ -115,16 +106,16 @@ private:
   uint32_t osr_counter_;
   uint32_t isr_counter_;
 
-  uint32_t delay_counter_;
-  uint32_t delay_;
+  uint64_t delay_counter_;
+  uint64_t delay_;
 
   Fifo tx_;
   Fifo rx_;
 
-  Register<SMClockDivider> clock_divider_register_;
-  Register<SMExecControl> exec_control_register_;
-  Register<SMShiftControl> shift_control_register_;
-  Register<SMPinControl> pin_control_register_;
+  SMClockDividerInternal clock_divider_register_;
+  SMExecControlInternal exec_control_register_;
+  SMShiftControlInternal shift_control_register_;
+  SMPinControlInternal pin_control_register_;
 
   uint16_t current_instruction_;
 };

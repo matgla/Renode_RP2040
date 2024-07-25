@@ -48,19 +48,17 @@ void PioSimulator::close()
 }
 
 PioSimulator::PioSimulator()
-  // clang-format off
-  : program_{}, 
-    irqs_{},
-    actions_{},
-    control_{
-      .reg = {
-        .sm_enable = 0,
-        .sm_restart = 0,
-        .clkdiv_restart = 0,
-        ._reserved = 0,
-      }
-    },
-    sm_{
+  : program_{}
+  , irqs_{}
+  , actions_{}
+  , control_{.reg =
+               {
+                 .sm_enable = 0,
+                 .sm_restart = 0,
+                 .clkdiv_restart = 0,
+                 ._reserved = 0,
+               }}
+  , sm_{
       PioStatemachine{0, program_, irqs_},
       PioStatemachine{1, program_, irqs_},
       PioStatemachine{2, program_, irqs_},
@@ -95,7 +93,9 @@ PioSimulator::PioSimulator()
     actions_[Address::RXF0 + i * 4] = {
       .read =
         [this, i]() {
-          return sm_[i].pop_rx();
+          uint32_t r = sm_[i].pop_rx();
+          renode_log(LogLevel::Error, std::format("!!! RX read: {:x}", r));
+          return r;
         },
       .write = nullptr,
     };
@@ -281,6 +281,7 @@ uint32_t PioSimulator::read_flevel() const
     r |= (sm_[i].tx_fifo().size() << (i * 8));
     r |= (sm_[i].rx_fifo().size() << (i * 8 + 4));
   }
+
   return r;
 }
 

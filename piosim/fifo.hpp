@@ -25,7 +25,7 @@ public:
 
   bool empty() const;
   bool full() const;
-  bool size() const;
+  std::size_t size() const;
   void resize(std::size_t size);
 
 private:

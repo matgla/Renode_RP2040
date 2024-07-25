@@ -58,7 +58,7 @@ void Fifo::resize(std::size_t size)
   max_size_ = size;
 }
 
-bool Fifo::size() const
+std::size_t Fifo::size() const
 {
   return queue_.size();
 }
