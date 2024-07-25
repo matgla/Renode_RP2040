@@ -3,7 +3,7 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
     <PlatformTarget>AMD64</PlatformTarget>
-    <RenodePath>/opt/renode/bin</RenodePath>
+    <RenodePath>/opt/renode_1.15.1_portable/bin</RenodePath>
   </PropertyGroup>
 
   <ItemGroup>

@@ -18,6 +18,8 @@ EnsureTypeIsLoaded "Antmicro.Renode.Peripherals.Miscellaneous.PioDecodedInstruct
 include $ORIGIN/emulation/peripherals/pio/pio_statemachine.cs
 EnsureTypeIsLoaded "Antmicro.Renode.Peripherals.Miscellaneous.PioStateMachine"
 include $ORIGIN/emulation/peripherals/pio/rp2040_pio.cs
+include $ORIGIN/emulation/peripherals/spi/rp2040_spi.cs
+
 
 include $ORIGIN/emulation/peripherals/sio/rp2040_sio.cs
 
