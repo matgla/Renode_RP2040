@@ -188,7 +188,7 @@ namespace Antmicro.Renode.Peripherals.CPU
             return 0;
         }
 
-        protected override ExecutionResult ExecuteInstructions(ulong numberOfInstructionsToExecute, out ulong numberOfExecutedInstructions)
+        public override ExecutionResult ExecuteInstructions(ulong numberOfInstructionsToExecute, out ulong numberOfExecutedInstructions)
         {
             instructionsExecutedThisRound = 0UL;
 
