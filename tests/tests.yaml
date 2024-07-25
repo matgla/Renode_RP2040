@@ -1,8 +1,8 @@
-#- tests/timer/hello_timer/hello_timer.robot
-#- tests/timer/timer_lowlevel/timer_lowlevel.robot
-#- tests/divider/hello_divider/hello_divider.robot
-#- tests/hello_world/serial/hello_serial.robot
+- tests/timer/hello_timer/hello_timer.robot
+- tests/timer/timer_lowlevel/timer_lowlevel.robot
+- tests/divider/hello_divider/hello_divider.robot
+- tests/hello_world/serial/hello_serial.robot
 - tests/pio/addition/addition.robot
-  #- tests/pio/hello_pio/hello_pio.robot
+- tests/pio/hello_pio/hello_pio.robot
 - tests/pio/pio_blink/pio_blink.robot
 - tests/pio/differential_manchester/differential_manchester.robot
