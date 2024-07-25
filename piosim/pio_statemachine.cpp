@@ -162,6 +162,10 @@ void PioStatemachine::schedule_delay(uint16_t data)
 
 void __attribute__((always_inline)) PioStatemachine::increment_program_counter()
 {
+  if (!enabled_)
+  {
+    return;
+  }
   if (program_counter_ == exec_control_register_.wrap_top)
   {
     program_counter_ = exec_control_register_.wrap_bottom;
@@ -194,9 +198,6 @@ void __attribute__((always_inline)) PioStatemachine::process_sideset(uint16_t da
       bool enabled = true;
       if (exec_control_register_.side_en)
       {
-        log(LogLevel::Error,
-            std::format("Side register enabled: and is {}, dat: {:x}",
-                        data & (1 << 4), data));
         if (!(data & (1 << 4)))
         {
           enabled = false;
@@ -204,9 +205,6 @@ void __attribute__((always_inline)) PioStatemachine::process_sideset(uint16_t da
       }
       if (enabled)
       {
-        log(LogLevel::Error,
-            std::format("Sideset: {}, {}", gpio_bitset, gpio_bitmap));
-
         if (exec_control_register_.side_pindir)
         {
           renode_gpio_set_pindir_bitset(gpio_bitset, gpio_bitmap);
@@ -215,8 +213,6 @@ void __attribute__((always_inline)) PioStatemachine::process_sideset(uint16_t da
         {
           renode_gpio_set_pin_bitset(gpio_bitset, gpio_bitmap);
         }
-
-        log(LogLevel::Error, "sideset done");
       }
     }
     sideset_done_ = true;
@@ -278,7 +274,6 @@ bool __attribute__((always_inline)) PioStatemachine::process_jump(uint16_t data)
     execute = osr_counter_ < shift_control_register_.pull_threshold;
     break;
   }
-  log(LogLevel::Error, std::format("Jump: {}, met: {}", condition, execute));
 
   if (execute)
   {
@@ -308,8 +303,6 @@ bool PioStatemachine::process_wait(uint16_t data)
     const int pin_index = ((index + pin_control_register_.in_base) % 32);
     const bool pin_state = renode_gpio_get_pin_state(pin_index);
     condition_met = pin_state == polarity;
-    log(LogLevel::Error,
-        std::format("Reading pin: {}, met: {}", pin_index, condition_met));
     break;
   }
   case 2: {
@@ -334,18 +327,17 @@ bool PioStatemachine::process_wait(uint16_t data)
   if (condition_met)
   {
     increment_program_counter();
+    return true;
   }
-  return true;
+  return false;
 }
 
 bool PioStatemachine::push_isr()
 {
   if (rx_.full())
   {
-    log(LogLevel::Error, std::format("RX FULL: {}", rx_.size()));
     return false;
   }
-  log(LogLevel::Error, std::format("RX push: {}", isr_));
   rx_.push(isr_);
   isr_ = 0;
   isr_counter_ = 0;
@@ -657,7 +649,6 @@ bool PioStatemachine::process_mov(uint16_t immediateData)
   const uint16_t source = static_cast<uint16_t>(immediateData & 0x7);
   const uint16_t operation = static_cast<uint16_t>((immediateData >> 3) & 0x03);
 
-  log(LogLevel::Error, std::format("MOV: {} to {}", source, destination));
   uint32_t data = get_from_source(source);
 
   if (operation == 1)
@@ -717,7 +708,6 @@ bool PioStatemachine::process_mov(uint16_t immediateData)
 
 bool PioStatemachine::process_irq(uint16_t data)
 {
-  renode_log(LogLevel::Error, "IRQ");
   if (wait_for_irq_)
   {
     if (irqs_[*wait_for_irq_] == false)
@@ -803,8 +793,6 @@ bool PioStatemachine::step()
 
   if (delay_counter_ < delay_)
   {
-    if (id_ == 0)
-      log(LogLevel::Error, std::format("delay: {}", delay_));
     ++delay_counter_;
     return true;
   }
@@ -815,23 +803,10 @@ bool PioStatemachine::step()
 
 bool __attribute__((always_inline)) PioStatemachine::run_step()
 {
-  static int i = 0;
-  if (++i > 400)
-  {
-    return true;
-  }
-
   const OpCode opcode = static_cast<OpCode>(current_instruction_ >> 13);
   const uint16_t delay_or_sideset = (current_instruction_ >> 8) & 0x1f;
   const uint16_t immediate_data = current_instruction_ & 0xff;
-  if (id_ == 0)
-  {
-    log(LogLevel::Error,
-        std::format("PC: {}, cmd: {}, delay: {:x}, immediate_data: {:x}, x: {:x}, "
-                    "osr: {:x}, c: {}",
-                    program_counter_, to_string(opcode), delay_or_sideset,
-                    immediate_data, x_, osr_, osr_counter_));
-  }
+
   process_sideset(delay_or_sideset);
 
   bool finished = false;
@@ -910,7 +885,8 @@ const Fifo &PioStatemachine::rx_fifo() const
 
 void PioStatemachine::push_tx(uint32_t data)
 {
-  log(LogLevel::Error, std::format("Push to TX: {:x}", data));
+  log(LogLevel::Noisy,
+      std::format("Pushing to queue: {}, size: {}", data, tx_.size()));
   tx_.push(data);
 }
 
@@ -986,8 +962,6 @@ void PioStatemachine::exec_control_register(uint32_t data)
   exec_control_register_.side_pindir = reg.reg.side_pindir;
   exec_control_register_.side_en = reg.reg.side_en;
   exec_control_register_.exec_stalled = reg.reg.exec_stalled;
-  log(LogLevel::Warning, std::format("EXEC registers: {:x}, sideen: {}", data,
-                                     exec_control_register_.side_en));
 }
 
 uint32_t PioStatemachine::shift_control_register() const
@@ -1023,16 +997,31 @@ void PioStatemachine::shift_control_register(uint32_t data)
   shift_control_register_.fjoin_tx = reg.reg.fjoin_tx;
   shift_control_register_.fjoin_rx = reg.reg.fjoin_rx;
 
-  if (shift_control_register_.fjoin_tx)
+  if (shift_control_register_.fjoin_tx != 0 && shift_control_register_.fjoin_rx == 0)
   {
     tx_.resize(8);
     rx_.resize(0);
+    log(LogLevel::Noisy, "Joining TX FIFO");
   }
-
-  if (shift_control_register_.fjoin_rx)
+  else if (shift_control_register_.fjoin_rx != 0 &&
+           shift_control_register_.fjoin_tx == 0)
   {
     tx_.resize(0);
     rx_.resize(8);
+    log(LogLevel::Noisy, "Joining RX FIFO");
+  }
+  else if (shift_control_register_.fjoin_rx == 1 &&
+           shift_control_register_.fjoin_tx == 1)
+  {
+    tx_.resize(0);
+    rx_.resize(0);
+    log(LogLevel::Noisy, "Joining RX&TX FIFO");
+  }
+  else
+  {
+    tx_.resize(4);
+    rx_.resize(4);
+    log(LogLevel::Noisy, "Unoining FIFOs");
   }
 }
 

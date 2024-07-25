@@ -93,9 +93,7 @@ PioSimulator::PioSimulator()
     actions_[Address::RXF0 + i * 4] = {
       .read =
         [this, i]() {
-          uint32_t r = sm_[i].pop_rx();
-          renode_log(LogLevel::Error, std::format("!!! RX read: {:x}", r));
-          return r;
+          return sm_[i].pop_rx();
         },
       .write = nullptr,
     };
