@@ -61,33 +61,12 @@ PioSimulator::PioSimulator()
       }
     },
     sm_{
-      PioStatemachine{0, program_, irqs_, io_sync_},
-      PioStatemachine{1, program_, irqs_, io_sync_},
-      PioStatemachine{2, program_, irqs_, io_sync_},
-      PioStatemachine{3, program_, irqs_, io_sync_},
+      PioStatemachine{0, program_, irqs_},
+      PioStatemachine{1, program_, irqs_},
+      PioStatemachine{2, program_, irqs_},
+      PioStatemachine{3, program_, irqs_},
     }
-    , io_sync_ {}
-    , io_actions_{}
-// clang-format on
 {
-  //  io_sync_.schedule_action = [this](const std::function<void()> &callback) {
-  //    std::unique_lock lk(io_sync_.mutex);
-  //    io_actions_.push_back(callback);
-  //    io_sync_.sync = true;
-  //    lk.unlock();
-  //    io_sync_.cv.notify_all();
-  //    lk.lock();
-  //    if (!io_sync_.cv.wait_for(lk, std::chrono::seconds(2), [this] {
-  //          return !io_sync_.sync;
-  //        }))
-  //    {
-  //      //   renode_log(LogLevel::Error, std::format("Timeout on waiting for IO
-  //      sync:
-  //      //   {}",
-  //      //                                           std::this_thread::get_id()));
-  //    }
-  //  };
-  //
   actions_[Address::CTRL] = {
     .read = std::bind(&PioSimulator::read_control, this),
     .write = std::bind(&PioSimulator::write_control, this, std::placeholders::_1),

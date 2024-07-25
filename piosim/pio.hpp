@@ -59,8 +59,6 @@ private:
 
   std::array<PioStatemachine, 4> sm_;
 
-  IOSync io_sync_;
-  std::vector<std::function<void()>> io_actions_;
   // program is read-only for statemachine, no need to synchronize thread
   //
   static std::unique_ptr<PioSimulator> self_;

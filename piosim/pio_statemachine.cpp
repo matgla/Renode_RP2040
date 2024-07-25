@@ -58,25 +58,18 @@ inline uint32_t __attribute__((always_inline)) bitreverse(uint32_t data)
 } // namespace
 
 PioStatemachine::PioStatemachine(int id, std::span<const uint16_t> program,
-                                 std::span<bool> irqs, IOSync &io_sync)
+                                 std::span<bool> irqs)
   : id_{id}
-  , running_{false}
-  , stop_{false}
   , enabled_{false}
   , clock_divider_{1}
   , stalled_{false}
   , sideset_done_{false}
   , ignore_delay_{false}
-  , request_pause_{false}
   , program_counter_{0}
   , immediate_instruction_{std::nullopt}
   , wait_for_irq_{std::nullopt}
   , program_{program}
   , irqs_{irqs}
-  , mutex_{}
-  , cv_{}
-  , thread_{}
-  , scheduleSteps_{0}
   , x_{0}
   , y_{0}
   , osr_{0}
@@ -127,19 +120,11 @@ PioStatemachine::PioStatemachine(int id, std::span<const uint16_t> program,
                                   .out_count = 0,
                                   .set_count = 5,
                                   .sideset_count = 0}}
-  , io_sync_{io_sync}
 {
-  // thread_ = std::thread(&PioStatemachine::loop, this);
 }
 
 PioStatemachine::~PioStatemachine()
 {
-  // std::unique_lock lk(mutex_);
-  // stop_ = true;
-  // enabled_ = false;
-  // lk.unlock();
-  // cv_.notify_one();
-  // thread_.join();
 }
 
 void PioStatemachine::enable(bool enable)

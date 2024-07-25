@@ -34,8 +34,7 @@ struct IOSync
 class PioStatemachine
 {
 public:
-  PioStatemachine(int id, std::span<const uint16_t> program, std::span<bool> irqs,
-                  IOSync &io_sync);
+  PioStatemachine(int id, std::span<const uint16_t> program, std::span<bool> irqs);
   ~PioStatemachine();
 
   void enable(bool enable);
@@ -97,27 +96,17 @@ private:
 
   int id_;
 
-  bool running_;
-  bool stop_;
   bool enabled_;
   double clock_divider_;
   bool stalled_;
   bool sideset_done_;
   bool ignore_delay_;
-  bool request_pause_;
 
   uint8_t program_counter_;
   std::optional<uint16_t> immediate_instruction_;
   std::optional<uint8_t> wait_for_irq_;
   std::span<const uint16_t> program_;
   std::span<bool> irqs_;
-  std::mutex mutex_;
-  std::condition_variable cv_;
-  std::condition_variable execute_immediately_cv_;
-  std::mutex execute_immediately_mutex_;
-
-  std::thread thread_;
-  uint32_t scheduleSteps_;
 
   uint32_t x_;
   uint32_t y_;
@@ -137,7 +126,6 @@ private:
   Register<SMShiftControl> shift_control_register_;
   Register<SMPinControl> pin_control_register_;
 
-  IOSync &io_sync_;
   uint16_t current_instruction_;
 };
 
