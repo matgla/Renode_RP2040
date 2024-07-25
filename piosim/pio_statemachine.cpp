@@ -9,10 +9,7 @@
 #include "pio_statemachine.hpp"
 
 #include <bit>
-#include <chrono>
 #include <format>
-#include <iostream>
-#include <thread>
 
 #include "gpio.hpp"
 #include "opcode.hpp"
@@ -780,12 +777,6 @@ bool PioStatemachine::step()
   {
     return true;
   }
-
-  if (stalled_)
-  {
-    return true;
-  }
-
   // process delay
   ++delay_counter_;
   if (delay_counter_ < delay_)
