@@ -3,7 +3,7 @@
 Suite Setup     Setup
 Suite Teardown  Teardown
 Test Teardown   Test Teardown
-Test Timeout    270 seconds
+Test Timeout    90 seconds
 
 *** Test Cases ***
 Run successfully 'hello_pio' example

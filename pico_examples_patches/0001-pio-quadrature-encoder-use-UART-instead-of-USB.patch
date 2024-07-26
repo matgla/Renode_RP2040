@@ -1,0 +1,25 @@
+From 87765effe208fc0f7d4c697251c977db56497e46 Mon Sep 17 00:00:00 2001
+From: Mateusz Stadnik <matgla@live.com>
+Date: Fri, 26 Jul 2024 21:48:58 +0200
+Subject: [PATCH] pio quadrature encoder use UART instead of USB
+
+---
+ pio/quadrature_encoder/CMakeLists.txt | 2 --
+ 1 file changed, 2 deletions(-)
+
+diff --git a/pio/quadrature_encoder/CMakeLists.txt b/pio/quadrature_encoder/CMakeLists.txt
+index b118f3c..c6f5eac 100644
+--- a/pio/quadrature_encoder/CMakeLists.txt
++++ b/pio/quadrature_encoder/CMakeLists.txt
+@@ -10,8 +10,6 @@ target_link_libraries(pio_quadrature_encoder PRIVATE
+         hardware_pio
+         )
+ 
+-pico_enable_stdio_usb(pio_quadrature_encoder 1)
+-
+ pico_add_extra_outputs(pio_quadrature_encoder)
+ 
+ # add url via pico_set_program_url
+-- 
+2.45.2
+
