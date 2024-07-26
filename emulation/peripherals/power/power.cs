@@ -1,20 +1,14 @@
 using Antmicro.Renode.Core;
-using Antmicro.Renode.Core.Structure.Registers;
-using Antmicro.Renode.Peripherals.CPU;
-using System;
-using System.Linq;
-using Antmicro.Renode.Time;
-using Xwt;
 using Antmicro.Renode.Logging;
 
 namespace Antmicro.Renode.Peripherals.Miscellaneous
 {
-    public class PowerOnInput: IGPIOReceiver
+    public class PowerOnInput : IGPIOReceiver
     {
         public PowerOnInput(Machine machine)
         {
             PowerOnLine = new bool();
-            this.machine = machine;  
+            this.machine = machine;
             Reset();
         }
 
@@ -27,7 +21,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
         public void OnGPIO(int number, bool value)
         {
             this.Log(LogLevel.Error, "Received GPIO PowerOn signal " + value);
-           
+
             if (value)
             {
                 var cpus = machine.SystemBus.GetCPUs();
@@ -38,7 +32,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                 }
             }
         }
-        
+
         private readonly bool PowerOnLine;
     }
 

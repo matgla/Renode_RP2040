@@ -6,7 +6,8 @@ using Antmicro.Renode.Utilities.Collections;
 
 namespace Antmicro.Renode.Peripherals.SPI
 {
-  public sealed class PL022 : NullRegistrationPointPeripheralContainer<ISPIPeripheral>, IWordPeripheral, IDoubleWordPeripheral, IBytePeripheral, IKnownSize
+  // Slave mode is not yet supported
+  public class PL022 : NullRegistrationPointPeripheralContainer<ISPIPeripheral>, IWordPeripheral, IDoubleWordPeripheral, IBytePeripheral, IKnownSize, IGPIOReceiver
   {
     public long Size { get { return 0x1000; } }
 
@@ -17,8 +18,23 @@ namespace Antmicro.Renode.Peripherals.SPI
 
       registers = new DoubleWordRegisterCollection(this);
       DefineRegisters();
+      dataSize = 0;
+      frameFormat = 0;
+      clockPolarity = false;
+      clockPhase = false;
+      clockRate = 0;
+      loopbackMode = false;
+      synchronousSerialPort = false;
+      masterSlaveSelect = false;
+      slaveModeDisabled = false;
+      running = false;
+      clockPrescaleDivisor = 0;
 
-      this._executionThread = machine.ObtainManagedThread(Step)
+      this._executionThread = machine.ObtainManagedThread(Step, 1);
+    }
+
+    public void OnGPIO(int number, bool value)
+    {
     }
 
     private void Step()
@@ -56,10 +72,6 @@ namespace Antmicro.Renode.Peripherals.SPI
     public override void Reset()
     {
     }
-
-    public GPIO IRQ { get; }
-
-
     private uint HandleDataRead()
     {
       return 0;
@@ -107,7 +119,6 @@ namespace Antmicro.Renode.Peripherals.SPI
           writeCallback: (_, value) => slaveModeDisabled = value, name: "SSPCR1_SOD")
         .WithReservedBits(4, 28);
 
-
       Registers.SSPDR.Define(registers)
         .WithValueField(0, 16, valueProviderCallback: _ =>
         {
@@ -125,6 +136,36 @@ namespace Antmicro.Renode.Peripherals.SPI
             txBuffer.Enqueue((ushort)value);
           }
         }, name: "SSPDR_DATA");
+
+      Registers.SSPSR.Define(registers)
+        .WithFlag(0, FieldMode.Read, valueProviderCallback: _ =>
+        {
+          return txBuffer.Count == 0;
+        }, name: "SSPSR_TFE")
+        .WithFlag(1, FieldMode.Read, valueProviderCallback: _ =>
+        {
+          return txBuffer.Count == txBuffer.Capacity;
+        }, name: "SSPSR_TNF")
+        .WithFlag(2, FieldMode.Read, valueProviderCallback: _ =>
+        {
+          return rxBuffer.Count == 0;
+        }, name: "SSPSR_RNE")
+        .WithFlag(3, FieldMode.Read, valueProviderCallback: _ =>
+        {
+          return rxBuffer.Count == rxBuffer.Capacity;
+        }, name: "SSPSR_RFF")
+        .WithFlag(4, FieldMode.Read, valueProviderCallback: _ =>
+        {
+          return running;
+        }, name: "SSPSR_BSY");
+
+      Registers.SSPCPSR.Define(registers)
+        .WithValueField(0, 8, valueProviderCallback: _ => clockPrescaleDivisor,
+          writeCallback: (_, value) =>
+          {
+            clockPrescaleDivisor = (byte)value;
+            RecalculateClockRate();
+          }, name: "SSPCPSR_CPSDVSR");
 
       Registers.SSPPERIPHID0.Define(registers)
         .WithValueField(0, 8, FieldMode.Read, valueProviderCallback: _ => 0x22, name: "SSPPERIPHID0_PARTNUMBER0")
@@ -155,6 +196,13 @@ namespace Antmicro.Renode.Peripherals.SPI
         .WithReservedBits(8, 24);
     }
 
+
+    public GPIO RxPin { get; set; }
+    public GPIO TxPin { get; set; }
+    public GPIO CsPin { get; set; }
+    public GPIO ClockPin { get; set; }
+
+
     private byte dataSize;
     private byte frameFormat;
     private bool clockPolarity;
@@ -164,6 +212,8 @@ namespace Antmicro.Renode.Peripherals.SPI
     private bool synchronousSerialPort;
     private bool masterSlaveSelect;
     private bool slaveModeDisabled;
+    private bool running;
+    private byte clockPrescaleDivisor;
 
     private DoubleWordRegisterCollection registers;
 
@@ -179,11 +229,11 @@ namespace Antmicro.Renode.Peripherals.SPI
       SSPCR1 = 0x4,
       SSPDR = 0x8,
       SSPSR = 0xC,
-      SSPCPSR = 0x10, // SPI_CRCPR
-      SSPIMSC = 0x14, // SPI_RXCRCR
-      SSPRIS = 0x18, // SPI_TXCRCR
-      SSPMIS = 0x1C, // SPI_I2SCFGR
-      SSPICR = 0x20, // SPI_I2SPR
+      SSPCPSR = 0x10,
+      SSPIMSC = 0x14,
+      SSPRIS = 0x18,
+      SSPMIS = 0x1C,
+      SSPICR = 0x20,
       SSPDMACR = 0x24,
       SSPPERIPHID0 = 0xfe0,
       SSPPERIPHID1 = 0xfe4,

@@ -37,6 +37,33 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
         };
         public Direction[] PinDirections { get; set; }
 
+        private string FunctionToString(int pin, int function)
+        {
+            if (function == 0)
+            {
+                return "none";
+            }
+
+            const string[,] pinMapping = new string[NumberOfPins, 9]{
+                {"SPI0 RX", "UART0 TX", "I2C SDA", "PWM0 A", "SIO", "PIO0", "PIO1", "none", "USB OVCUR DET"},
+                {"SPI0 CSn", "UART0 RX", "I2C SCL", "PWM0 B", "SIO", "PIO0", "PIO1", "none", "USB VBUS DET"},
+                {"SPI0 RX", "UART0 TX", "I2C SDA", "PWM0 A", "SIO", "PIO0", "PIO1", "none", "USB VBUS EN"},
+
+
+
+            };
+
+            return pinMapping[pin - 1][function];
+        }
+
+        private void EvaluatePinInterconnections()
+        {
+            for (int i = 0; i < NumberOfPins; ++i)
+            {
+                this.Log(LogLevel.Noisy, "GPIO{} has function: ")
+            }
+        }
+
         private DoubleWordRegisterCollection CreateRegisters()
         {
             var registersMap = new Dictionary<long, DoubleWordRegister>();
@@ -86,6 +113,7 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
                         writeCallback: (_, value) =>
                         {
                             functionSelect[i] = (int)value;
+                            EvaluatePinInterconnections();
                         },
                         name: "GPIO" + i + "_CTRL_FUNCSEL")
                     .WithReservedBits(5, 3)
