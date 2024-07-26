@@ -15,12 +15,13 @@ Run successfully 'pio_clocked_input' example
     Wait For Line On Uart       Data to transmit:
     FOR  ${i}  IN RANGE  8 
     ${number}    Wait For Next Line On Uart    
-    Append To List  ${data}  "${number} OK"
+    Append To List  ${data}  "${number.line} OK"
     END
 
+    Wait For Line On Uart       Reading back from RX FIFO:
     FOR  ${i}  IN RANGE  8 
     ${number}    Wait For Next Line On Uart    
-    Should Contain  ${data}  "${number}"
+    Should Contain  ${data}  "${number.line}"
     END
 
     
