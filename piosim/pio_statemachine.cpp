@@ -337,7 +337,6 @@ bool PioStatemachine::process_wait(uint16_t data)
 
 bool PioStatemachine::push_isr()
 {
-  log(LogLevel::Error, std::format("Pushing to: {}", isr_));
   if (rx_.full())
   {
     return false;
@@ -439,10 +438,6 @@ bool PioStatemachine::process_pushpull(uint16_t data)
 bool __attribute__((always_inline)) PioStatemachine::write_isr(uint32_t bits,
                                                                uint32_t data)
 {
-  log(LogLevel::Error,
-      std::format("Writing ISR: {}, bits: {}, counter: {}, cisr: {}", data, bits,
-                  isr_counter_, isr_));
-
   if (shift_control_register_.autopush &&
       isr_counter_ >= shift_control_register_.push_threshold)
   {
@@ -461,8 +456,6 @@ bool __attribute__((always_inline)) PioStatemachine::write_isr(uint32_t bits,
   if (shift_control_register_.autopush &&
       (isr_counter_ >= shift_control_register_.push_threshold))
   {
-    log(LogLevel::Error, std::format("PUSH: {}", isr_));
-
     return !push_isr();
   }
 
@@ -483,7 +476,6 @@ bool PioStatemachine::process_in(uint16_t data)
   {
   case 0: {
     isr_data = renode_gpio_get_pin_bitmap();
-    // log(LogLevel::Error, std::format("ISR DATA: {}, inbase: {}", isr_data, ));
     const uint32_t mask = (1 << bit_count) - 1;
     isr_data = rotate_right(isr_data, pin_control_register_.in_base, 32) & mask;
     break;
@@ -902,8 +894,6 @@ const Fifo &PioStatemachine::rx_fifo() const
 
 void PioStatemachine::push_tx(uint32_t data)
 {
-  log(LogLevel::Noisy,
-      std::format("Pushing to queue: {}, size: {}", data, tx_.size()));
   tx_.push(data);
 }
 

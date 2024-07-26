@@ -2,8 +2,6 @@ using System;
 using System.Collections.Generic;
 using Antmicro.Renode.Core;
 using Antmicro.Renode.Logging;
-using Antmicro.Renode.Utilities;
-using Antmicro.Renode.Exceptions;
 using Antmicro.Renode.Peripherals.Bus;
 using Antmicro.Renode.Core.Structure.Registers;
 
@@ -20,7 +18,7 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
             Reset();
             functionSelect = new int[NumberOfPins];
             PinDirections = new Direction[NumberOfPins];
-            ReevaluatePio = () => { };
+            ReevaluatePio = (uint cycles) => { };
         }
 
         public void SubscribeOnFunctionChange(Action<int, GpioFunction> callback)
@@ -401,7 +399,7 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
 
         // Currently I have no better idea how to retrigger CPU evaluation when GPIO state changes 
         // This is necessary to have synchronized PIO with System Clock
-        public Action ReevaluatePio { get; set; }
+        public Action<uint> ReevaluatePio { get; set; }
 
 
         List<Action<int, GpioFunction>> functionSelectCallbacks;

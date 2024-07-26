@@ -44,7 +44,8 @@ namespace Antmicro.Renode.Peripherals.SPI
       slaveModeDisabled = false;
       running = false;
       clockPrescaleDivisor = 0;
-      uint frequency = (uint)machine.ClockSource.GetAllClockEntries().First().Frequency / 100;
+      frequency = (ulong)machine.ClockSource.GetAllClockEntries().First().Frequency / 100;
+      steps = (ulong)machine.ClockSource.GetAllClockEntries().First().Frequency / frequency;
       this._executionThread = machine.ObtainManagedThread(Step, 10000000);
       this.gpio.SubscribeOnFunctionChange(OnGpioFunctionSelect);
       transmitCounter = 16;
@@ -159,7 +160,7 @@ namespace Antmicro.Renode.Peripherals.SPI
 
     private void Step()
     {
-      if (transmitCounter > dataSize)
+      if (transmitCounter > dataSize - 1)
       {
         transmitCounter = 0;
         rxBuffer.Enqueue(receiveData);
@@ -167,14 +168,13 @@ namespace Antmicro.Renode.Peripherals.SPI
         if (txBuffer.Count != 0)
         {
           txBuffer.TryDequeue(out transmitData);
-
         }
         else
         {
           transmitData = 0;
 
           SetMultiplePins(txPins, false);
-          SetMultiplePins(clockPins, true);
+          SetMultiplePins(clockPins, false);
           _executionThread.Stop();
           running = false;
         }
@@ -188,7 +188,8 @@ namespace Antmicro.Renode.Peripherals.SPI
         receiveData = (ushort)((receiveData << 1) | Convert.ToUInt16(ReadMultiplePins(rxPins)));
         transmitCounter += 1;
       }
-      gpio.ReevaluatePio();
+
+      gpio.ReevaluatePio((uint)steps);
     }
 
     public uint ReadDoubleWord(long offset)
@@ -198,8 +199,6 @@ namespace Antmicro.Renode.Peripherals.SPI
 
     public void WriteDoubleWord(long offset, uint value)
     {
-      Logger.Log(LogLevel.Error, "Writing to: " + offset + " -> " + value + ", buffer count: " + txBuffer.Count + " / " + txBuffer.Capacity);
-
       registers.Write(offset, value);
     }
 
@@ -363,5 +362,7 @@ namespace Antmicro.Renode.Peripherals.SPI
       SSPPCELLID2 = 0xff8,
       SSPPCELLID3 = 0xffc
     }
+    private ulong frequency;
+    private ulong steps;
   }
 }

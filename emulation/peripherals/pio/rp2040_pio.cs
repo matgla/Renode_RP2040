@@ -126,10 +126,9 @@ namespace Antmicro.Renode.Peripherals.CPU
             binder = new NativeBinder(this, libraryFile);
             machine.GetSystemBus(this).Register(this, new BusRangeRegistration(new Antmicro.Renode.Core.Range(address, (ulong)Size)));
             this.gpio = gpio;
-            gpio.ReevaluatePio = () =>
+            gpio.ReevaluatePio = (uint steps) =>
             {
-                this.Log(LogLevel.Error, "Reevaluate PIO");
-                totalExecutedInstructions += PioExecute(100);
+                totalExecutedInstructions += PioExecute(steps);
             };
         }
 
@@ -268,7 +267,6 @@ namespace Antmicro.Renode.Peripherals.CPU
 
         private ulong instructionsExecutedThisRound;
         private ulong totalExecutedInstructions;
-
         // [This needs to be mapped to the id of the Program Counter register used by the simulator]
         private const int PCRegisterId = 0;
 
@@ -380,7 +378,6 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                     .WithValueField(0, 32, FieldMode.Write,
                         writeCallback: (_, value) =>
                         {
-                            this.Log(LogLevel.Info, "Writing to SM: " + key + " FIFO, val: " + value);
                             StateMachines[key].ShiftControl.PushTxFifo((uint)value);
                         },
                     name: "TXF" + i);
