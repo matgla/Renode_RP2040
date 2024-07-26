@@ -15,10 +15,17 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
     {
         public RP2040GPIO(IMachine machine) : base(machine, NumberOfPins)
         {
+            functionSelectCallbacks = new List<Action<int, GpioFunction>>();
             registers = CreateRegisters();
             Reset();
             functionSelect = new int[NumberOfPins];
             PinDirections = new Direction[NumberOfPins];
+            ReevaluatePio = () => { };
+        }
+
+        public void SubscribeOnFunctionChange(Action<int, GpioFunction> callback)
+        {
+            functionSelectCallbacks.Add(callback);
         }
 
         public IGPIO GetGpio(int id)
@@ -29,7 +36,7 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
         public long Size { get { return 0x1000; } }
         public int[] functionSelect;
 
-        public const int NumberOfPins = 29;
+        public const int NumberOfPins = 30;
         public enum Direction : byte
         {
             Input,
@@ -37,30 +44,114 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
         };
         public Direction[] PinDirections { get; set; }
 
-        private string FunctionToString(int pin, int function)
+        public enum GpioFunction
         {
-            if (function == 0)
+            SPI0_RX,
+            SPI0_CSN,
+            SPI0_SCK,
+            SPI0_TX,
+            SPI1_RX,
+            SPI1_CSN,
+            SPI1_SCK,
+            SPI1_TX,
+            UART0_TX,
+            UART0_RX,
+            UART0_CTS,
+            UART0_RTS,
+            UART1_TX,
+            UART1_RX,
+            UART1_CTS,
+            UART1_RTS,
+            I2C0_SDA,
+            I2C0_SCL,
+            I2C1_SDA,
+            I2C1_SCL,
+            PWM0_A,
+            PWM0_B,
+            PWM1_A,
+            PWM1_B,
+            PWM2_A,
+            PWM2_B,
+            PWM3_A,
+            PWM3_B,
+            PWM4_A,
+            PWM4_B,
+            PWM5_A,
+            PWM5_B,
+            PWM6_A,
+            PWM6_B,
+            PWM7_A,
+            PWM7_B,
+            SIO,
+            PIO0,
+            PIO1,
+            CLOCK_GPIN0,
+            CLOCK_GPIN1,
+            CLOCK_GPOUT0,
+            CLOCK_GPOUT1,
+            CLOCK_GPOUT2,
+            CLOCK_GPOUT3,
+            USB_OVCUR_DET,
+            USB_VBUS_DET,
+            USB_VBUS_EN,
+            NONE
+        };
+
+        private GpioFunction GetFunction(int pin)
+        {
+            if (functionSelect[pin] == 0 || functionSelect[pin] > 9)
             {
-                return "none";
+                return GpioFunction.NONE;
             }
 
-            const string[,] pinMapping = new string[NumberOfPins, 9]{
-                {"SPI0 RX", "UART0 TX", "I2C SDA", "PWM0 A", "SIO", "PIO0", "PIO1", "none", "USB OVCUR DET"},
-                {"SPI0 CSn", "UART0 RX", "I2C SCL", "PWM0 B", "SIO", "PIO0", "PIO1", "none", "USB VBUS DET"},
-                {"SPI0 RX", "UART0 TX", "I2C SDA", "PWM0 A", "SIO", "PIO0", "PIO1", "none", "USB VBUS EN"},
-
-
-
+            GpioFunction[,] pinMapping = new GpioFunction[NumberOfPins, 9]{
+            /* 0 */    {GpioFunction.SPI0_RX,  GpioFunction.UART0_TX,  GpioFunction.I2C0_SDA, GpioFunction.PWM0_A, GpioFunction.SIO, GpioFunction.PIO0, GpioFunction.PIO1, GpioFunction.NONE, GpioFunction.USB_OVCUR_DET},
+            /* 1 */    {GpioFunction.SPI0_CSN, GpioFunction.UART0_RX,  GpioFunction.I2C0_SCL, GpioFunction.PWM0_B, GpioFunction.SIO, GpioFunction.PIO0, GpioFunction.PIO1, GpioFunction.NONE, GpioFunction.USB_VBUS_DET},
+            /* 2 */    {GpioFunction.SPI0_SCK, GpioFunction.UART0_CTS, GpioFunction.I2C1_SDA, GpioFunction.PWM1_A, GpioFunction.SIO, GpioFunction.PIO0, GpioFunction.PIO1, GpioFunction.NONE, GpioFunction.USB_VBUS_EN},
+            /* 3 */    {GpioFunction.SPI0_TX,  GpioFunction.UART0_RTS, GpioFunction.I2C1_SCL, GpioFunction.PWM1_B, GpioFunction.SIO, GpioFunction.PIO0, GpioFunction.PIO1, GpioFunction.NONE, GpioFunction.USB_OVCUR_DET},
+            /* 4 */    {GpioFunction.SPI0_RX,  GpioFunction.UART1_TX,  GpioFunction.I2C0_SDA, GpioFunction.PWM2_A, GpioFunction.SIO, GpioFunction.PIO0, GpioFunction.PIO1, GpioFunction.NONE, GpioFunction.USB_VBUS_DET},
+            /* 5 */    {GpioFunction.SPI0_CSN, GpioFunction.UART1_RX,  GpioFunction.I2C0_SCL, GpioFunction.PWM2_B, GpioFunction.SIO, GpioFunction.PIO0, GpioFunction.PIO1, GpioFunction.NONE, GpioFunction.USB_VBUS_EN},
+            /* 6 */    {GpioFunction.SPI0_SCK, GpioFunction.UART1_CTS, GpioFunction.I2C1_SDA, GpioFunction.PWM3_A, GpioFunction.SIO, GpioFunction.PIO0, GpioFunction.PIO1, GpioFunction.NONE, GpioFunction.USB_OVCUR_DET},
+            /* 7 */    {GpioFunction.SPI0_TX,  GpioFunction.UART1_RTS, GpioFunction.I2C1_SCL, GpioFunction.PWM3_B, GpioFunction.SIO, GpioFunction.PIO0, GpioFunction.PIO1, GpioFunction.NONE, GpioFunction.USB_VBUS_DET},
+            /* 8 */    {GpioFunction.SPI1_RX,  GpioFunction.UART1_TX,  GpioFunction.I2C0_SDA, GpioFunction.PWM4_A, GpioFunction.SIO, GpioFunction.PIO0, GpioFunction.PIO1, GpioFunction.NONE, GpioFunction.USB_VBUS_EN},
+            /* 9 */    {GpioFunction.SPI1_SCK, GpioFunction.UART1_CTS, GpioFunction.I2C0_SCL, GpioFunction.PWM4_B, GpioFunction.SIO, GpioFunction.PIO0, GpioFunction.PIO1, GpioFunction.NONE, GpioFunction.USB_OVCUR_DET},
+            /* 10 */   {GpioFunction.SPI1_TX,  GpioFunction.UART1_RTS, GpioFunction.I2C1_SDA, GpioFunction.PWM5_A, GpioFunction.SIO, GpioFunction.PIO0, GpioFunction.PIO1, GpioFunction.NONE, GpioFunction.USB_VBUS_DET},
+            /* 11 */   {GpioFunction.SPI1_RX,  GpioFunction.UART0_TX,  GpioFunction.I2C1_SCL, GpioFunction.PWM5_B, GpioFunction.SIO, GpioFunction.PIO0, GpioFunction.PIO1, GpioFunction.NONE, GpioFunction.USB_VBUS_EN},
+            /* 12 */   {GpioFunction.SPI1_CSN, GpioFunction.UART0_RX,  GpioFunction.I2C0_SDA, GpioFunction.PWM6_A, GpioFunction.SIO, GpioFunction.PIO0, GpioFunction.PIO1, GpioFunction.NONE, GpioFunction.USB_OVCUR_DET},
+            /* 13 */   {GpioFunction.SPI1_SCK, GpioFunction.UART0_CTS, GpioFunction.I2C0_SCL, GpioFunction.PWM6_B, GpioFunction.SIO, GpioFunction.PIO0, GpioFunction.PIO1, GpioFunction.NONE, GpioFunction.USB_VBUS_DET},
+            /* 14 */   {GpioFunction.SPI1_TX,  GpioFunction.UART0_RTS, GpioFunction.I2C1_SDA, GpioFunction.PWM7_A, GpioFunction.SIO, GpioFunction.PIO0, GpioFunction.PIO1, GpioFunction.NONE, GpioFunction.USB_VBUS_EN},
+            /* 15 */   {GpioFunction.SPI0_RX,  GpioFunction.UART0_TX,  GpioFunction.I2C1_SCL, GpioFunction.PWM7_B, GpioFunction.SIO, GpioFunction.PIO0, GpioFunction.PIO1, GpioFunction.NONE, GpioFunction.USB_OVCUR_DET},
+            /* 16 */   {GpioFunction.SPI0_CSN, GpioFunction.UART0_RX,  GpioFunction.I2C0_SDA, GpioFunction.PWM0_A, GpioFunction.SIO, GpioFunction.PIO0, GpioFunction.PIO1, GpioFunction.NONE, GpioFunction.USB_VBUS_DET},
+            /* 17 */   {GpioFunction.SPI0_SCK, GpioFunction.UART0_CTS, GpioFunction.I2C0_SCL, GpioFunction.PWM0_B, GpioFunction.SIO, GpioFunction.PIO0, GpioFunction.PIO1, GpioFunction.NONE, GpioFunction.USB_VBUS_EN},
+            /* 18 */   {GpioFunction.SPI0_TX,  GpioFunction.UART0_RTS, GpioFunction.I2C1_SDA, GpioFunction.PWM1_A, GpioFunction.SIO, GpioFunction.PIO0, GpioFunction.PIO1, GpioFunction.NONE, GpioFunction.USB_OVCUR_DET},
+            /* 19 */   {GpioFunction.SPI0_RX,  GpioFunction.UART1_TX,  GpioFunction.I2C1_SCL, GpioFunction.PWM1_B, GpioFunction.SIO, GpioFunction.PIO0, GpioFunction.PIO1, GpioFunction.NONE, GpioFunction.USB_VBUS_DET},
+            /* 20 */   {GpioFunction.SPI0_CSN, GpioFunction.UART1_RX,  GpioFunction.I2C0_SDA, GpioFunction.PWM2_A, GpioFunction.SIO, GpioFunction.PIO0, GpioFunction.PIO1, GpioFunction.CLOCK_GPIN0, GpioFunction.USB_VBUS_EN},
+            /* 21 */   {GpioFunction.SPI0_SCK, GpioFunction.UART1_CTS, GpioFunction.I2C0_SCL, GpioFunction.PWM2_B, GpioFunction.SIO, GpioFunction.PIO0, GpioFunction.PIO1, GpioFunction.CLOCK_GPOUT0, GpioFunction.USB_OVCUR_DET},
+            /* 22 */   {GpioFunction.SPI0_TX,  GpioFunction.UART1_RTS, GpioFunction.I2C1_SDA, GpioFunction.PWM3_A, GpioFunction.SIO, GpioFunction.PIO0, GpioFunction.PIO1, GpioFunction.CLOCK_GPIN1, GpioFunction.USB_VBUS_DET},
+            /* 23 */   {GpioFunction.SPI1_RX,  GpioFunction.UART1_TX,  GpioFunction.I2C1_SCL, GpioFunction.PWM3_B, GpioFunction.SIO, GpioFunction.PIO0, GpioFunction.PIO1, GpioFunction.CLOCK_GPOUT1, GpioFunction.USB_VBUS_EN},
+            /* 24 */   {GpioFunction.SPI1_CSN, GpioFunction.UART1_RX,  GpioFunction.I2C0_SDA, GpioFunction.PWM4_A, GpioFunction.SIO, GpioFunction.PIO0, GpioFunction.PIO1, GpioFunction.CLOCK_GPOUT2, GpioFunction.USB_OVCUR_DET},
+            /* 25 */   {GpioFunction.SPI1_SCK, GpioFunction.UART1_CTS, GpioFunction.I2C0_SCL, GpioFunction.PWM4_B, GpioFunction.SIO, GpioFunction.PIO0, GpioFunction.PIO1, GpioFunction.CLOCK_GPOUT3, GpioFunction.USB_VBUS_DET},
+            /* 26 */   {GpioFunction.SPI1_TX,  GpioFunction.UART1_RTS, GpioFunction.I2C1_SDA, GpioFunction.PWM5_A, GpioFunction.SIO, GpioFunction.PIO0, GpioFunction.PIO1, GpioFunction.NONE, GpioFunction.USB_VBUS_EN},
+            /* 27 */   {GpioFunction.SPI1_RX,  GpioFunction.UART0_TX,  GpioFunction.I2C1_SCL, GpioFunction.PWM5_B, GpioFunction.SIO, GpioFunction.PIO0, GpioFunction.PIO1, GpioFunction.NONE, GpioFunction.USB_OVCUR_DET},
+            /* 28 */   {GpioFunction.SPI1_CSN, GpioFunction.UART0_RX,  GpioFunction.I2C0_SDA, GpioFunction.PWM6_A, GpioFunction.SIO, GpioFunction.PIO0, GpioFunction.PIO1, GpioFunction.NONE, GpioFunction.USB_VBUS_DET},
+            /* 29 */   {GpioFunction.SPI1_CSN, GpioFunction.UART0_RX,  GpioFunction.I2C0_SCL, GpioFunction.PWM6_B, GpioFunction.SIO, GpioFunction.PIO0, GpioFunction.PIO1, GpioFunction.NONE, GpioFunction.USB_VBUS_EN}
             };
 
-            return pinMapping[pin - 1][function];
+            return pinMapping[pin, functionSelect[pin] - 1];
         }
 
-        private void EvaluatePinInterconnections()
+        private void EvaluatePinInterconnections(int[] previous)
         {
             for (int i = 0; i < NumberOfPins; ++i)
             {
-                this.Log(LogLevel.Noisy, "GPIO{} has function: ")
+                if (previous[i] != functionSelect[i])
+                {
+                    this.Log(LogLevel.Noisy, "GPIO" + i + ": has function: " + GetFunction(i));
+                    foreach (var action in functionSelectCallbacks)
+                    {
+                        action(i, GetFunction(i));
+                    }
+                }
             }
         }
 
@@ -112,8 +203,10 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
                         },
                         writeCallback: (_, value) =>
                         {
+                            int[] oldFunctions = new int[NumberOfConnections];
+                            functionSelect.CopyTo(oldFunctions, 0);
                             functionSelect[i] = (int)value;
-                            EvaluatePinInterconnections();
+                            EvaluatePinInterconnections(oldFunctions);
                         },
                         name: "GPIO" + i + "_CTRL_FUNCSEL")
                     .WithReservedBits(5, 3)
@@ -225,8 +318,9 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
                         WritePin(i, false);
                     }
                 }
-
             }
+
+
         }
 
         public void SetPinDirectionBitset(ulong bitset, ulong bitmask = 0xffffffff)
@@ -249,7 +343,6 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
 
             }
         }
-
 
 
         public void ClearGpioBitset(ulong bitset)
@@ -299,12 +392,19 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
         public void WritePin(int number, bool value)
         {
             this.Log(LogLevel.Noisy, "Setting GPIO" + number + " to: " + value + ", time: " + machine.ElapsedVirtualTime.TimeElapsed);
+            bool previousState = State[number];
             State[number] = value;
             Connections[number].Set(value);
         }
 
         private readonly DoubleWordRegisterCollection registers;
 
+        // Currently I have no better idea how to retrigger CPU evaluation when GPIO state changes 
+        // This is necessary to have synchronized PIO with System Clock
+        public Action ReevaluatePio { get; set; }
+
+
+        List<Action<int, GpioFunction>> functionSelectCallbacks;
     }
 
 }

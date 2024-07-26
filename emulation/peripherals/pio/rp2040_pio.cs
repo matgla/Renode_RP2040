@@ -2,7 +2,6 @@ using Antmicro.Renode.Core;
 using Antmicro.Renode.Core.Structure.Registers;
 using System;
 using System.IO;
-using System.Reflection;
 using Antmicro.Renode.Logging;
 using Antmicro.Renode.Peripherals.GPIOPort;
 
@@ -127,6 +126,11 @@ namespace Antmicro.Renode.Peripherals.CPU
             binder = new NativeBinder(this, libraryFile);
             machine.GetSystemBus(this).Register(this, new BusRangeRegistration(new Antmicro.Renode.Core.Range(address, (ulong)Size)));
             this.gpio = gpio;
+            gpio.ReevaluatePio = () =>
+            {
+                this.Log(LogLevel.Error, "Reevaluate PIO");
+                totalExecutedInstructions += PioExecute(100);
+            };
         }
 
         public override void Start()
@@ -190,25 +194,24 @@ namespace Antmicro.Renode.Peripherals.CPU
 
         public override ExecutionResult ExecuteInstructions(ulong numberOfInstructionsToExecute, out ulong numberOfExecutedInstructions)
         {
-            instructionsExecutedThisRound = 0UL;
-
             try
             {
                 // [Here comes the invocation of the external simulator for the given amount of instructions]
                 // [This is the place where simulation of acutal instructions is to be executed]
-                instructionsExecutedThisRound = (ulong)PioExecute((uint)numberOfInstructionsToExecute);
-
+                instructionsExecutedThisRound += (ulong)PioExecute((uint)numberOfInstructionsToExecute);
             }
             catch (Exception)
             {
                 this.NoisyLog("CPU exception detected, halting.");
                 //InvokeHalted(new HaltArguments(HaltReason.Abort, this));
+                instructionsExecutedThisRound = 0UL;
                 return ExecutionResult.Aborted;
             }
             finally
             {
                 numberOfExecutedInstructions = instructionsExecutedThisRound;
                 totalExecutedInstructions += instructionsExecutedThisRound;
+                instructionsExecutedThisRound = 0UL;
             }
 
             return ExecutionResult.Ok;

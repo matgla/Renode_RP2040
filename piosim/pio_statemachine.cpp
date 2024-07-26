@@ -303,6 +303,8 @@ bool PioStatemachine::process_wait(uint16_t data)
     const int pin_index = ((index + pin_control_register_.in_base) % 32);
     const bool pin_state = renode_gpio_get_pin_state(pin_index);
     condition_met = pin_state == polarity;
+    //   log(LogLevel::Error,
+    //       std::format("Waiting for {}, done: {}", pin_index, condition_met));
     break;
   }
   case 2: {
@@ -324,6 +326,7 @@ bool PioStatemachine::process_wait(uint16_t data)
     return false;
   }
   }
+
   if (condition_met)
   {
     increment_program_counter();
@@ -334,6 +337,7 @@ bool PioStatemachine::process_wait(uint16_t data)
 
 bool PioStatemachine::push_isr()
 {
+  log(LogLevel::Error, std::format("Pushing to: {}", isr_));
   if (rx_.full())
   {
     return false;
@@ -435,6 +439,16 @@ bool PioStatemachine::process_pushpull(uint16_t data)
 bool __attribute__((always_inline)) PioStatemachine::write_isr(uint32_t bits,
                                                                uint32_t data)
 {
+  log(LogLevel::Error,
+      std::format("Writing ISR: {}, bits: {}, counter: {}, cisr: {}", data, bits,
+                  isr_counter_, isr_));
+
+  if (shift_control_register_.autopush &&
+      isr_counter_ >= shift_control_register_.push_threshold)
+  {
+    return !push_isr();
+  }
+
   if (shift_control_register_.in_shiftdir == 0)
   {
     isr_ = (isr_ << bits) | data;
@@ -444,10 +458,11 @@ bool __attribute__((always_inline)) PioStatemachine::write_isr(uint32_t bits,
     isr_ = (isr_ >> bits) | (data << (32 - bits));
   }
   isr_counter_ += bits;
-
   if (shift_control_register_.autopush &&
       (isr_counter_ >= shift_control_register_.push_threshold))
   {
+    log(LogLevel::Error, std::format("PUSH: {}", isr_));
+
     return !push_isr();
   }
 
@@ -468,7 +483,9 @@ bool PioStatemachine::process_in(uint16_t data)
   {
   case 0: {
     isr_data = renode_gpio_get_pin_bitmap();
-    isr_data = rotate_right(isr_, pin_control_register_.in_base, 32);
+    // log(LogLevel::Error, std::format("ISR DATA: {}, inbase: {}", isr_data, ));
+    const uint32_t mask = (1 << bit_count) - 1;
+    isr_data = rotate_right(isr_data, pin_control_register_.in_base, 32) & mask;
     break;
   }
   case 1: {

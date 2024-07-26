@@ -1,18 +1,33 @@
 using Antmicro.Renode.Peripherals.Bus;
 using Antmicro.Renode.Core.Structure;
 using Antmicro.Renode.Core;
+using Antmicro.Renode.Logging;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using Antmicro.Renode.Core.Structure.Registers;
 using Antmicro.Renode.Utilities.Collections;
+using Antmicro.Renode.Peripherals.GPIOPort;
 
 namespace Antmicro.Renode.Peripherals.SPI
 {
   // Slave mode is not yet supported
-  public class PL022 : NullRegistrationPointPeripheralContainer<ISPIPeripheral>, IWordPeripheral, IDoubleWordPeripheral, IBytePeripheral, IKnownSize, IGPIOReceiver
+  public class PL022 : NullRegistrationPointPeripheralContainer<ISPIPeripheral>, IDoubleWordPeripheral, IKnownSize, IGPIOReceiver
   {
-    public long Size { get { return 0x1000; } }
-
-    public PL022(IMachine machine) : base(machine)
+    public long Size
     {
+      get { return 0x1000; }
+    }
+
+    public PL022(IMachine machine, RP2040GPIO gpio, int id) : base(machine)
+    {
+      this.id = id;
+      this.gpio = gpio;
+      this.txPins = new List<int>();
+      this.rxPins = new List<int>();
+      this.clockPins = new List<int>();
+      this.csPins = new List<int>();
+
       rxBuffer = new CircularBuffer<ushort>(8);
       txBuffer = new CircularBuffer<ushort>(8);
 
@@ -29,59 +44,166 @@ namespace Antmicro.Renode.Peripherals.SPI
       slaveModeDisabled = false;
       running = false;
       clockPrescaleDivisor = 0;
+      uint frequency = (uint)machine.ClockSource.GetAllClockEntries().First().Frequency / 100;
+      this._executionThread = machine.ObtainManagedThread(Step, 10000000);
+      this.gpio.SubscribeOnFunctionChange(OnGpioFunctionSelect);
+      transmitCounter = 16;
+    }
 
-      this._executionThread = machine.ObtainManagedThread(Step, 1);
+    private void OnGpioFunctionSelect(int pin, RP2040GPIO.GpioFunction function)
+    {
+      if (id == 0)
+      {
+        switch (function)
+        {
+          case RP2040GPIO.GpioFunction.SPI0_TX:
+            {
+              txPins.Add(pin);
+              return;
+            }
+          case RP2040GPIO.GpioFunction.SPI0_RX:
+            {
+              rxPins.Add(pin);
+              return;
+            }
+          case RP2040GPIO.GpioFunction.SPI0_CSN:
+            {
+              csPins.Add(pin);
+              return;
+            }
+          case RP2040GPIO.GpioFunction.SPI0_SCK:
+            {
+              clockPins.Add(pin);
+              return;
+            }
+          case RP2040GPIO.GpioFunction.NONE:
+            {
+              txPins.Remove(pin);
+              rxPins.Remove(pin);
+              clockPins.Remove(pin);
+              csPins.Remove(pin);
+              return;
+            }
+        }
+      }
+      else if (id == 1)
+      {
+        switch (function)
+        {
+          case RP2040GPIO.GpioFunction.SPI1_TX:
+            {
+              txPins.Add(pin);
+              return;
+            }
+          case RP2040GPIO.GpioFunction.SPI1_RX:
+            {
+              rxPins.Add(pin);
+              return;
+            }
+          case RP2040GPIO.GpioFunction.SPI1_CSN:
+            {
+              csPins.Add(pin);
+              return;
+            }
+          case RP2040GPIO.GpioFunction.SPI1_SCK:
+            {
+              clockPins.Add(pin);
+              return;
+            }
+          case RP2040GPIO.GpioFunction.NONE:
+            {
+              txPins.Remove(pin);
+              rxPins.Remove(pin);
+              clockPins.Remove(pin);
+              csPins.Remove(pin);
+              return;
+            }
+        }
+      }
     }
 
     public void OnGPIO(int number, bool value)
     {
+
+    }
+
+    private void SetMultiplePins(List<int> pins, bool state)
+    {
+      foreach (int pin in pins)
+      {
+        this.gpio.WritePin(pin, state);
+      }
+    }
+
+    private bool ReadMultiplePins(List<int> pins, bool doOr = false)
+    {
+      if (pins.Count == 0)
+      {
+        return false;
+      }
+
+      if (!doOr)
+      {
+        return this.gpio.GetGpioState((uint)pins[0]);
+      }
+
+      foreach (int pin in pins)
+      {
+        if (this.gpio.GetGpioState((uint)pin))
+        {
+          return true;
+        }
+      }
+      return false;
     }
 
     private void Step()
     {
+      if (transmitCounter > dataSize)
+      {
+        transmitCounter = 0;
+        rxBuffer.Enqueue(receiveData);
+        receiveData = 0;
+        if (txBuffer.Count != 0)
+        {
+          txBuffer.TryDequeue(out transmitData);
 
-    }
+        }
+        else
+        {
+          transmitData = 0;
 
-    public byte ReadByte(long offset)
-    {
-      return 0;
-    }
+          SetMultiplePins(txPins, false);
+          SetMultiplePins(clockPins, true);
+          _executionThread.Stop();
+          running = false;
+        }
+      }
 
-    public void WriteByte(long offset, byte value)
-    {
-    }
-
-    public ushort ReadWord(long offset)
-    {
-      return 0;
-    }
-
-    public void WriteWord(long offset, ushort value)
-    {
+      bool clockWasHigh = ReadMultiplePins(clockPins);
+      SetMultiplePins(clockPins, !clockWasHigh);
+      if (!clockWasHigh)
+      {
+        SetMultiplePins(txPins, Convert.ToBoolean((transmitData >> (dataSize - 1 - transmitCounter)) & 1));
+        receiveData = (ushort)((receiveData << 1) | Convert.ToUInt16(ReadMultiplePins(rxPins)));
+        transmitCounter += 1;
+      }
+      gpio.ReevaluatePio();
     }
 
     public uint ReadDoubleWord(long offset)
     {
-      return 0;
+      return registers.Read(offset);
     }
 
     public void WriteDoubleWord(long offset, uint value)
     {
+      Logger.Log(LogLevel.Error, "Writing to: " + offset + " -> " + value + ", buffer count: " + txBuffer.Count + " / " + txBuffer.Capacity);
+
+      registers.Write(offset, value);
     }
 
     public override void Reset()
-    {
-    }
-    private uint HandleDataRead()
-    {
-      return 0;
-    }
-
-    private void HandleDataWrite(uint value)
-    {
-    }
-
-    private void Update()
     {
     }
 
@@ -131,33 +253,24 @@ namespace Antmicro.Renode.Peripherals.SPI
           return 0;
         }, writeCallback: (_, value) =>
         {
+          Logger.Log(LogLevel.Noisy, "SPI" + id + ": Adding to queue: " + value);
           if (txBuffer.Count < txBuffer.Capacity)
           {
             txBuffer.Enqueue((ushort)value);
+            if (!running)
+            {
+              running = true;
+              _executionThread.Start();
+            }
           }
         }, name: "SSPDR_DATA");
 
       Registers.SSPSR.Define(registers)
-        .WithFlag(0, FieldMode.Read, valueProviderCallback: _ =>
-        {
-          return txBuffer.Count == 0;
-        }, name: "SSPSR_TFE")
-        .WithFlag(1, FieldMode.Read, valueProviderCallback: _ =>
-        {
-          return txBuffer.Count == txBuffer.Capacity;
-        }, name: "SSPSR_TNF")
-        .WithFlag(2, FieldMode.Read, valueProviderCallback: _ =>
-        {
-          return rxBuffer.Count == 0;
-        }, name: "SSPSR_RNE")
-        .WithFlag(3, FieldMode.Read, valueProviderCallback: _ =>
-        {
-          return rxBuffer.Count == rxBuffer.Capacity;
-        }, name: "SSPSR_RFF")
-        .WithFlag(4, FieldMode.Read, valueProviderCallback: _ =>
-        {
-          return running;
-        }, name: "SSPSR_BSY");
+        .WithFlag(0, FieldMode.Read, valueProviderCallback: _ => txBuffer.Count == 0, name: "SSPSR_TFE")
+        .WithFlag(1, FieldMode.Read, valueProviderCallback: _ => txBuffer.Count != txBuffer.Capacity, name: "SSPSR_TNF")
+        .WithFlag(2, FieldMode.Read, valueProviderCallback: _ => rxBuffer.Count == 0, name: "SSPSR_RNE")
+        .WithFlag(3, FieldMode.Read, valueProviderCallback: _ => rxBuffer.Count != rxBuffer.Capacity, name: "SSPSR_RFF")
+        .WithFlag(4, FieldMode.Read, valueProviderCallback: _ => running, name: "SSPSR_BSY");
 
       Registers.SSPCPSR.Define(registers)
         .WithValueField(0, 8, valueProviderCallback: _ => clockPrescaleDivisor,
@@ -171,37 +284,40 @@ namespace Antmicro.Renode.Peripherals.SPI
         .WithValueField(0, 8, FieldMode.Read, valueProviderCallback: _ => 0x22, name: "SSPPERIPHID0_PARTNUMBER0")
         .WithReservedBits(8, 24);
       Registers.SSPPERIPHID1.Define(registers)
-        .WithValueField(0, 4, FieldMode.Read, valueProviderCallback: _ => 0x00, name: "SSPPERIPHID1_DESIGNER0")
-        .WithValueField(4, 4, FieldMode.Read, valueProviderCallback: _ => 0x01, name: "SSPPERIPHID1_PARTNUMBER1}")
-        .WithReservedBits(8, 24);
+            .WithValueField(0, 4, FieldMode.Read, valueProviderCallback: _ => 0x00, name: "SSPPERIPHID1_DESIGNER0")
+            .WithValueField(4, 4, FieldMode.Read, valueProviderCallback: _ => 0x01, name: "SSPPERIPHID1_PARTNUMBER1}")
+            .WithReservedBits(8, 24);
       Registers.SSPPERIPHID2.Define(registers)
-        .WithValueField(0, 4, FieldMode.Read, valueProviderCallback: _ => 0x04, name: "SSPPERIPHID2_DESIGNER1")
-        .WithValueField(4, 4, FieldMode.Read, valueProviderCallback: _ => 0x03, name: "SSPPERIPHID2_REVISION}")
-        .WithReservedBits(8, 24);
+            .WithValueField(0, 4, FieldMode.Read, valueProviderCallback: _ => 0x04, name: "SSPPERIPHID2_DESIGNER1")
+            .WithValueField(4, 4, FieldMode.Read, valueProviderCallback: _ => 0x03, name: "SSPPERIPHID2_REVISION}")
+            .WithReservedBits(8, 24);
       Registers.SSPPERIPHID3.Define(registers)
-        .WithValueField(0, 8, FieldMode.Read, valueProviderCallback: _ => 0x00, name: "SSPPERIPHID3")
-        .WithReservedBits(8, 24);
+            .WithValueField(0, 8, FieldMode.Read, valueProviderCallback: _ => 0x00, name: "SSPPERIPHID3")
+            .WithReservedBits(8, 24);
 
       Registers.SSPPCELLID0.Define(registers)
-        .WithValueField(0, 8, FieldMode.Read, valueProviderCallback: _ => 0x0d, name: "SSPCELLID0")
-        .WithReservedBits(8, 24);
+            .WithValueField(0, 8, FieldMode.Read, valueProviderCallback: _ => 0x0d, name: "SSPCELLID0")
+            .WithReservedBits(8, 24);
       Registers.SSPPCELLID1.Define(registers)
-        .WithValueField(0, 8, FieldMode.Read, valueProviderCallback: _ => 0xf0, name: "SSPCELLID1")
-        .WithReservedBits(8, 24);
+            .WithValueField(0, 8, FieldMode.Read, valueProviderCallback: _ => 0xf0, name: "SSPCELLID1")
+            .WithReservedBits(8, 24);
       Registers.SSPPCELLID2.Define(registers)
-        .WithValueField(0, 8, FieldMode.Read, valueProviderCallback: _ => 0x05, name: "SSPCELLID2")
-        .WithReservedBits(8, 24);
+            .WithValueField(0, 8, FieldMode.Read, valueProviderCallback: _ => 0x05, name: "SSPCELLID2")
+            .WithReservedBits(8, 24);
       Registers.SSPPCELLID3.Define(registers)
-        .WithValueField(0, 8, FieldMode.Read, valueProviderCallback: _ => 0xb1, name: "SSPCELLID3")
-        .WithReservedBits(8, 24);
+            .WithValueField(0, 8, FieldMode.Read, valueProviderCallback: _ => 0xb1, name: "SSPCELLID3")
+            .WithReservedBits(8, 24);
     }
 
 
-    public GPIO RxPin { get; set; }
-    public GPIO TxPin { get; set; }
-    public GPIO CsPin { get; set; }
-    public GPIO ClockPin { get; set; }
+    public IGPIO[] IRQs { get; private set; }
 
+    private RP2040GPIO gpio;
+    private List<int> txPins;
+    private List<int> rxPins;
+    private List<int> clockPins;
+    private List<int> csPins;
+    private int id;
 
     private byte dataSize;
     private byte frameFormat;
@@ -223,6 +339,9 @@ namespace Antmicro.Renode.Peripherals.SPI
     // SPI is executed on thread since it must manage GPIO in realtime.
     // This is crucial for PIO <-> SPI interworking
     private IManagedThread _executionThread;
+    private byte transmitCounter;
+    private ushort transmitData;
+    private ushort receiveData;
     private enum Registers
     {
       SSPCR0 = 0x0,

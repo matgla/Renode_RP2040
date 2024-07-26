@@ -133,7 +133,35 @@ gpio_bitmask_clear_alias: Memory.RP2040BitmaskClearRegisterAlias @ sysbus 0x4001
 
 poweron: Miscellaneous.PowerOnInput @ sysbus 
 
-
 sio: Miscellaneous.RP2040SIO @ sysbus 0xd0000000 {
     gpio: gpio
 }
+
+spi0: SPI.PL022 @ sysbus 0x4003c000 {
+    gpio: gpio;
+    id: 0
+}
+spi0_xor_alias: Memory.RP2040XorRegisterAlias @ sysbus 0x4003d000 {
+    originalAddress: 0x4003c000
+}
+spi0_bitmask_set_alias: Memory.RP2040BitmaskSetRegisterAlias @ sysbus 0x4003e000 {
+    originalAddress: 0x4003c000
+}
+spi0_bitmask_clear_alias: Memory.RP2040BitmaskClearRegisterAlias @ sysbus 0x4003f000 {
+    originalAddress: 0x4003c000
+}
+
+spi1: SPI.PL022 @ sysbus 0x40040000 {
+    gpio: gpio;
+    id: 1
+}
+spi1_xor_alias: Memory.RP2040XorRegisterAlias @ sysbus 0x40041000 {
+    originalAddress: 0x40040000
+}
+spi1_bitmask_set_alias: Memory.RP2040BitmaskSetRegisterAlias @ sysbus 0x40042000 {
+    originalAddress: 0x40040000
+}
+spi1_bitmask_clear_alias: Memory.RP2040BitmaskClearRegisterAlias @ sysbus 0x40043000 {
+    originalAddress: 0x40040000
+}
+

@@ -31,7 +31,6 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             this._scratchY = 0;
             this._scratchX = 0;
             long frequency = machine.ClockSource.GetAllClockEntries().First().Frequency;
-            log(LogLevel.Error, "freq: " + frequency);
             this._executionThread = machine.ObtainManagedThread(Step, (uint)frequency, "RP2040PIO_SM" + id);
         }
 
