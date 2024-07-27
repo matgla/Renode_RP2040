@@ -11,18 +11,85 @@ There is predefined Raspberry Pico board description in: 'boards/raspberry_pico.
 
 # Supported Peripherals And Hardware 
 
-
+|    Peripheral   |  Supported    | Known Limitations  |
+|       :---:     |     :---:     |       :---:        |
+|    **SIO**      |      $${\color{yellow}✓}$$       | Partially supported, limitations to be filled when known                 |
+| **IRQ**  | $${\color{red}✗}$$ | Propagation from peripherals is not implemented |
+| **DMA**  | $${\color{red}✗}$$  | DMA in peripherals not yet implemented, MCU may support due to official ARM emulation |
+| **Clocks** | $${\color{yellow}✓}$$ | Clocks are currently just stubs to pass PicoSDK initialization, but virtual time is always correct | 
+| **GPIO** | $${\color{yellow}✓}$$ | Pins manipulation implemented, limitations not yet known except when some pins changed PIO may needs to be manually reevaluated due to CPU emulation (it's not step by step). Look for RP2040_SPI (PL022) peripheral as an example |
+| **XOSC** |  $${\color{red}✗}$$  | |
+| **ROSC** | $${\color{red}✗}$$  | |
+| **PLL** | $${\color{red}✗}$$  | |
+| **SysConfig** | $${\color{red}✗}$$  | |
+| **SysInfo** | $${\color{red}✗}$$  | | 
+| **PIO** |  $${\color{yellow}✓}$$  | Manual reevaluation may be neccessary to synchronize PIO together with actions on MCU. IRQ and DMA not yet supported |
+| **USB** | $${\color{red}✗}$$  |  |
+| **UART** | $${\color{green}✓}$$  | Official PL011 simulation from Renode, limitations not yet known except it doen't manage GPIO states so can't interwork with PIO |
+| **SPI** |  $${\color{yellow}✓}$$ | Clock configuration not yet supported. Only master mode implemented with only one mode. Interworking with PIO is implemented! |
+| **I2C** |  $${\color{red}✗}$$  |  |
+| **PWM** |  $${\color{red}✗}$$  |  |
+| **Timers** | $${\color{yellow}✓}$$  | Alarms implemented, but not all registers |
+| **Watchdog** | $${\color{red}✗}$$  | |
+| **RTC** | $${\color{red}✗}$$  | |
+| **ADC** | $${\color{red}✗}$$  | |
+| **SSI** | $${\color{red}✗}$$  | |
 
 # How PIO simulation works 
 
+PIO is implemented as external simulator written in C++: `piosim` directory. Decision was made due to performance issues with C# implementation. 
+Due to that PIO is modelled as additional CPU. 
+Renode executes more than 1 step at once on given CPU, so manual synchronization is necessary in some cases, like interworking between SPI and PIO. 
+
+`piosim` requires `cmake` and `C++` compiler available on machine. 
+
+It is compiled by renode simulation automatically, no manual steps are necessary. 
+
 # How to use Raspberry Pico simulation
 
-# How to define own board 
+To use Raspberry Pico simulation clone Renode_RP2040 repository, then add path to it and include `boards/initialize_raspberry_pico.resc`. 
 
-# Multi Node simulation
+Example use:
+```
+(monitor) path add @repos/Renode_RP2040 
+(monitor) include @repos/Renode_RP2040/board/initialize_raspberry_pico.resc 
+(raspberry_pico) sysbus LoadELF @repos/Renode_RP2040/pico-examples/build/hello_world/serial/
+hello_serial.elf
+(raspberry_pico) sysbus.cpu0 VectorTableOffset `sysbus GetSymbolAddress "__VECTOR_TABLE"`
+(raspberry_pico) sysbus.cpu1 VectorTableOffset `sysbus GetSymbolAddress "__VECTOR_TABLE"`
+(raspberry_pico) showAnalyzer sysbus.uart0
+(raspberry_pico) start
+```
+> [!NOTE] 
+> set VectorTableOffset to valid address for your firmware, for pico-examples it can be __VECTOR_TABLE symbol.
+
+You may use it inside your simulation scripts, look at `tests/prepare.resc` as an example.
+
+# How to define own board 
+Raspberry Pico configuration may be extended to configure board connections. 
+As an example you can check `tests/pio/clocked_input/raspberry_pico_with_redirected_spi.repl`.
+
+You may also build your own board using pure RP2040 target. 
+
+Example from [MSPC Board Simulation](https://github.com/matgla/mspc-south-bridge/) simulation directory: 
+```
+path add @${RENODE_BOARD_DIR}
+$machine_name="mspc_north_bridge"
+include @initialize_rp2040.resc
+```
+
+# Multi Node simulation. 
+Many RP2040 simulators may interwork together. I am using that possibility in full MSPC simulation. To interwork between them GPIOConnector may be used, please check existing usage (`simulation` directory):
+ [MSPC Board Simulation](https://github.com/matgla/mspc-south-bridge/) 
 
 # Testing 
-I am testing simulator code using official pico-examples. Currently passing tests: 
+I am testing simulator code using official pico-examples. Tests in use are: 
+
+**ADC**
+| Example | Passed |
+| :---: | :---:    |
+
+
 
 
 # License 
