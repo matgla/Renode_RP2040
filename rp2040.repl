@@ -49,7 +49,8 @@ piocpu0: CPU.RP2040PIOCPU @ sysbus
     cpuType: "rp2040_pio"
     address: 0x50200000
     gpio: gpio
-    PerformanceInMips: 125
+    PerformanceInMips: 1
+    id: 3
 
 pio0_xor_alias: Memory.RP2040XorRegisterAlias @ sysbus 0x50201000 {
     originalAddress: 0x50200000
@@ -87,19 +88,8 @@ sysbus:
 // cortex-m overlay
 
 dwt: Miscellaneous.DWT @ sysbus 0xE0001000
-    frequency: 72000000
-
-
-clocks: Miscellaneous.RP2040Clocks @ sysbus 0x40008000
-clocks_xor_alias: Memory.RP2040XorRegisterAlias @ sysbus 0x40009000 {
-    originalAddress: 0x40008000
-}
-clocks_bitmask_set_alias: Memory.RP2040BitmaskSetRegisterAlias @ sysbus 0x4000a000 {
-    originalAddress: 0x40008000
-}
-clocks_bitmask_clear_alias: Memory.RP2040BitmaskClearRegisterAlias @ sysbus 0x4000b000 {
-    originalAddress: 0x40008000
-}
+    // according to 4.7.2 RP2040 Datasheet is 1MHz 
+    frequency: 1000000 
 
 timer: Timers.RP2040Timer @ sysbus 0x40054000
     IRQ0 -> nvic0@0
@@ -164,4 +154,47 @@ spi1_bitmask_set_alias: Memory.RP2040BitmaskSetRegisterAlias @ sysbus 0x40042000
 spi1_bitmask_clear_alias: Memory.RP2040BitmaskClearRegisterAlias @ sysbus 0x40043000 {
     originalAddress: 0x40040000
 }
+
+xosc: Miscellaneous.RP2040XOSC @ sysbus 0x40024000 {
+    frequency: 12000000
+}
+xosc_xor_alias: Memory.RP2040XorRegisterAlias @ sysbus 0x40025000 {
+    originalAddress: 0x40024000
+}
+xosc_bitmask_set_alias: Memory.RP2040BitmaskSetRegisterAlias @ sysbus 0x40026000 {
+    originalAddress: 0x40024000
+}
+xosc_bitmask_clear_alias: Memory.RP2040BitmaskClearRegisterAlias @ sysbus 0x40027000 {
+    originalAddress: 0x40024000
+}
+
+
+rosc: Miscellaneous.RP2040ROSC @ sysbus 0x40060000 
+
+rosc_xor_alias: Memory.RP2040XorRegisterAlias @ sysbus 0x40061000 {
+    originalAddress: 0x40060000
+}
+rosc_bitmask_set_alias: Memory.RP2040BitmaskSetRegisterAlias @ sysbus 0x40062000 {
+    originalAddress: 0x40060000
+}
+rosc_bitmask_clear_alias: Memory.RP2040BitmaskClearRegisterAlias @ sysbus 0x40063000 {
+    originalAddress: 0x40060000
+}
+
+
+clocks: Miscellaneous.RP2040Clocks @ sysbus 0x40008000 {
+    xosc: xosc;
+    rosc: rosc
+}
+
+clocks_xor_alias: Memory.RP2040XorRegisterAlias @ sysbus 0x40009000 {
+    originalAddress: 0x40008000
+}
+clocks_bitmask_set_alias: Memory.RP2040BitmaskSetRegisterAlias @ sysbus 0x4000a000 {
+    originalAddress: 0x40008000
+}
+clocks_bitmask_clear_alias: Memory.RP2040BitmaskClearRegisterAlias @ sysbus 0x4000b000 {
+    originalAddress: 0x40008000
+}
+
 

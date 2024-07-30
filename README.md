@@ -85,12 +85,177 @@ Many RP2040 simulators may interwork together. I am using that possibility in fu
 # Testing 
 I am testing simulator code using official pico-examples. Tests in use are: 
 
-**ADC**
+## ADC
 | Example | Passed |
 | :---: | :---:    |
+| [adc_console](https://github.com/raspberrypi/pico-examples/tree/master/adc/adc_console) | $${\color{red}✗}$$ |
+| [dma_capture](https://github.com/raspberrypi/pico-examples/tree/master/adc/dma_capture) | $${\color{red}✗}$$ |
+| [hello_adc](https://github.com/raspberrypi/pico-examples/tree/master/adc/hello_adc) | $${\color{red}✗}$$ |
+| [joystick_display](https://github.com/raspberrypi/pico-examples/tree/master/adc/joystick_display) | $${\color{red}✗}$$ | 
+| [microphone_adc](https://github.com/raspberrypi/pico-examples/tree/master/adc/microphone_adc) | $${\color{red}✗}$$ | 
+| [onboard_temperature](https://github.com/raspberrypi/pico-examples/tree/master/adc/onboard_temperature) | $${\color{red}✗}$$ | 
+| [read_vsys](https://github.com/raspberrypi/pico-examples/tree/master/adc/read_vsys) | $${\color{red}✗}$$ | 
 
+## Blink
+| Example | Passed |
+| :---: | :---:    |
+| [blink](https://github.com/raspberrypi/pico-examples/tree/master/blink) | $${\color{green}✓}$$ |
 
+## Clocks
+| Example | Passed |
+| :---: | :---:    |
+| [detached_clk_peri](https://github.com/raspberrypi/pico-examples/tree/master/clocks/detached_clk_peri) | $${\color{green}✓}$$ |
+| [hello_48MHz](https://github.com/raspberrypi/pico-examples/tree/master/clocks/hello_48MHz) | $${\color{red}✗}$$ | 
+| [hello_gpout](https://github.com/raspberrypi/pico-examples/tree/master/clocks/hello_gpout) | $${\color{red}✗}$$ |
+| [hello_resus](https://github.com/raspberrypi/pico-examples/tree/master/clocks/hello_resus) | $${\color{red}✗}$$ |
 
+## Divider
+
+| Example | Passed |
+| :---: | :---:    |
+| [divider](https://github.com/raspberrypi/pico-examples/tree/master/divider) | $${\color{green}✓}$$ |
+
+## DMA
+| Example | Passed |
+| :---: | :---:    |
+| [channel_irq](https://github.com/raspberrypi/pico-examples/tree/master/dma/channel_irq) | $${\color{red}✗}$$ |
+| [control_blocks](https://github.com/raspberrypi/pico-examples/tree/master/dma/control_blocks) | $${\color{red}✗}$$ |
+| [hello_dma](https://github.com/raspberrypi/pico-examples/tree/master/dma/hello_dma) | $${\color{red}✗}$$ |
+| [sniff_crc](https://github.com/raspberrypi/pico-examples/tree/master/dma/sniff_crc) | $${\color{red}✗}$$ |
+
+## Flash
+| Example | Passed |
+| :---: | :---:    |
+| [cache_perfctr](https://github.com/raspberrypi/pico-examples/tree/master/flash/cache_perfctr) | $${\color{red}✗}$$ | 
+| [nuke](https://github.com/raspberrypi/pico-examples/tree/master/flash/nuke) | $${\color{red}✗}$$ |
+| [program](https://github.com/raspberrypi/pico-examples/tree/master/flash/program) | $${\color{red}✗}$$ |
+| [ssi_dma](https://github.com/raspberrypi/pico-examples/tree/master/flash/ssi_dma) | $${\color{red}✗}$$ |
+| [xip_stream](https://github.com/raspberrypi/pico-examples/tree/master/flash/xip_stream) | $${\color{red}✗}$$ |
+
+## GPIO
+| Example | Passed |
+| :---: | :---:    |
+| [dht_sensor](https://github.com/raspberrypi/pico-examples/tree/master/gpio/dht_sensor) | $${\color{red}✗}$$ |
+| [hello_7segment](https://github.com/raspberrypi/pico-examples/tree/master/gpio/hello_7segment) | $${\color{red}✗}$$ |
+| [hello_gpio_irq](https://github.com/raspberrypi/pico-examples/tree/master/gpio/hello_gpio_irq) | $${\color{red}✗}$$ |
+
+## Hello World
+
+| Example | Passed |
+| :---: | :---:    |
+| [serial](https://github.com/raspberrypi/pico-examples/tree/master/hello_world/serial) | $${\color{green}✓}$$ |
+| [usb](https://github.com/raspberrypi/pico-examples/tree/master/hello_world/usb) | $${\color{red}✗}$$ |
+
+## I2C
+| Example | Passed |
+| :---: | :---:    |
+| [bmp280_i2c](https://github.com/raspberrypi/pico-examples/tree/master/i2c/bmp280_i2c) | $${\color{red}✗}$$ |
+| [bus_scan](https://github.com/raspberrypi/pico-examples/tree/master/i2c/bus_scan) | $${\color{red}✗}$$ | 
+| [ht16k33_i2c](https://github.com/raspberrypi/pico-examples/tree/master/i2c/ht16k33_i2c) | $${\color{red}✗}$$ |
+| [lcd_1602_i2c](https://github.com/raspberrypi/pico-examples/tree/master/i2c/lcd_1602_i2c) | $${\color{red}✗}$$ |
+| [lis3dh_i2c](https://github.com/raspberrypi/pico-examples/tree/master/i2c/lis3dh_i2c) | $${\color{red}✗}$$ |
+| [mpc9808_i2c](https://github.com/raspberrypi/pico-examples/tree/master/i2c/mcp9808_i2c) | $${\color{red}✗}$$ |
+| [mma8451_i2c](https://github.com/raspberrypi/pico-examples/tree/master/i2c/mma8451_i2c) | $${\color{red}✗}$$ |
+| [mpl3115a2_i2c](https://github.com/raspberrypi/pico-examples/tree/master/i2c/mpl3115a2_i2c) | $${\color{red}✗}$$ |
+| [mpu6050_i2c](https://github.com/raspberrypi/pico-examples/tree/master/i2c/mpu6050_i2c) | $${\color{red}✗}$$ |
+| [pa1010d_i2c](https://github.com/raspberrypi/pico-examples/tree/master/i2c/pa1010d_i2c) | $${\color{red}✗}$$ |
+| [pcf8523_i2c](https://github.com/raspberrypi/pico-examples/tree/master/i2c/pcf8523_i2c) | $${\color{red}✗}$$ |
+| [slave_mem_i2c](https://github.com/raspberrypi/pico-examples/tree/master/i2c/slave_mem_i2c) | $${\color{red}✗}$$ |
+| [ssd1306_i2c](https://github.com/raspberrypi/pico-examples/tree/master/i2c/ssd1306_i2c) | $${\color{red}✗}$$ |
+
+## Interp
+
+| Example | Passed |
+| :---: | :---:    |
+| [hello_interp](https://github.com/raspberrypi/pico-examples/tree/master/interp/hello_interp) | $${\color{red}✗}$$ |
+
+## Multicore
+| Example | Passed |
+| :---: | :---:    |
+| [hello_multicore](https://github.com/raspberrypi/pico-examples/tree/master/multicore/hello_multicore) | $${\color{red}✗}$$ |
+| [multicore_fifo_irqs](https://github.com/raspberrypi/pico-examples/tree/master/multicore/multicore_fifo_irqs) | $${\color{red}✗}$$ |
+| [multicore_runners](https://github.com/raspberrypi/pico-examples/tree/master/multicore/multicore_runner) | $${\color{red}✗}$$ |
+| [multicore_runner_queue](https://github.com/raspberrypi/pico-examples/tree/master/multicore/multicore_runner_queue) | $${\color{red}✗}$$ |
+
+## PIO
+| Example | Passed |
+| :---: | :---:    |
+| [addition](https://github.com/raspberrypi/pico-examples/tree/master/pio/addition) | $${\color{green}✓}$$ |
+| [apa102](https://github.com/raspberrypi/pico-examples/tree/master/pio/apa102) | $${\color{red}✗}$$ |
+| [clocked_input](https://github.com/raspberrypi/pico-examples/tree/master/pio/clocked_input) | $${\color{green}✓}$$ |
+| [differential_manchester](https://github.com/raspberrypi/pico-examples/tree/master/pio/differential_manchester) | $${\color{green}✓}$$ |
+| [hello_pio](https://github.com/raspberrypi/pico-examples/tree/master/pio/hello_pio) | $${\color{green}✓}$$ |
+| [hub75](https://github.com/raspberrypi/pico-examples/tree/master/pio/hub75) | $${\color{red}✗}$$ | 
+| [i2c](https://github.com/raspberrypi/pico-examples/tree/master/pio/i2c) | $${\color{red}✗}$$ |
+| [ir_nec](https://github.com/raspberrypi/pico-examples/tree/master/pio/ir_nec) | $${\color{red}✗}$$ |
+| [logic_analyser](https://github.com/raspberrypi/pico-examples/tree/master/pio/logic_analyser) | $${\color{red}✗}$$ |
+| [manchester_encoding](https://github.com/raspberrypi/pico-examples/tree/master/pio/manchester_encoding) | $${\color{red}✗}$$ | 
+| [onewire](https://github.com/raspberrypi/pico-examples/tree/master/pio/onewire) | $${\color{red}✗}$$ |
+| [pio_blink](https://github.com/raspberrypi/pico-examples/tree/master/pio/pio_blink) | $${\color{green}✓}$$ |
+| [pwm](https://github.com/raspberrypi/pico-examples/tree/master/pio/pwm) | $${\color{red}✗}$$ |
+| [quadrature_encoder](https://github.com/raspberrypi/pico-examples/tree/master/pio/quadrature_encoder) | $${\color{red}✗}$$ |
+| [spi](https://github.com/raspberrypi/pico-examples/tree/master/pio/spi) | $${\color{red}✗}$$ |
+| [squarewave](https://github.com/raspberrypi/pico-examples/tree/master/pio/squarewave) | $${\color{red}✗}$$ |
+| [st7789_lcd](https://github.com/raspberrypi/pico-examples/tree/master/pio/st7789_lcd) | $${\color{red}✗}$$ |
+| [uart_rx](https://github.com/raspberrypi/pico-examples/tree/master/pio/uart_rx) | $${\color{red}✗}$$ |
+| [uart_tx](https://github.com/raspberrypi/pico-examples/tree/master/pio/uart_tx) | $${\color{red}✗}$$ |
+| [ws2812](https://github.com/raspberrypi/pico-examples/tree/master/pio/ws2812) | $${\color{red}✗}$$ |
+
+## PWM
+| Example | Passed |
+| :---: | :---:    |
+| [hello_pwm](https://github.com/raspberrypi/pico-examples/tree/master/pwm/hello_pwm) | $${\color{red}✗}$$ |
+| [led_fade](https://github.com/raspberrypi/pico-examples/tree/master/pwm/led_fade) | $${\color{red}✗}$$ |
+| [measure_duty_cycle](https://github.com/raspberrypi/pico-examples/tree/master/pwm/measure_duty_cycle) | $${\color{red}✗}$$ |
+
+## Reset
+| Example | Passed |
+| :---: | :---:    |
+| [hello_reset](https://github.com/raspberrypi/pico-examples/tree/master/reset/hello_reset) | $${\color{red}✗}$$ |
+
+## RTC
+| Example | Passed |
+| :---: | :---:    |
+| [hello_rtc](https://github.com/raspberrypi/pico-examples/tree/master/rtc/hello_rtc) | $${\color{red}✗}$$ |
+| [rtc_alarm](https://github.com/raspberrypi/pico-examples/tree/master/rtc/rtc_alarm) | $${\color{red}✗}$$ |
+| [rtc_alarm_repeat](https://github.com/raspberrypi/pico-examples/tree/master/rtc/rtc_alarm_repeat) | $${\color{red}✗}$$ |
+
+## SPI
+| Example | Passed |
+| :---: | :---:    |
+| [bme280_spi](https://github.com/raspberrypi/pico-examples/tree/master/spi/bme280_spi) | $${\color{red}✗}$$ |
+| [max7219_32x8_spi](https://github.com/raspberrypi/pico-examples/tree/master/spi/max7219_32x8_spi) | $${\color{red}✗}$$ |
+| [max7219_8x7seg_spi](https://github.com/raspberrypi/pico-examples/tree/master/spi/max7219_8x7seg_spi) | $${\color{red}✗}$$ |
+| [mpu9250_spi](https://github.com/raspberrypi/pico-examples/tree/master/spi/mpu9250_spi) | $${\color{red}✗}$$ |
+| [spi_dma](https://github.com/raspberrypi/pico-examples/tree/master/spi/spi_dma) | $${\color{red}✗}$$ |
+| [spi_flash](https://github.com/raspberrypi/pico-examples/tree/master/spi/spi_flash) | $${\color{red}✗}$$ |
+| [spi_master_slave](https://github.com/raspberrypi/pico-examples/tree/master/spi/spi_master_slave) | $${\color{red}✗}$$ |
+
+## System
+| Example | Passed |
+| :---: | :---:    |
+| [hello_double_tap](https://github.com/raspberrypi/pico-examples/tree/master/system/hello_double_tap) | $${\color{red}✗}$$ |
+| [narrow_io_write](https://github.com/raspberrypi/pico-examples/tree/master/system/narrow_io_write) | $${\color{red}✗}$$ |
+| [unique_board_id](https://github.com/raspberrypi/pico-examples/tree/master/system/unique_board_id) | $${\color{red}✗}$$ |
+
+# Timer
+| Example | Passed |
+| :---: | :---:    |
+| [hello_timer](https://github.com/raspberrypi/pico-examples/tree/master/timer/hello_timer) | $${\color{green}✓}$$ |
+| [periodic_sampler](https://github.com/raspberrypi/pico-examples/tree/master/timer/periodic_sampler) | $${\color{red}✗}$$ |
+| [timer_lowlevel](https://github.com/raspberrypi/pico-examples/tree/master/timer/timer_lowlevel) | $${\color{green}✓}$$ |
+
+# USB 
+| Example | Passed |
+| :---: | :---:    |
+| [device](https://github.com/raspberrypi/pico-examples/tree/master/usb/device) | $${\color{red}✗}$$ |
+| [dual](https://github.com/raspberrypi/pico-examples/tree/master/usb/dual) | $${\color{red}✗}$$ |
+| [host](https://github.com/raspberrypi/pico-examples/tree/master/usb/host) | $${\color{red}✗}$$ | 
+
+# Watchdog 
+| Example | Passed |
+| :---: | :---:    |
+| [hello_watchdog](https://github.com/raspberrypi/pico-examples/tree/master/watchdog/hello_watchdog) | $${\color{red}✗}$$ |
 
 # License 
 

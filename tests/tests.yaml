@@ -1,3 +1,5 @@
+- tests/blink/blink.robot
+- tests/clocks/detached_clk_peri/detached_clk_peri.robot
 - tests/timer/hello_timer/hello_timer.robot
 - tests/timer/timer_lowlevel/timer_lowlevel.robot
 - tests/divider/hello_divider/hello_divider.robot

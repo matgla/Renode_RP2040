@@ -2,6 +2,7 @@ using Antmicro.Renode.Core;
 using Antmicro.Renode.Core.Structure.Registers;
 using System;
 using System.IO;
+using System.Collections.Generic;
 using Antmicro.Renode.Logging;
 using Antmicro.Renode.Peripherals.GPIOPort;
 
@@ -118,8 +119,8 @@ namespace Antmicro.Renode.Peripherals.CPU
 
         }
 
-        public RP2040PIOCPU(string cpuType, IMachine machine, ulong address, GPIOPort.RP2040GPIO gpio, Endianess endianness = Endianess.LittleEndian, CpuBitness bitness = CpuBitness.Bits32)
-            : base(0, cpuType, machine, endianness, bitness)
+        public RP2040PIOCPU(string cpuType, IMachine machine, ulong address, GPIOPort.RP2040GPIO gpio, uint id, Endianess endianness = Endianess.LittleEndian, CpuBitness bitness = CpuBitness.Bits32)
+            : base(id, cpuType, machine, endianness, bitness)
         {
             CompilePioSim();
             string libraryFile = GetPioSimLibraryPath();

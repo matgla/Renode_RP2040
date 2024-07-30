@@ -1,0 +1,4 @@
+$global.TEST_FILE=$ORIGIN/../../../pico-examples/build/clocks/detached_clk_peri/clocks_detached_clk_peri.elf
+
+include $ORIGIN/../../prepare.resc
+showAnalyzer sysbus.uart0

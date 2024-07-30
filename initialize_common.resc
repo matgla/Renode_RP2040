@@ -1,5 +1,10 @@
 mach create $machine_name 
 
+include $ORIGIN/emulation/peripherals/clocks/rp2040_xosc.cs
+EnsureTypeIsLoaded "Antmicro.Renode.Peripherals.Miscellaneous.RP2040XOSC"
+include $ORIGIN/emulation/peripherals/clocks/rp2040_rosc.cs
+EnsureTypeIsLoaded "Antmicro.Renode.Peripherals.Miscellaneous.RP2040ROSC"
+
 include $ORIGIN/emulation/peripherals/memory/rp2040_atomic_access.cs
 include $ORIGIN/emulation/peripherals/clocks/rp2040_clocks.cs
 include $ORIGIN/emulation/peripherals/timer/rp2040_timer.cs
