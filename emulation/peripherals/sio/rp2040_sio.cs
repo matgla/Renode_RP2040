@@ -14,21 +14,21 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
 {
     class FifoStatus
     {
-        public bool Roe{get; set;}
-        public bool Wof{get; set;}
-        public bool Rdy{get; set;}
-        public bool Vld{get; set;}
+        public bool Roe { get; set; }
+        public bool Wof { get; set; }
+        public bool Rdy { get; set; }
+        public bool Vld { get; set; }
     }
 
     class Divider
     {
-        public long Dividend{get; set;}
-        public long Divisor{get; set;}
-        public long Quotient{get; set;}
-        public long Remainder{get; set;}
+        public long Dividend { get; set; }
+        public long Divisor { get; set; }
+        public long Quotient { get; set; }
+        public long Remainder { get; set; }
 
-        public bool Ready{get; set;}
-        public bool Dirty{get; set;}
+        public bool Ready { get; set; }
+        public bool Dirty { get; set; }
 
         public void CalculateSigned()
         {
@@ -70,7 +70,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             GPIO_OE = 0x20,
             GPIO_OE_SET = 0x24,
             GPIO_OE_CLR = 0x28,
-            GPIO_OE_XOR = 0x2c, 
+            GPIO_OE_XOR = 0x2c,
             GPIO_HI_OUT = 0x30,
             GPIO_HI_OUT_SET = 0x34,
             GPIO_HI_OUT_CLR = 0x38,
@@ -123,10 +123,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             SPINLOCK_31 = 0x17c,
         }
 
-        private int[] spinlocks;
-        private IPeripheral gpioPeripheral;
-        private RP2040GPIO gpio;
-        public RP2040SIO(Machine machine, RP2040GPIO gpio) : base(machine)
+        public RP2040SIO(Machine machine, RP2040GPIO gpio, RP2040GPIO gpioQspi) : base(machine)
         {
             cpuFifo = new Queue<long>[2];
             fifoStatus = new FifoStatus[2];
@@ -149,6 +146,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                 };
             }
             this.gpio = gpio;
+            this.gpioQspi = gpioQspi;
             DefineRegisters();
         }
 
@@ -161,7 +159,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
         private int OtherCpu()
         {
             var cpu = machine.SystemBus.GetCurrentCPU();
-            var cpuId = machine.SystemBus.GetCPUId(cpu); 
+            var cpuId = machine.SystemBus.GetCPUId(cpu);
             return cpuId == 0 ? 1 : 0;
         }
 
@@ -169,73 +167,93 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
         {
             Registers.GPIO_IN.Define(this)
                 .WithValueField(0, 30, FieldMode.Read,
-                    valueProviderCallback: _ => {
-                        return gpio.GetGpioStateBitmap();
-                    },
-                    name: "GPIO_IN");
+                    valueProviderCallback: _ => gpio.GetGpioStateBitmap(),
+                    name: "GPIO_IN")
+                .WithReservedBits(30, 2);
+
+            Registers.GPIO_HI_IN.Define(this)
+                .WithValueField(0, 6, FieldMode.Read,
+                    valueProviderCallback: _ => gpioQspi.GetGpioStateBitmap(),
+                    name: "GPIO_HI_IN")
+                .WithReservedBits(6, 26);
 
             Registers.GPIO_OUT.Define(this)
-                .WithValueField(0, 30, FieldMode.Read | FieldMode.Write,
-                    valueProviderCallback: _ => {
-                        return gpio.GetGpioStateBitmap();
-                    },
-                    writeCallback: (_, value) => {
-                        gpio.SetGpioBitmap(value);
-                    },
+                .WithValueField(0, 30,
+                    valueProviderCallback: _ => gpio.GetGpioStateBitmap(),
+                    writeCallback: (_, value) => gpio.SetGpioBitmap(value),
                     name: "GPIO_OUT")
                 .WithReservedBits(30, 2);
- 
+
             Registers.GPIO_OUT_SET.Define(this)
                 .WithValueField(0, 30, FieldMode.Write,
-                    writeCallback: (_, value) => {
-                        gpio.SetGpioBitset(value);     
-                    },
+                    writeCallback: (_, value) => gpio.SetGpioBitset(value),
                     name: "GPIO_OUT_SET")
                 .WithReservedBits(30, 2);
 
             Registers.GPIO_OUT_CLR.Define(this)
                 .WithValueField(0, 30, FieldMode.Write,
-                    writeCallback: (_, value) => {
-                        gpio.ClearGpioBitset(value);     
-                    },
+                    writeCallback: (_, value) => gpio.ClearGpioBitset(value),
                     name: "GPIO_OUT_CLR")
                 .WithReservedBits(30, 2);
 
             Registers.GPIO_OUT_XOR.Define(this)
                 .WithValueField(0, 30, FieldMode.Write,
-                    writeCallback: (_, value) => {
-                        gpio.XorGpioBitset(value);     
-                    },
+                    writeCallback: (_, value) => gpio.XorGpioBitset(value),
                     name: "GPIO_OUT_XOR")
                     .WithReservedBits(30, 2);
 
+            Registers.GPIO_HI_OUT.Define(this)
+                .WithValueField(0, 6,
+                    valueProviderCallback: _ => gpioQspi.GetGpioStateBitmap(),
+                    writeCallback: (_, value) => gpioQspi.SetGpioBitmap(value),
+                    name: "GPIO_HI_OUT")
+                .WithReservedBits(6, 26);
+
+            Registers.GPIO_HI_OUT_SET.Define(this)
+                .WithValueField(0, 6, FieldMode.Write,
+                    writeCallback: (_, value) => gpioQspi.SetGpioBitset(value),
+                    name: "GPIO_HI_OUT_SET")
+                .WithReservedBits(6, 26);
+
+            Registers.GPIO_HI_OUT_CLR.Define(this)
+                .WithValueField(0, 6, FieldMode.Write,
+                    writeCallback: (_, value) => gpioQspi.ClearGpioBitset(value),
+                    name: "GPIO_HI_OUT_CLR")
+                .WithReservedBits(6, 26);
+
+            Registers.GPIO_HI_OUT_XOR.Define(this)
+                .WithValueField(0, 6, FieldMode.Write,
+                    writeCallback: (_, value) => gpioQspi.XorGpioBitset(value),
+                    name: "GPIO_HI_OUT_XOR")
+                .WithReservedBits(6, 26);
+
 
             Registers.CPUID.Define(this)
-                .WithFlag(0, FieldMode.Read, 
+                .WithFlag(0, FieldMode.Read,
                     valueProviderCallback: _ => CurrentCpu() == 1,
                     name: "CPUID");
 
             Registers.FIFO_ST.Define(this)
-                .WithFlag(0, FieldMode.Read, 
+                .WithFlag(0, FieldMode.Read,
                     valueProviderCallback: _ => fifoStatus[CurrentCpu()].Vld,
                     name: "FIFO_ST_VLD")
-                .WithFlag(1, FieldMode.Read, 
+                .WithFlag(1, FieldMode.Read,
                     valueProviderCallback: _ => fifoStatus[OtherCpu()].Rdy,
                     name: "FIFO_ST_RDY")
-                .WithFlag(2, FieldMode.Read, 
+                .WithFlag(2, FieldMode.Read,
                     valueProviderCallback: _ => fifoStatus[OtherCpu()].Wof,
                     name: "FIFO_ST_WOF")
-                .WithFlag(3, FieldMode.Read, 
+                .WithFlag(3, FieldMode.Read,
                     valueProviderCallback: _ => fifoStatus[CurrentCpu()].Roe,
                     name: "FIFO_ST_ROE")
                 .WithReservedBits(4, 28);
 
             Registers.FIFO_RD.Define(this)
-                .WithValueField(0, 32, FieldMode.Read, 
+                .WithValueField(0, 32, FieldMode.Read,
                     valueProviderCallback: _ =>
                     {
                         var cpu = machine.SystemBus.GetCurrentCPU();
-                        var cpuId = machine.SystemBus.GetCPUId(cpu); 
+                        var cpuId = machine.SystemBus.GetCPUId(cpu);
 
                         if (cpuFifo[cpuId].Count != 0)
                         {
@@ -250,15 +268,15 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                         }
                         fifoStatus[cpuId].Roe = true;
                         return 0;
-                    }, 
+                    },
                     name: "FIFO_RD");
 
             Registers.FIFO_WR.Define(this)
-                .WithValueField(0, 32, FieldMode.Write, 
+                .WithValueField(0, 32, FieldMode.Write,
                     writeCallback: (_, value) =>
                     {
                         var cpu = machine.SystemBus.GetCurrentCPU();
-                        var cpuId = machine.SystemBus.GetCPUId(cpu); 
+                        var cpuId = machine.SystemBus.GetCPUId(cpu);
 
                         long otherCpu = Convert.ToInt64(cpuId == 0);
 
@@ -278,32 +296,33 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                             fifoStatus[otherCpu].Wof = true;
                         }
                     }, name: "FIFO_WR");
-            
+
             Registers.DIV_UDIVIDEND.Define(this)
                 .WithValueField(0, 32, FieldMode.Write | FieldMode.Read,
                     writeCallback: (_, value) =>
                     {
                         var cpu = machine.SystemBus.GetCurrentCPU();
-                        var cpuId = machine.SystemBus.GetCPUId(cpu); 
+                        var cpuId = machine.SystemBus.GetCPUId(cpu);
 
                         divider[cpuId].Dividend = (int)value;
                         divider[cpuId].Dirty = true;
-                        divider[cpuId].CalculateUnsigned(); },
+                        divider[cpuId].CalculateUnsigned();
+                    },
                     valueProviderCallback: _ => (uint)divider[CurrentCpu()].Dividend,
                     name: "DIV_UDIVIDEND");
-            
+
             Registers.DIV_UDIVISOR.Define(this)
                 .WithValueField(0, 32, FieldMode.Write | FieldMode.Read,
                     writeCallback: (_, value) =>
                     {
                         var cpu = machine.SystemBus.GetCurrentCPU();
-                        var cpuId = machine.SystemBus.GetCPUId(cpu); 
+                        var cpuId = machine.SystemBus.GetCPUId(cpu);
 
                         divider[cpuId].Divisor = (int)value;
                         divider[cpuId].Dirty = true;
                         divider[cpuId].CalculateUnsigned();
                     },
-                    valueProviderCallback: _ => (uint)divider[CurrentCpu()].Divisor, 
+                    valueProviderCallback: _ => (uint)divider[CurrentCpu()].Divisor,
                     name: "DIV_UDIVISOR");
 
             Registers.DIV_SDIVIDEND.Define(this)
@@ -311,7 +330,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                     writeCallback: (_, value) =>
                     {
                         var cpu = machine.SystemBus.GetCurrentCPU();
-                        var cpuId = machine.SystemBus.GetCPUId(cpu); 
+                        var cpuId = machine.SystemBus.GetCPUId(cpu);
 
                         divider[cpuId].Dividend = (int)value;
                         divider[cpuId].Dirty = true;
@@ -319,26 +338,26 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                     },
                     valueProviderCallback: _ => (uint)divider[CurrentCpu()].Dividend,
                     name: "DIV_SDIVIDEND");
-            
+
             Registers.DIV_SDIVISOR.Define(this)
                 .WithValueField(0, 32, FieldMode.Write | FieldMode.Read,
                     writeCallback: (_, value) =>
                     {
                         var cpu = machine.SystemBus.GetCurrentCPU();
-                        var cpuId = machine.SystemBus.GetCPUId(cpu); 
+                        var cpuId = machine.SystemBus.GetCPUId(cpu);
 
                         divider[cpuId].Divisor = (int)value;
                         divider[cpuId].CalculateSigned();
                     },
                     valueProviderCallback: _ => (uint)divider[CurrentCpu()].Divisor,
                     name: "DIV_SDIVISOR");
-           
+
             Registers.DIV_QUOTIENT.Define(this)
                 .WithValueField(0, 32, FieldMode.Write | FieldMode.Read,
                     writeCallback: (_, value) =>
                     {
                         var cpu = machine.SystemBus.GetCurrentCPU();
-                        var cpuId = machine.SystemBus.GetCPUId(cpu); 
+                        var cpuId = machine.SystemBus.GetCPUId(cpu);
 
                         divider[cpuId].Dirty = true;
                         divider[cpuId].Quotient = (int)value;
@@ -346,7 +365,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                     valueProviderCallback: _ =>
                     {
                         var cpu = machine.SystemBus.GetCurrentCPU();
-                        var cpuId = machine.SystemBus.GetCPUId(cpu); 
+                        var cpuId = machine.SystemBus.GetCPUId(cpu);
 
                         divider[cpuId].Dirty = false;
                         return (uint)divider[cpuId].Quotient;
@@ -357,19 +376,19 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                     writeCallback: (_, value) =>
                     {
                         var cpu = machine.SystemBus.GetCurrentCPU();
-                        var cpuId = machine.SystemBus.GetCPUId(cpu); 
+                        var cpuId = machine.SystemBus.GetCPUId(cpu);
 
                         divider[cpuId].Dirty = true;
                         divider[cpuId].Remainder = (int)value;
                     },
                     valueProviderCallback: _ => (uint)divider[CurrentCpu()].Remainder,
                     name: "DIV_REMAINDER");
-            
+
             Registers.DIV_CSR.Define(this)
-                .WithFlag(0, FieldMode.Read, 
+                .WithFlag(0, FieldMode.Read,
                     valueProviderCallback: _ => divider[CurrentCpu()].Ready,
                     name: "DIV_CSR_READY")
-                .WithFlag(1, FieldMode.Read, 
+                .WithFlag(1, FieldMode.Read,
                     valueProviderCallback: _ => divider[CurrentCpu()].Dirty,
                     name: "DIV_CSR_DIRTY")
                 .WithReservedBits(2, 30);
@@ -382,8 +401,8 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                     int id = spinlockNumber;
                     r.Define(this)
                         .WithValueField(0, 32, FieldMode.Write | FieldMode.Read,
-                            writeCallback: (_, value) => 
-                            { 
+                            writeCallback: (_, value) =>
+                            {
                                 var cpu = CurrentCpu();
                                 if (cpu == spinlocks[id])
                                 {
@@ -392,7 +411,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                             },
                             valueProviderCallback: _ =>
                             {
-                                var cpu = CurrentCpu();     
+                                var cpu = CurrentCpu();
                                 if (spinlocks[id] == 0 || spinlocks[id] == cpu)
                                 {
                                     spinlocks[id] = cpu;
@@ -405,5 +424,9 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                 }
             }
         }
+        private int[] spinlocks;
+        private IPeripheral gpioPeripheral;
+        private RP2040GPIO gpio;
+        private RP2040GPIO gpioQspi;
     }
 }

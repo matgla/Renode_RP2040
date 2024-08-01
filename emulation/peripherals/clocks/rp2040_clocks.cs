@@ -61,7 +61,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             ClkSrcGPin1 = 2
         }
 
-        public RP2040Clocks(Machine machine, RP2040XOSC xosc, RP2040ROSC rosc) : base(machine)
+        public RP2040Clocks(Machine machine, RP2040XOSC xosc, RP2040ROSC rosc, RP2040PLL pll, RP2040PLL pllusb) : base(machine)
         {
             refClockSource = RefClockSource.ROSCClkSrcPh;
             refClockAuxSource = RefClockAuxSource.ClkSrcPllUsb;
@@ -69,6 +69,8 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             sysClockSource = SysClockSource.ClkRef;
             this.xosc = xosc;
             this.rosc = rosc;
+            this.pll = pll;
+            this.pllusb = pllusb;
             frequencyCounterRunning = false;
             this.sysClockDividerInt = 1;
             this.defaultFrequency = xosc.Frequency;
@@ -223,37 +225,39 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                             }
                         case 1:
                             {
-                                frequencyCounter = 1;
+                                frequencyCounter = pll.CalculateOutputFrequency(xosc.Frequency);
                                 break;
                             }
                         case 2:
                             {
-                                frequencyCounter = 2;
+                                frequencyCounter = pllusb.CalculateOutputFrequency(xosc.Frequency);
                                 break;
                             }
                         case 3:
                             {
-                                frequencyCounter = 3;
+                                frequencyCounter = rosc.Frequency;
                                 break;
                             }
                         case 4:
                             {
-                                frequencyCounter = 4;
+                                frequencyCounter = rosc.Frequency;
                                 break;
                             }
                         case 5:
                             {
-                                frequencyCounter = 5;
+                                frequencyCounter = xosc.Frequency;
                                 break;
                             }
                         case 6:
                             {
-                                frequencyCounter = 6;
+                                // GPIN not supported
+                                frequencyCounter = 0;
                                 break;
                             }
                         case 7:
                             {
-                                frequencyCounter = 7;
+                                // GPIN not supported
+                                frequencyCounter = 0;
                                 break;
                             }
                         case 8:
@@ -315,5 +319,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
         private ulong frequencyCounter;
         private RP2040XOSC xosc;
         private RP2040ROSC rosc;
+        private RP2040PLL pll;
+        private RP2040PLL pllusb;
     }
 }

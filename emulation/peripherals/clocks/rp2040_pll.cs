@@ -30,7 +30,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
 
         public RP2040PLL(Machine machine) : base(machine)
         {
-            locked = false;
+            locked = true;
             bypass = false;
             refdiv = 1;
             vcopd = true;
@@ -44,8 +44,58 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             DefineRegisters();
         }
 
+        public ulong CalculateOutputFrequency(ulong frequency)
+        {
+            return (ulong)(((long)frequency / refdiv) * fbdiv_int / (postdiv1 * postdiv2));
+        }
+
         private void DefineRegisters()
         {
+            Registers.CS.Define(this)
+                .WithValueField(0, 6, valueProviderCallback: _ => refdiv,
+                    writeCallback: (_, value) => refdiv = (byte)value,
+                    name: "PLL_CS_REFDIV")
+                .WithReservedBits(6, 2)
+                .WithFlag(8, valueProviderCallback: _ => bypass,
+                    writeCallback: (_, value) => bypass = value,
+                    name: "PLL_CS_BYPASS")
+                .WithReservedBits(9, 22)
+                .WithFlag(31, FieldMode.Read, valueProviderCallback: _ => locked,
+                    name: "PLL_CS_LOCK");
+
+            Registers.PWR.Define(this)
+                .WithFlag(0, valueProviderCallback: _ => pd,
+                    writeCallback: (_, value) => pd = value,
+                    name: "PLL_PWR_PD")
+                .WithReservedBits(1, 1)
+                .WithFlag(2, valueProviderCallback: _ => dsmpd,
+                    writeCallback: (_, value) => dsmpd = value,
+                    name: "PLL_PWR_DSMPD")
+                .WithFlag(3, valueProviderCallback: _ => postdivpd,
+                    writeCallback: (_, value) => postdivpd = value,
+                    name: "PLL_PWR_POSTDIVPD")
+                .WithReservedBits(4, 1)
+                .WithFlag(5, valueProviderCallback: _ => vcopd,
+                    writeCallback: (_, value) => vcopd = value,
+                    name: "PLL_PWR_VCOPD")
+                .WithReservedBits(6, 26);
+
+            Registers.FBDIV_INT.Define(this)
+                .WithValueField(0, 12, valueProviderCallback: _ => fbdiv_int,
+                    writeCallback: (_, value) => fbdiv_int = (ushort)value,
+                    name: "PLL_FBDIV_INT")
+                .WithReservedBits(12, 20);
+
+            Registers.PRIM.Define(this)
+                .WithReservedBits(0, 12)
+                .WithValueField(12, 3, valueProviderCallback: _ => postdiv2,
+                    writeCallback: (_, value) => postdiv2 = (byte)value,
+                    name: "PLL_PRIM_POSTDIV2")
+                .WithReservedBits(15, 1)
+                .WithValueField(16, 3, valueProviderCallback: _ => postdiv1,
+                    writeCallback: (_, value) => postdiv1 = (byte)value,
+                    name: "PLL_PRIM_POSTDIV2")
+                .WithValueField(19, 11);
         }
 
         public long Size { get { return 0x1000; } }

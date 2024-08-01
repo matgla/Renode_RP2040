@@ -11,9 +11,10 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
     [AllowedTranslations(AllowedTranslation.WordToDoubleWord)]
     public class RP2040GPIO : BaseGPIOPort, IDoubleWordPeripheral, IGPIOReceiver, IKnownSize
     {
-        public RP2040GPIO(IMachine machine) : base(machine, NumberOfPins)
+        public RP2040GPIO(IMachine machine, int numberOfPins) : base(machine, numberOfPins)
         {
             functionSelectCallbacks = new List<Action<int, GpioFunction>>();
+            NumberOfPins = numberOfPins;
             registers = CreateRegisters();
             Reset();
             functionSelect = new int[NumberOfPins];
@@ -34,7 +35,7 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
         public long Size { get { return 0x1000; } }
         public int[] functionSelect;
 
-        public const int NumberOfPins = 30;
+        public int NumberOfPins;
         public enum Direction : byte
         {
             Input,
@@ -97,12 +98,18 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
 
         private GpioFunction GetFunction(int pin)
         {
+            // temporary check for QSPI GPIO, provide this by flag
+            if (NumberOfPins == 6)
+            {
+                return GpioFunction.NONE;
+            }
+
             if (functionSelect[pin] == 0 || functionSelect[pin] > 9)
             {
                 return GpioFunction.NONE;
             }
 
-            GpioFunction[,] pinMapping = new GpioFunction[NumberOfPins, 9]{
+            GpioFunction[,] pinMapping = new GpioFunction[30, 9]{
             /* 0 */    {GpioFunction.SPI0_RX,  GpioFunction.UART0_TX,  GpioFunction.I2C0_SDA, GpioFunction.PWM0_A, GpioFunction.SIO, GpioFunction.PIO0, GpioFunction.PIO1, GpioFunction.NONE, GpioFunction.USB_OVCUR_DET},
             /* 1 */    {GpioFunction.SPI0_CSN, GpioFunction.UART0_RX,  GpioFunction.I2C0_SCL, GpioFunction.PWM0_B, GpioFunction.SIO, GpioFunction.PIO0, GpioFunction.PIO1, GpioFunction.NONE, GpioFunction.USB_VBUS_DET},
             /* 2 */    {GpioFunction.SPI0_SCK, GpioFunction.UART0_CTS, GpioFunction.I2C1_SDA, GpioFunction.PWM1_A, GpioFunction.SIO, GpioFunction.PIO0, GpioFunction.PIO1, GpioFunction.NONE, GpioFunction.USB_VBUS_EN},

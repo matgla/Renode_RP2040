@@ -4,6 +4,8 @@ include $ORIGIN/emulation/peripherals/clocks/rp2040_xosc.cs
 EnsureTypeIsLoaded "Antmicro.Renode.Peripherals.Miscellaneous.RP2040XOSC"
 include $ORIGIN/emulation/peripherals/clocks/rp2040_rosc.cs
 EnsureTypeIsLoaded "Antmicro.Renode.Peripherals.Miscellaneous.RP2040ROSC"
+include $ORIGIN/emulation/peripherals/clocks/rp2040_pll.cs
+EnsureTypeIsLoaded "Antmicro.Renode.Peripherals.Miscellaneous.RP2040PLL"
 
 include $ORIGIN/emulation/peripherals/memory/rp2040_atomic_access.cs
 include $ORIGIN/emulation/peripherals/clocks/rp2040_clocks.cs
@@ -25,6 +27,7 @@ EnsureTypeIsLoaded "Antmicro.Renode.Peripherals.Miscellaneous.PioStateMachine"
 include $ORIGIN/emulation/peripherals/pio/rp2040_pio.cs
 include $ORIGIN/emulation/peripherals/spi/rp2040_spi.cs
 EnsureTypeIsLoaded "Antmicro.Renode.Peripherals.SPI.PL022"
+include $ORIGIN/emulation/peripherals/spi/rp2040_xip_ssi.cs
 
 
 include $ORIGIN/emulation/peripherals/sio/rp2040_sio.cs

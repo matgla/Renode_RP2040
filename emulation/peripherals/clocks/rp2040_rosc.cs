@@ -84,7 +84,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
 
             // don't ask, it's my magical equation for ROSC frequency
             // not really reallistic 
-            Frequency = 498 * 1000000;
+            Frequency = (ulong)((double)3.5 * 498ul * 1000000);
 
             for (int i = 0; i < stagesUsed; ++i)
             {

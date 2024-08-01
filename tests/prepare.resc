@@ -2,8 +2,11 @@ $machine_name="pico_tests"
 path add $ORIGIN/..
 include $ORIGIN/../boards/initialize_raspberry_pico.resc
 sysbus LoadELF $global.TEST_FILE
-sysbus.cpu0 VectorTableOffset `sysbus GetSymbolAddress "__VECTOR_TABLE"`
-sysbus.cpu1 VectorTableOffset `sysbus GetSymbolAddress "__VECTOR_TABLE"`
+#sysbus.cpu0 VectorTableOffset `sysbus GetSymbolAddress "__VECTOR_TABLE"`
+#sysbus.cpu1 VectorTableOffset `sysbus GetSymbolAddress "__VECTOR_TABLE"`
+
+sysbus.cpu0 VectorTableOffset 0x00000000
+sysbus.cpu1 VectorTableOffset 0x00000000
 
 machine StartGdbServer 3333 true sysbus.cpu0
 machine StartGdbServer 3333 true sysbus.cpu1

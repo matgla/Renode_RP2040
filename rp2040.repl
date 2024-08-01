@@ -7,6 +7,10 @@ flash0: Memory.MappedMemory @ sysbus 0x10000000
 sram0: Memory.MappedMemory @ sysbus 0x20000000
     size: 0x42000
 
+
+usbram: Memory.MappedMemory @ sysbus 0x50100000
+    size: 0x1000
+
 cpu0: CPU.CortexM @ sysbus
     cpuType: "cortex-m0+"
     id: 0
@@ -107,9 +111,10 @@ timer_bitmask_clear_alias: Memory.RP2040BitmaskClearRegisterAlias @ sysbus 0x400
     originalAddress: 0x40054000
 }
 
-gpio: GPIOPort.RP2040GPIO @ sysbus 0x40014000
+gpio: GPIOPort.RP2040GPIO @ sysbus 0x40014000 {
+    numberOfPins: 30
+}
     
-
 gpio_xor_alias: Memory.RP2040XorRegisterAlias @ sysbus 0x40015000 {
     originalAddress: 0x40014000
 }
@@ -121,10 +126,28 @@ gpio_bitmask_clear_alias: Memory.RP2040BitmaskClearRegisterAlias @ sysbus 0x4001
     originalAddress: 0x40014000
 }
 
+gpio_qspi: GPIOPort.RP2040GPIO @ sysbus 0x40018000 {
+    numberOfPins: 6
+}
+    
+gpio_qspi_xor_alias: Memory.RP2040XorRegisterAlias @ sysbus 0x40019000 {
+    originalAddress: 0x40018000
+}
+
+gpio_qspi_bitmask_set_alias: Memory.RP2040BitmaskSetRegisterAlias @ sysbus 0x4001a000 {
+    originalAddress: 0x40018000
+}
+gpio_qspi_bitmask_clear_alias: Memory.RP2040BitmaskClearRegisterAlias @ sysbus 0x4001b000 {
+    originalAddress: 0x40018000
+}
+
+
+
 poweron: Miscellaneous.PowerOnInput @ sysbus 
 
 sio: Miscellaneous.RP2040SIO @ sysbus 0xd0000000 {
-    gpio: gpio
+    gpio: gpio;
+    gpioQspi: gpio_qspi
 }
 
 spi0: SPI.PL022 @ sysbus 0x4003c000 {
@@ -181,10 +204,37 @@ rosc_bitmask_clear_alias: Memory.RP2040BitmaskClearRegisterAlias @ sysbus 0x4006
     originalAddress: 0x40060000
 }
 
+pll: Miscellaneous.RP2040PLL @ sysbus 0x40028000
+
+pll_xor_alias: Memory.RP2040XorRegisterAlias @ sysbus 0x40029000 {
+    originalAddress: 0x40028000
+}
+pll_bitmask_set_alias: Memory.RP2040BitmaskSetRegisterAlias @ sysbus 0x4002A000 {
+    originalAddress: 0x40028000
+}
+pll_bitmask_clear_alias: Memory.RP2040BitmaskClearRegisterAlias @ sysbus 0x4002B000 {
+    originalAddress: 0x40028000
+}
+
+
+pll_usb: Miscellaneous.RP2040PLL @ sysbus 0x4002c000
+
+pll_usb_xor_alias: Memory.RP2040XorRegisterAlias @ sysbus 0x4002d000 {
+    originalAddress: 0x40028000
+}
+pll_usb_bitmask_set_alias: Memory.RP2040BitmaskSetRegisterAlias @ sysbus 0x4002e000 {
+    originalAddress: 0x40028000
+}
+pll_usb_bitmask_clear_alias: Memory.RP2040BitmaskClearRegisterAlias @ sysbus 0x4002f000 {
+    originalAddress: 0x40028000
+}
+
 
 clocks: Miscellaneous.RP2040Clocks @ sysbus 0x40008000 {
     xosc: xosc;
-    rosc: rosc
+    rosc: rosc;
+    pll: pll;
+    pllusb: pll_usb
 }
 
 clocks_xor_alias: Memory.RP2040XorRegisterAlias @ sysbus 0x40009000 {
@@ -197,4 +247,22 @@ clocks_bitmask_clear_alias: Memory.RP2040BitmaskClearRegisterAlias @ sysbus 0x40
     originalAddress: 0x40008000
 }
 
+xip_ssi: SPI.RP2040XIPSSI @ sysbus 0x18000000
+xip_ssi_xor_alias: Memory.RP2040XorRegisterAlias @ sysbus 0x18001000 {
+    originalAddress: 0x18000000
+}
+xip_ssi_bitmask_set_alias: Memory.RP2040BitmaskSetRegisterAlias @ sysbus 0x18002000 {
+    originalAddress: 0x18000000
+}
+xip_ssi_bitmask_clear_alias: Memory.RP2040BitmaskClearRegisterAlias @ sysbus 0x18003000 {
+    originalAddress: 0x18000000
+}
+
+
+xip_flash: SPI.Micron_MT25Q @ xip_ssi {
+    underlyingMemory: flash0
+}
+
+gpio_qspi:
+    1 -> xip_flash@0
 
