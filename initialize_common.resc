@@ -14,6 +14,9 @@ include $ORIGIN/emulation/peripherals/power/power.cs
 include $ORIGIN/emulation/peripherals/gpio/rp2040_gpio.cs
 EnsureTypeIsLoaded "Antmicro.Renode.Peripherals.GPIOPort.RP2040GPIO"
 
+include $ORIGIN/emulation/peripherals/gpio/rp2040_pads.cs
+include $ORIGIN/emulation/peripherals/gpio/rp2040_qspi_pads.cs
+
 include $ORIGIN/emulation/peripherals/pio/pio_registers.cs
 EnsureTypeIsLoaded "Antmicro.Renode.Peripherals.Miscellaneous.RP2040PIORegisters.StateMachineClockDivider"
 EnsureTypeIsLoaded "Antmicro.Renode.Peripherals.Miscellaneous.RP2040PIORegisters.StateMachineExecutionControl"

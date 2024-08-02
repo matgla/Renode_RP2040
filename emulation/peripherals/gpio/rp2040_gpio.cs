@@ -1,4 +1,13 @@
+/**
+ * rp2040_gpio.cs
+ *
+ * Copyright (c) 2024 Mateusz Stadnik <matgla@live.com>
+ *
+ * Distributed under the terms of the MIT License.
+ */
+
 using System;
+using System.Linq;
 using System.Collections.Generic;
 using Antmicro.Renode.Core;
 using Antmicro.Renode.Logging;
@@ -20,6 +29,16 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
             functionSelect = new int[NumberOfPins];
             PinDirections = new Direction[NumberOfPins];
             ReevaluatePio = (uint cycles) => { };
+            pullDown = Enumerable.Repeat<bool>(true, NumberOfPins).ToArray();
+            pullUp = new bool[NumberOfPins];
+            outputEnableOverride = new OutputEnableOverride[NumberOfPins];
+            forcedOutputDisableMap = new bool[NumberOfPins];
+            outputOverride = new OutputOverride[NumberOfPins];
+        }
+
+        private bool IsPinOutput(int pin)
+        {
+            return forcedOutputDisableMap[pin] == false && outputEnableOverride[pin] == OutputEnableOverride.Enable;
         }
 
         public void SubscribeOnFunctionChange(Action<int, GpioFunction> callback)
@@ -31,17 +50,6 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
         {
             return Connections[id];
         }
-
-        public long Size { get { return 0x1000; } }
-        public int[] functionSelect;
-
-        public int NumberOfPins;
-        public enum Direction : byte
-        {
-            Input,
-            Output
-        };
-        public Direction[] PinDirections { get; set; }
 
         public enum GpioFunction
         {
@@ -160,13 +168,32 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
             }
         }
 
+        private void SetPinAccordingToPulls(int pin)
+        {
+            if (pullDown[pin] == true)
+            {
+                State[pin] = false;
+                Connections[pin].Set(false);
+            }
+            if (pullUp[pin] == true)
+            {
+                State[pin] = true;
+                Connections[pin].Set(true);
+            }
+        }
+
         private DoubleWordRegisterCollection CreateRegisters()
         {
             var registersMap = new Dictionary<long, DoubleWordRegister>();
+            // That's true for both GPIO and QSPI GPIO  
+            // 0x00 + 0x8 * i = STATUSES
+            // 0x04 + 0x8 * i = CTRL
+            // NumberOfPins * 0x8 = INTR0
 
             for (int p = 0; p < NumberOfPins; ++p)
             {
                 int i = p;
+
                 registersMap[i * 8] = new DoubleWordRegister(this)
                     .WithReservedBits(0, 8)
                     .WithFlag(8, FieldMode.Read,
@@ -215,59 +242,204 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
                         },
                         name: "GPIO" + i + "_CTRL_FUNCSEL")
                     .WithReservedBits(5, 3)
-                    .WithValueField(8, 2, FieldMode.Read | FieldMode.Write,
+                    .WithValueField(8, 2,
                         valueProviderCallback: _ =>
                         {
-                            if (State[i])
-                            {
-                                return 0x02;
-                            }
-                            return 0x03;
+                            return (ulong)outputOverride[i];
                         },
                         writeCallback: (_, value) =>
                         {
-                            if (value == 0x02)
+                            outputOverride[i] = (OutputOverride)value;
+                            if (IsPinOutput(i))
                             {
-                                WritePin(i, false);
+                                if (outputOverride[i] == OutputOverride.Low)
+                                {
+                                    WritePin(i, false);
+                                }
+                                else if (outputOverride[i] == OutputOverride.High)
+                                {
+                                    WritePin(i, true);
+                                }
+                                // peripherals not supported yet
                             }
-                            else if (value == 0x03)
+                            else
                             {
-                                WritePin(i, true);
+                                SetPinAccordingToPulls(i);
                             }
                         },
                         name: "GPIO" + i + "_CTRL_OUTOVER")
                     .WithReservedBits(10, 2)
-                    .WithValueField(12, 2, FieldMode.Read | FieldMode.Write,
+                    .WithValueField(12, 2,
                         valueProviderCallback: _ =>
                         {
-                            return 0;
+                            return (ulong)outputEnableOverride[i];
                         },
                         writeCallback: (_, value) =>
                         {
+                            outputEnableOverride[i] = (OutputEnableOverride)value;
+                            switch (value)
+                            {
+                                case 0:
+                                case 1:
+                                    {
+                                        // peripheral driving not yet implemented
+                                        break;
+                                    }
+                                case 2:
+                                    {
+                                        SetPinAccordingToPulls(i);
+                                        break;
+                                    }
+                                case 3:
+                                    {
+                                        WritePin(i, outputOverride[i] == OutputOverride.High);
+                                        break;
+                                    }
+                            }
                         },
                         name: "GPIO" + i + "_CTRL_OEOVER")
                     .WithReservedBits(14, 2)
-                    .WithValueField(16, 2, FieldMode.Read | FieldMode.Write,
-                        valueProviderCallback: _ =>
-                        {
-                            return 0;
-                        },
-                        writeCallback: (_, value) =>
-                        {
-                        },
-                        name: "GPIO" + i + "_CTRL_INOVER")
+                    .WithValueField(16, 2, name: "GPIO" + i + "_CTRL_INOVER")
                     .WithReservedBits(18, 10)
-                    .WithValueField(28, 2, FieldMode.Read | FieldMode.Write,
-                        valueProviderCallback: _ =>
-                        {
-                            return 0;
-                        },
-                        name: "GPIO" + i + "_CTRL_IRQOVER")
+                    .WithValueField(28, 2, name: "GPIO" + i + "_CTRL_IRQOVER")
                     .WithReservedBits(30, 2);
+            }
 
+            int intr0p0 = NumberOfPins * 8;
+            int numberOfIntRegisters = (int)Math.Ceiling((decimal)NumberOfPins / 8);
+            // 8 pins per register
+            for (int p = 0; p < numberOfIntRegisters; ++p)
+            {
+                registersMap[intr0p0 + p * 4] = new DoubleWordRegister(this)
+                    .WithValueField(0, 32, name: "INTR0" + p + "_PROC0");
+            }
+
+            int inte0p0 = intr0p0 + numberOfIntRegisters * 4;
+            // 8 pins per register
+            for (int p = 0; p < numberOfIntRegisters; ++p)
+            {
+                registersMap[inte0p0 + p * 4] = new DoubleWordRegister(this)
+                    .WithValueField(0, 32, name: "INTE0" + p + "_PROC0");
+            }
+
+
+            int intf0p0 = inte0p0 + numberOfIntRegisters * 4;
+            // 8 pins per register
+            for (int p = 0; p < numberOfIntRegisters; ++p)
+            {
+                registersMap[intf0p0 + p * 4] = new DoubleWordRegister(this)
+                    .WithValueField(0, 32, name: "INTF0" + p + "_PROC0");
+            }
+
+
+            int ints0p0 = intf0p0 + numberOfIntRegisters * 4;
+            // 8 pins per register
+            for (int p = 0; p < numberOfIntRegisters; ++p)
+            {
+                registersMap[ints0p0 + p * 4] = new DoubleWordRegister(this)
+                    .WithValueField(0, 32, name: "INTS0" + p + "_PROC0");
+            }
+
+            int intr0p1 = ints0p0 + numberOfIntRegisters * 4;
+            // 8 pins per register
+            for (int p = 0; p < numberOfIntRegisters; ++p)
+            {
+                registersMap[intr0p1 + p * 4] = new DoubleWordRegister(this)
+                    .WithValueField(0, 32, name: "INTR0" + p + "_PROC1");
+            }
+
+            int inte0p1 = intr0p1 + numberOfIntRegisters * 4;
+            // 8 pins per register
+            for (int p = 0; p < numberOfIntRegisters; ++p)
+            {
+                registersMap[inte0p1 + p * 4] = new DoubleWordRegister(this)
+                    .WithValueField(0, 32, name: "INTE0" + p + "_PROC1");
+            }
+
+            int intf0p1 = inte0p1 + numberOfIntRegisters * 4;
+            // 8 pins per register
+            for (int p = 0; p < numberOfIntRegisters; ++p)
+            {
+                registersMap[intf0p1 + p * 4] = new DoubleWordRegister(this)
+                    .WithValueField(0, 32, name: "INTF0" + p + "_PROC1");
+            }
+
+            int ints0p1 = intf0p1 + numberOfIntRegisters * 4;
+            // 8 pins per register
+            for (int p = 0; p < numberOfIntRegisters; ++p)
+            {
+                registersMap[ints0p1 + p * 4] = new DoubleWordRegister(this)
+                    .WithValueField(0, 32, name: "INTS0" + p + "_PROC1");
+            }
+
+            int dormantWakeInte0 = ints0p1 + numberOfIntRegisters * 4;
+            // 8 pins per register
+            for (int p = 0; p < numberOfIntRegisters; ++p)
+            {
+                registersMap[dormantWakeInte0 + p * 4] = new DoubleWordRegister(this)
+                    .WithValueField(0, 32, name: "DORMANT_WAKE_INTE" + p);
+            }
+
+            int dormantWakeIntf0 = dormantWakeInte0 + numberOfIntRegisters * 4;
+            // 8 pins per register
+            for (int p = 0; p < numberOfIntRegisters; ++p)
+            {
+                registersMap[dormantWakeIntf0 + p * 4] = new DoubleWordRegister(this)
+                    .WithValueField(0, 32, name: "DORMANT_WAKE_INTF" + p);
+            }
+
+            int dormantWakeInts0 = dormantWakeIntf0 + numberOfIntRegisters * 4;
+            // 8 pins per register
+            for (int p = 0; p < numberOfIntRegisters; ++p)
+            {
+                registersMap[dormantWakeInts0 + p * 4] = new DoubleWordRegister(this)
+                    .WithValueField(0, 32, name: "DORMANT_WAKE_INTS" + p);
             }
 
             return new DoubleWordRegisterCollection(this, registersMap);
+        }
+
+        public bool GetPullDown(int pin)
+        {
+            return pullDown[pin];
+        }
+
+        public bool GetPullUp(int pin)
+        {
+            return pullUp[pin];
+        }
+
+        public void SetPullDown(int pin, bool state)
+        {
+            this.Log(LogLevel.Noisy, "Setting pull down on " + pin + " to " + state);
+            pullDown[pin] = state;
+            if (!IsPinOutput(pin) && state == true)
+            {
+                State[pin] = false;
+                Connections[pin].Set(false);
+            }
+        }
+
+        public void SetPullUp(int pin, bool state)
+        {
+            this.Log(LogLevel.Noisy, "Setting pull up on " + pin + " to " + state);
+            pullUp[pin] = state;
+            if (!IsPinOutput(pin) && state == true)
+            {
+                State[pin] = true;
+                Connections[pin].Set(true);
+            }
+        }
+
+        // Disable from PADS has greater priority than from GPIO
+        public bool IsPinOutputForcedDisabled(int pin)
+        {
+            return forcedOutputDisableMap[pin];
+        }
+
+        public void ForcePinOutputDisable(int pin, bool state)
+        {
+            forcedOutputDisableMap[pin] = state;
         }
 
         public bool GetGpioState(uint number)
@@ -397,19 +569,55 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
         public void WritePin(int number, bool value)
         {
             this.Log(LogLevel.Noisy, "Setting GPIO" + number + " to: " + value + ", time: " + machine.ElapsedVirtualTime.TimeElapsed);
-            bool previousState = State[number];
+            if (!IsPinOutput(number))
+            {
+                this.Log(LogLevel.Warning, "Trying to set input pin: " + number + " to: " + value);
+                return;
+            }
+
             State[number] = value;
             Connections[number].Set(value);
         }
 
-        private readonly DoubleWordRegisterCollection registers;
+        public long Size { get { return 0x1000; } }
+        public int[] functionSelect;
+
+        public int NumberOfPins;
+        public enum Direction : byte
+        {
+            Input,
+            Output
+        };
+        public Direction[] PinDirections { get; set; }
 
         // Currently I have no better idea how to retrigger CPU evaluation when GPIO state changes 
         // This is necessary to have synchronized PIO with System Clock
         public Action<uint> ReevaluatePio { get; set; }
 
 
-        List<Action<int, GpioFunction>> functionSelectCallbacks;
+        private readonly DoubleWordRegisterCollection registers;
+        private bool[] pullDown;
+        private bool[] pullUp;
+        private enum OutputOverride
+        {
+            Peripheral = 0,
+            InversePeripheral = 1,
+            Low = 2,
+            High = 3
+        };
+
+        private OutputOverride[] outputOverride;
+        private enum OutputEnableOverride
+        {
+            Peripheral = 0,
+            InversePeripheral = 1,
+            Disable = 2,
+            Enable = 3
+        };
+        private OutputEnableOverride[] outputEnableOverride;
+        private bool[] forcedOutputDisableMap;
+
+        private List<Action<int, GpioFunction>> functionSelectCallbacks;
     }
 
 }

@@ -73,7 +73,6 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             this.pllusb = pllusb;
             frequencyCounterRunning = false;
             this.sysClockDividerInt = 1;
-            this.defaultFrequency = xosc.Frequency;
 
             DefineRegisters();
             ChangeClock();
@@ -82,12 +81,80 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
 
         private void ChangeClock()
         {
+            ulong sourceFrequency = 0;
+            this.Log(LogLevel.Noisy, "Reconfiguration of clocks with system clock: " + sysClockSource + ", system clock auxilary: " + sysClockAuxSource);
+
+            if (sysClockSource == SysClockSource.ClkSrcClkSysAux)
+            {
+                switch (sysClockAuxSource)
+                {
+                    case SysClockAuxSource.ROSCClkSrc:
+                        {
+                            sourceFrequency = rosc.Frequency;
+                            break;
+                        }
+                    case SysClockAuxSource.XOSCClkSrc:
+                        {
+                            sourceFrequency = xosc.Frequency;
+                            break;
+                        }
+                    case SysClockAuxSource.ClkSrcPllSys:
+                        {
+                            sourceFrequency = pll.CalculateOutputFrequency(xosc.Frequency);
+                            break;
+                        }
+                    case SysClockAuxSource.ClkSrcPllUsb:
+                        {
+                            sourceFrequency = pllusb.CalculateOutputFrequency(xosc.Frequency);
+                            break;
+                        }
+                    case SysClockAuxSource.ClkSrcGPin0:
+                    case SysClockAuxSource.ClkSrcGPin1:
+                        {
+                            this.Log(LogLevel.Warning, "GPIN clock source is not supported yet");
+                            break;
+                        }
+                }
+            }
+            else
+            {
+                switch (refClockSource)
+                {
+                    case RefClockSource.ClkSrcClkRefAux:
+                        switch (refClockAuxSource)
+                        {
+                            case RefClockAuxSource.ClkSrcGPin0:
+                            case RefClockAuxSource.ClkSrcGPin1:
+                                {
+                                    this.Log(LogLevel.Warning, "GPIN clock source is not supported yet");
+                                    break;
+                                }
+                            case RefClockAuxSource.ClkSrcPllUsb:
+                                {
+                                    sourceFrequency = pllusb.CalculateOutputFrequency(xosc.Frequency);
+                                    break;
+                                }
+                        }
+                        break;
+                    case RefClockSource.XOSCClkSrc:
+                        {
+                            sourceFrequency = xosc.Frequency;
+                            break;
+                        }
+                    case RefClockSource.ROSCClkSrcPh:
+                        {
+                            sourceFrequency = rosc.Frequency;
+                            break;
+                        }
+                }
+            }
+
             foreach (var c in machine.ClockSource.GetAllClockEntries())
             {
                 if (c.LocalName == "systick")
                 {
-                    machine.ClockSource.ExchangeClockEntryWith(c.Handler, oldEntry => oldEntry.With(frequency: (uint)(defaultFrequency / sysClockDividerInt)));
-                    this.Log(LogLevel.Debug, "Changing system clock to: " + defaultFrequency / sysClockDividerInt);
+                    machine.ClockSource.ExchangeClockEntryWith(c.Handler, oldEntry => oldEntry.With(frequency: (uint)(sourceFrequency / sysClockDividerInt)));
+                    this.Log(LogLevel.Debug, "Changing system clock with base: " + sourceFrequency + " / " + sysClockDividerInt);
                 }
                 // Recalculate SPI
             }
@@ -96,7 +163,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             {
                 if (c.GetName().Contains("piocpu"))
                 {
-                    (c as BaseCPU).PerformanceInMips = (uint)(defaultFrequency / 1000000 / sysClockDividerInt);
+                    (c as BaseCPU).PerformanceInMips = (uint)(sourceFrequency / 1000000 / sysClockDividerInt);
                     this.Log(LogLevel.Debug, "Changing performance of: " + c.GetName() + ", to: " + (c as BaseCPU).PerformanceInMips);
                 }
             }
@@ -225,27 +292,27 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                             }
                         case 1:
                             {
-                                frequencyCounter = pll.CalculateOutputFrequency(xosc.Frequency);
+                                frequencyCounter = pll.CalculateOutputFrequency(xosc.Frequency) / 1000;
                                 break;
                             }
                         case 2:
                             {
-                                frequencyCounter = pllusb.CalculateOutputFrequency(xosc.Frequency);
+                                frequencyCounter = pllusb.CalculateOutputFrequency(xosc.Frequency) / 1000;
                                 break;
                             }
                         case 3:
                             {
-                                frequencyCounter = rosc.Frequency;
+                                frequencyCounter = rosc.Frequency / 1000;
                                 break;
                             }
                         case 4:
                             {
-                                frequencyCounter = rosc.Frequency;
+                                frequencyCounter = rosc.Frequency / 1000;
                                 break;
                             }
                         case 5:
                             {
-                                frequencyCounter = xosc.Frequency;
+                                frequencyCounter = xosc.Frequency / 1000;
                                 break;
                             }
                         case 6:
@@ -308,7 +375,6 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
         private bool frequencyCounterRunning;
         private uint sysClockDividerFrac;
         private uint sysClockDividerInt;
-        private ulong defaultFrequency;
         private ulong pllSysFrequency;
         private ulong pllUsbFrequency;
         private ulong roscFrequency;

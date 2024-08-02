@@ -257,11 +257,11 @@ xip_ssi_bitmask_set_alias: Memory.RP2040BitmaskSetRegisterAlias @ sysbus 0x18002
 xip_ssi_bitmask_clear_alias: Memory.RP2040BitmaskClearRegisterAlias @ sysbus 0x18003000 {
     originalAddress: 0x18000000
 }
-
-
 xip_flash: SPI.Micron_MT25Q @ xip_ssi {
     underlyingMemory: flash0
 }
+
+pads: 
 
 gpio_qspi:
     1 -> xip_flash@0
