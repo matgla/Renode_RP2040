@@ -20,16 +20,55 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
     {
         private enum Registers
         {
+            CLK_GPOUT0_CTRL = 0x00,
+            CLK_GPOUT0_DIV = 0x04,
+            CLK_GPOUT0_SELECTED = 0x08,
+            CLK_GPOUT1_CTRL = 0x0c,
+            CLK_GPOUT1_DIV = 0x10,
+            CLK_GPOUT1_SELECTED = 0x14,
+            CLK_GPOUT2_CTRL = 0x18,
+            CLK_GPOUT2_DIV = 0x1c,
+            CLK_GPOUT2_SELECTED = 0x20,
+            CLK_GPOUT3_CTRL = 0x24,
+            CLK_GPOUT3_DIV = 0x28,
+            CLK_GPOUT3_SELECTED = 0x2c,
             CLK_REF_CTRL = 0x30,
             CLK_REF_DIV = 0x34,
             CLK_REF_SELECTED = 0x38,
             CLK_SYS_CTRL = 0x3c,
-            CLK_SYS_SELECTED = 0x44,
-            CLK_SYS_RESUS_CTRL = 0x78,
-            CLK_FC0_STATUS = 0x98,
             CLK_SYS_DIV = 0x40,
+            CLK_SYS_SELECTED = 0x44,
+            CLK_PERI_CTRL = 0x48,
+            CLK_PERI_SELECTED = 0x50,
+            CLK_USB_CTRL = 0x54,
+            CLK_USB_DIV = 0x58,
+            CLK_USB_SELECTED = 0x5c,
+            CLK_ADC_CTRL = 0x60,
+            CLK_ADC_DIV = 0x64,
+            CLK_ADC_SELECTED = 0x68,
+            CLK_RTC_CTRL = 0x6c,
+            CLK_RTC_DIV = 0x70,
+            CLK_RTC_SELECTED = 0x74,
+            CLK_SYS_RESUS_CTRL = 0x78,
+            CLK_SYS_RESUS_STATUS = 0x7c,
+            FC0_REF_KHZ = 0x80,
+            FC0_MIN_KHZ = 0x84,
+            FC0_MAX_KHZ = 0x88,
+            FC0_DELAY = 0x8c,
+            FC0_INTERVAL = 0x90,
+            FC0_SRC = 0x94,
+            FC0_STATUS = 0x98,
             FC0_RESULT = 0x9c,
-            FC0_SRC = 0x94
+            WAKE_EN0 = 0xa0,
+            WAKE_EN1 = 0xa4,
+            SLEEP_EN0 = 0xa8,
+            SLEEP_EN1 = 0xac,
+            ENABLED0 = 0xb0,
+            ENABLED1 = 0xb4,
+            INTR = 0xb8,
+            INTE = 0xbc,
+            INTF = 0xc0,
+            INTS = 0xc4
         }
 
         private enum SysClockAuxSource
@@ -61,18 +100,46 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             ClkSrcGPin1 = 2
         }
 
+        private enum PeriClockAuxSource
+        {
+            ClkSys = 0,
+            ClkPllSys = 1,
+            ClkPllUsb = 2,
+            ClkXosc = 3,
+            ClkRosc = 4,
+            ClkGPin0 = 5,
+            ClkGPin1 = 6
+        }
+
+        private enum UsbClockAuxSource
+        {
+            ClkPllUsb = 0,
+            ClkPllSys = 1,
+            ClkRosc = 2,
+            ClkXosc = 3,
+            ClkGPin0 = 4,
+            ClkGPin1 = 5
+        }
+
         public RP2040Clocks(Machine machine, RP2040XOSC xosc, RP2040ROSC rosc, RP2040PLL pll, RP2040PLL pllusb) : base(machine)
         {
             refClockSource = RefClockSource.ROSCClkSrcPh;
             refClockAuxSource = RefClockAuxSource.ClkSrcPllUsb;
             sysClockAuxSource = SysClockAuxSource.ClkSrcPllSys;
             sysClockSource = SysClockSource.ClkRef;
+            periClockAuxSource = PeriClockAuxSource.ClkSys;
+            periClockEnabled = false;
+            periClockKill = false;
             this.xosc = xosc;
             this.rosc = rosc;
             this.pll = pll;
             this.pllusb = pllusb;
             frequencyCounterRunning = false;
             this.sysClockDividerInt = 1;
+
+            this.refDiv = 1;
+            this.sysDivInt = 1;
+            this.sysDivFrac = 0;
 
             DefineRegisters();
             ChangeClock();
@@ -169,53 +236,161 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             }
         }
 
+        private void UpdatePeripheralsClock()
+        {
+        }
+
+        private void UpdateRefClock()
+        {
+        }
+
+        private void UpdateSysClock()
+        {
+        }
+
+        private void UpdateUsbClock()
+        {
+        }
+
+        private void UpdateRtcClock()
+        {
+        }
+
+        private void UpdateAdcClock()
+        {
+        }
+
         private void DefineRegisters()
         {
+            Registers.CLK_GPOUT0_CTRL.Define(this)
+                .WithReservedBits(0, 5)
+                .WithValueField(5, 4, name: "AUXSRC")
+                .WithReservedBits(9, 1)
+                .WithTaggedFlag("KILL", 10)
+                .WithTaggedFlag("ENABLE", 11)
+                .WithTaggedFlag("DC50", 12)
+                .WithReservedBits(13, 3)
+                .WithValueField(16, 2, name: "PHASE")
+                .WithReservedBits(18, 2)
+                .WithTaggedFlag("NUDGE", 20)
+                .WithReservedBits(21, 11);
+
+            Registers.CLK_GPOUT0_DIV.Define(this)
+                .WithValueField(0, 8, name: "FRAC")
+                .WithValueField(8, 24, name: "INT");
+
+            Registers.CLK_GPOUT0_SELECTED.Define(this)
+                .WithValueField(0, 32, name: "SELECTED");
+
+            Registers.CLK_GPOUT1_CTRL.Define(this)
+                .WithReservedBits(0, 5)
+                .WithValueField(5, 4, name: "AUXSRC")
+                .WithReservedBits(9, 1)
+                .WithTaggedFlag("KILL", 10)
+                .WithTaggedFlag("ENABLE", 11)
+                .WithTaggedFlag("DC50", 12)
+                .WithReservedBits(13, 3)
+                .WithValueField(16, 2, name: "PHASE")
+                .WithReservedBits(18, 2)
+                .WithTaggedFlag("NUDGE", 20)
+                .WithReservedBits(21, 11);
+
+            Registers.CLK_GPOUT1_DIV.Define(this)
+                .WithValueField(0, 8, name: "FRAC")
+                .WithValueField(8, 24, name: "INT");
+
+            Registers.CLK_GPOUT1_SELECTED.Define(this)
+                .WithValueField(0, 32, name: "SELECTED");
+
+            Registers.CLK_GPOUT2_CTRL.Define(this)
+                .WithReservedBits(0, 5)
+                .WithValueField(5, 4, name: "AUXSRC")
+                .WithReservedBits(9, 1)
+                .WithTaggedFlag("KILL", 10)
+                .WithTaggedFlag("ENABLE", 11)
+                .WithTaggedFlag("DC50", 12)
+                .WithReservedBits(13, 3)
+                .WithValueField(16, 2, name: "PHASE")
+                .WithReservedBits(18, 2)
+                .WithTaggedFlag("NUDGE", 20)
+                .WithReservedBits(21, 11);
+
+            Registers.CLK_GPOUT2_DIV.Define(this)
+                .WithValueField(0, 8, name: "FRAC")
+                .WithValueField(8, 24, name: "INT");
+
+            Registers.CLK_GPOUT2_SELECTED.Define(this)
+                .WithValueField(0, 32, name: "SELECTED");
+
+            Registers.CLK_GPOUT3_CTRL.Define(this)
+                .WithReservedBits(0, 5)
+                .WithValueField(5, 4, name: "AUXSRC")
+                .WithReservedBits(9, 1)
+                .WithTaggedFlag("KILL", 10)
+                .WithTaggedFlag("ENABLE", 11)
+                .WithTaggedFlag("DC50", 12)
+                .WithReservedBits(13, 3)
+                .WithValueField(16, 2, name: "PHASE")
+                .WithReservedBits(18, 2)
+                .WithTaggedFlag("NUDGE", 20)
+                .WithReservedBits(21, 11);
+
+            Registers.CLK_GPOUT3_DIV.Define(this)
+                .WithValueField(0, 8, name: "FRAC")
+                .WithValueField(8, 24, name: "INT");
+
+            Registers.CLK_GPOUT3_SELECTED.Define(this)
+                .WithValueField(0, 32, name: "SELECTED");
+
             Registers.CLK_REF_CTRL.Define(this)
-                .WithValueField(0, 2, FieldMode.Write | FieldMode.Read,
-                    writeCallback: (_, value) => refClockSource = (RefClockSource)value,
-                    valueProviderCallback: _ => (ulong)refClockSource,
+                .WithValueField(0, 2, valueProviderCallback: _ => (ulong)refClockSource,
+                    writeCallback: (_, value) =>
+                    {
+                        refClockSource = (RefClockSource)value;
+                        UpdateRefClock();
+                    },
                     name: "CLK_REF_CTRL")
                 .WithReservedBits(2, 3)
-                .WithValueField(5, 2, FieldMode.Write | FieldMode.Read,
-                    writeCallback: (_, value) => refClockAuxSource = (RefClockAuxSource)value,
-                    valueProviderCallback: _ => (ulong)refClockAuxSource,
+                .WithValueField(5, 2, valueProviderCallback: _ => (ulong)refClockAuxSource,
+                    writeCallback: (_, value) =>
+                    {
+                        refClockAuxSource = (RefClockAuxSource)value;
+                        UpdateRefClock();
+                    },
                     name: "CLK_AUX_CTRL")
                 .WithReservedBits(7, 25);
+
+            Registers.CLK_REF_DIV.Define(this)
+                .WithReservedBits(0, 8)
+                .WithValueField(8, 2, valueProviderCallback: _ => refDiv == 0 ? 1ul << 16 : refDiv,
+                    writeCallback: (_, value) =>
+                    {
+                        refDiv = (byte)value;
+                        UpdateRefClock();
+                    },
+                    name: "INT")
+                .WithReservedBits(10, 22);
 
             Registers.CLK_REF_SELECTED.Define(this)
                 .WithValueField(0, 32, FieldMode.Read,
                     valueProviderCallback: _ => (ulong)(1 << (int)refClockSource),
                     name: "CLK_REF_SELECTED");
 
-            Registers.CLK_SYS_RESUS_CTRL.Define(this)
-                .WithValueField(0, 8, FieldMode.Write | FieldMode.Read,
-                    writeCallback: (_, value) => timeout = (long)value,
-                    valueProviderCallback: _ => (ulong)timeout,
-                    name: "CLK_SYS_RESUS_CTRL_TIMEOUT")
-                .WithFlag(8, FieldMode.Write | FieldMode.Read,
-                    writeCallback: (_, value) => resusEnable = value,
-                    valueProviderCallback: _ => resusEnable,
-                    name: "CLK_SYS_RESUS_CTRL_ENABLE")
-                .WithReservedBits(9, 3)
-                .WithFlag(12, FieldMode.Write | FieldMode.Read,
-                    valueProviderCallback: _ => false,
-                    name: "CLK_SYS_RESUS_CTRL_FORCE")
-                .WithReservedBits(13, 3)
-                .WithFlag(16, FieldMode.Write | FieldMode.Read,
-                    valueProviderCallback: _ => false,
-                    name: "CLK_SYS_RESUS_CTRL_CLEAR")
-                .WithReservedBits(17, 15);
-
             Registers.CLK_SYS_CTRL.Define(this)
-                .WithValueField(0, 1, FieldMode.Write | FieldMode.Read,
-                    writeCallback: (_, value) => sysClockSource = (SysClockSource)value,
-                    valueProviderCallback: _ => (ulong)sysClockSource,
+                .WithValueField(0, 1, valueProviderCallback: _ => (ulong)sysClockSource,
+                    writeCallback: (_, value) =>
+                    {
+                        sysClockSource = (SysClockSource)value;
+                        UpdateSysClock();
+                    },
                     name: "CLK_SYS_CTRL_SRC")
                 .WithReservedBits(1, 4)
-                .WithValueField(5, 3, FieldMode.Write | FieldMode.Read,
-                    writeCallback: (_, value) => sysClockAuxSource = (SysClockAuxSource)value,
-                    valueProviderCallback: _ => (ulong)sysClockAuxSource,
+                .WithValueField(5, 3, valueProviderCallback: _ => (ulong)sysClockAuxSource,
+                    writeCallback: (_, value) =>
+                    {
+                        sysClockAuxSource = (SysClockAuxSource)value;
+                        UpdateSysClock();
+                    },
                     name: "CLK_SYS_CTRL_AUXSRC")
                 .WithReservedBits(8, 24);
 
@@ -224,7 +399,101 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                     valueProviderCallback: _ => (ulong)(1 << (int)sysClockSource),
                     name: "CLK_SYS_SELECTED");
 
-            Registers.CLK_FC0_STATUS.Define(this)
+            Registers.CLK_SYS_DIV.Define(this)
+                .WithValueField(0, 8, valueProviderCallback: _ => sysDivFrac,
+                    writeCallback: (_, value) =>
+                    {
+                        sysDivFrac = (byte)value;
+                        UpdateSysClock();
+                    },
+                    name: "FRAC")
+                .WithValueField(8, 24, valueProviderCallback: _ => sysDivInt,
+                    writeCallback: (_, value) =>
+                    {
+                        sysDivInt = (uint)value;
+                        UpdateSysClock();
+                    },
+                    name: "INT");
+
+            Registers.CLK_SYS_RESUS_CTRL.Define(this)
+                .WithValueField(0, 8, valueProviderCallback: _ => (ulong)timeout,
+                    writeCallback: (_, value) => timeout = (long)value,
+                    name: "CLK_SYS_RESUS_CTRL_TIMEOUT")
+                .WithFlag(8, valueProviderCallback: _ => resusEnable,
+                    writeCallback: (_, value) => resusEnable = value,
+                    name: "CLK_SYS_RESUS_CTRL_ENABLE")
+                .WithReservedBits(9, 3)
+                .WithTaggedFlag("CLK_SYS_RESUS_CTRL_FORCE", 12)
+                .WithReservedBits(13, 3)
+                .WithTaggedFlag("CLK_SYS_RESUS_CTRL_CLEAR", 16)
+                .WithReservedBits(17, 15);
+
+            Registers.CLK_PERI_CTRL.Define(this)
+                .WithReservedBits(0, 5)
+                .WithValueField(5, 3, valueProviderCallback: _ => (ulong)periClockAuxSource,
+                    writeCallback: (_, value) =>
+                    {
+                        periClockAuxSource = (PeriClockAuxSource)value;
+                        UpdatePeripheralsClock();
+                    },
+                    name: "AUXSRC")
+                .WithReservedBits(8, 2)
+                .WithFlag(10, valueProviderCallback: _ => periClockKill,
+                    writeCallback: (_, value) =>
+                    {
+                        periClockKill = value;
+                        if (value)
+                        {
+                            periClockEnabled = false;
+                            UpdatePeripheralsClock();
+                        }
+                    })
+                .WithFlag(11, valueProviderCallback: _ => periClockEnabled,
+                    writeCallback: (_, value) =>
+                    {
+                        periClockEnabled = value;
+                        UpdatePeripheralsClock();
+                    }, name: "ENABLE")
+                .WithReservedBits(12, 20);
+
+            Registers.CLK_PERI_SELECTED.Define(this)
+                .WithValueField(0, 32, FieldMode.Read, valueProviderCallback: _ => (ulong)(1 << (int)periClockAuxSource),
+                    name: "SELECTED");
+
+            Registers.CLK_USB_CTRL.Define(this)
+                .WithReservedBits(0, 5)
+                .WithValueField(5, 3, valueProviderCallback: _ => (ulong)usbClockAuxSource,
+                    writeCallback: (_, value) =>
+                    {
+                        usbClockAuxSource = (UsbClockAuxSource)value;
+                        UpdateUsbClock();
+                    }, name: "AUXSRC")
+                .WithReservedBits(8, 2)
+                .WithFlag(10, valueProviderCallback: _ => usbClockKill,
+                    writeCallback: (_, value) =>
+                    {
+                        usbClockKill = value;
+                        if (value)
+                        {
+                            usbClockEnabled = false;
+                        }
+                        UpdateUsbClock();
+                    }, name: "KILL")
+                .WithFlag(11, valueProviderCallback: _ => usbClockEnabled,
+                    writeCallback: (_, value) =>
+                    {
+                        usbClockEnabled = value;
+                        UpdateUsbClock();
+                    }, name: "ENABLE")
+                .WithReservedBits(12, 4)
+                .WithValueField(16, 2, name: "PHASE")
+                .WithReservedBits(18, 2)
+                .WithTaggedFlag("NUDGE", 20)
+                .WithReservedBits(21, 11);
+
+
+
+            Registers.FC0_STATUS.Define(this)
                 .WithFlag(0, FieldMode.Read, valueProviderCallback: _ => true, name: "PASS")
                 .WithReservedBits(1, 3)
                 .WithFlag(4, FieldMode.Read, valueProviderCallback: _ => !frequencyCounterRunning, name: "DONE")
@@ -334,12 +603,12 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                             }
                         case 9:
                             {
-                                frequencyCounter = (ulong)machine.ClockSource.GetAllClockEntries().First().Frequency / 1000;
+                                frequencyCounter = (ulong)(machine.ClockSource.GetAllClockEntries().First().Frequency / 1000);
                                 break;
                             }
                         case 10:
                             {
-                                frequencyCounter = (ulong)machine.ClockSource.GetAllClockEntries().First().Frequency / 1000;
+                                frequencyCounter = (ulong)(machine.ClockSource.GetAllClockEntries().First().Frequency / 1000);
                                 break;
                             }
                         case 11:
@@ -370,6 +639,15 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
         private RefClockAuxSource refClockAuxSource;
         private SysClockAuxSource sysClockAuxSource;
         private SysClockSource sysClockSource;
+        private PeriClockAuxSource periClockAuxSource;
+        private UsbClockAuxSource usbClockAuxSource;
+
+        private bool periClockEnabled;
+        private bool periClockKill;
+        private bool usbClockEnabled;
+        private bool usbClockKill;
+
+
         private long timeout;
         private bool resusEnable;
         private bool frequencyCounterRunning;
@@ -387,5 +665,8 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
         private RP2040ROSC rosc;
         private RP2040PLL pll;
         private RP2040PLL pllusb;
+        private byte refDiv;
+        private byte sysDivFrac;
+        private uint sysDivInt;
     }
 }

@@ -27,7 +27,6 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
             registers = CreateRegisters();
             Reset();
             functionSelect = new int[NumberOfPins];
-            PinDirections = new Direction[NumberOfPins];
             ReevaluatePio = (uint cycles) => { };
             pullDown = Enumerable.Repeat<bool>(true, NumberOfPins).ToArray();
             pullUp = new bool[NumberOfPins];
@@ -38,7 +37,7 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
 
         private bool IsPinOutput(int pin)
         {
-            return forcedOutputDisableMap[pin] == false && outputEnableOverride[pin] == OutputEnableOverride.Enable;
+            return forcedOutputDisableMap[pin] == false && outputEnableOverride[pin] != OutputEnableOverride.Disable;
         }
 
         public void SubscribeOnFunctionChange(Action<int, GpioFunction> callback)
@@ -264,6 +263,7 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
                             }
                             else
                             {
+                                this.Log(LogLevel.Error, "Set output but not output");
                                 SetPinAccordingToPulls(i);
                             }
                         },
@@ -411,7 +411,6 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
 
         public void SetPullDown(int pin, bool state)
         {
-            this.Log(LogLevel.Noisy, "Setting pull down on " + pin + " to " + state);
             pullDown[pin] = state;
             if (!IsPinOutput(pin) && state == true)
             {
@@ -422,13 +421,17 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
 
         public void SetPullUp(int pin, bool state)
         {
-            this.Log(LogLevel.Noisy, "Setting pull up on " + pin + " to " + state);
             pullUp[pin] = state;
             if (!IsPinOutput(pin) && state == true)
             {
                 State[pin] = true;
                 Connections[pin].Set(true);
             }
+        }
+
+        public void SetPinOutput(int pin, bool state)
+        {
+            outputEnableOverride[pin] = state ? OutputEnableOverride.Enable : OutputEnableOverride.Disable;
         }
 
         // Disable from PADS has greater priority than from GPIO
@@ -496,8 +499,6 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
                     }
                 }
             }
-
-
         }
 
         public void SetPinDirectionBitset(ulong bitset, ulong bitmask = 0xffffffff)
@@ -511,13 +512,12 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
 
                 if ((bitset & (1UL << i)) != 0)
                 {
-                    PinDirections[i] = Direction.Output;
+                    outputEnableOverride[i] = OutputEnableOverride.Enable;
                 }
                 else
                 {
-                    PinDirections[i] = Direction.Input;
+                    outputEnableOverride[i] = OutputEnableOverride.Disable;
                 }
-
             }
         }
 
@@ -547,6 +547,79 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
                     state = state ^ false;
                 }
                 WritePin(i, state);
+            }
+        }
+
+        public void ClearOutputEnableBitset(ulong bitset)
+        {
+            for (int i = 0; i < NumberOfPins; ++i)
+            {
+                if ((bitset & (1UL << i)) != 0)
+                {
+                    outputEnableOverride[i] = OutputEnableOverride.Disable;
+                }
+            }
+        }
+
+        public void XorOutputEnableBitset(ulong bitset)
+        {
+            for (int i = 0; i < NumberOfPins; ++i)
+            {
+                bool state;
+                if ((bitset & (1UL << i)) != 0)
+                {
+                    state = IsPinOutput(i) ^ true;
+                }
+                else
+                {
+                    state = IsPinOutput(i) ^ false;
+                }
+                outputEnableOverride[i] = state ? OutputEnableOverride.Enable : OutputEnableOverride.Disable;
+            }
+        }
+
+        public uint GetOutputEnableBitmap()
+        {
+            uint output = 0;
+            for (int i = 0; i < NumberOfPins; ++i)
+            {
+                output |= Convert.ToUInt32(outputEnableOverride[i] == OutputEnableOverride.Enable) << i;
+            }
+            return output;
+        }
+
+        public void SetOutputEnableBitmap(ulong bitmap)
+        {
+            for (int i = 0; i < NumberOfPins; ++i)
+            {
+                if ((bitmap & (1UL << i)) != 0)
+                {
+                    outputEnableOverride[i] = OutputEnableOverride.Enable;
+                }
+                else
+                {
+                    outputEnableOverride[i] = OutputEnableOverride.Disable;
+                }
+            }
+        }
+
+        public void SetOutputEnableBitset(ulong bitset, ulong bitmask = 0xfffffff)
+        {
+            for (int i = 0; i < NumberOfPins; ++i)
+            {
+                if ((bitmask & (1UL << i)) == 0)
+                {
+                    continue;
+                }
+
+                if ((bitset & (1UL << i)) != 0)
+                {
+                    outputEnableOverride[i] = OutputEnableOverride.Enable;
+                }
+                else
+                {
+                    outputEnableOverride[i] = OutputEnableOverride.Disable;
+                }
             }
         }
 
@@ -583,12 +656,6 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
         public int[] functionSelect;
 
         public int NumberOfPins;
-        public enum Direction : byte
-        {
-            Input,
-            Output
-        };
-        public Direction[] PinDirections { get; set; }
 
         // Currently I have no better idea how to retrigger CPU evaluation when GPIO state changes 
         // This is necessary to have synchronized PIO with System Clock

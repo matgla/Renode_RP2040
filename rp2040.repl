@@ -257,11 +257,36 @@ xip_ssi_bitmask_set_alias: Memory.RP2040BitmaskSetRegisterAlias @ sysbus 0x18002
 xip_ssi_bitmask_clear_alias: Memory.RP2040BitmaskClearRegisterAlias @ sysbus 0x18003000 {
     originalAddress: 0x18000000
 }
+
+pads: GPIOPort.RP2040Pads @ sysbus 0x4001c000 {
+    gpio: gpio
+}
+pads_xor_alias: Memory.RP2040XorRegisterAlias @ sysbus 0x4001d000 {
+    originalAddress: 0x4001c000
+}
+pads_bitmask_set_alias: Memory.RP2040BitmaskSetRegisterAlias @ sysbus 0x4001e000 {
+    originalAddress: 0
+}
+pads_bitmask_clear_alias: Memory.RP2040BitmaskClearRegisterAlias @ sysbus 0x4001f000 {
+    originalAddress: 0x18000000
+}
+
+qspi_pads: GPIOPort.RP2040QspiPads @ sysbus 0x40020000 {
+    gpio: gpio_qspi
+}
+qspi_pads_xor_alias: Memory.RP2040XorRegisterAlias @ sysbus 0x40021000 {
+    originalAddress: 0x40020000
+}
+qspi_pads_bitmask_set_alias: Memory.RP2040BitmaskSetRegisterAlias @ sysbus 0x40022000 {
+    originalAddress: 0x40020000
+}
+qspi_pads_bitmask_clear_alias: Memory.RP2040BitmaskClearRegisterAlias @ sysbus 0x40023000 {
+    originalAddress: 0x40020000
+}
+
 xip_flash: SPI.Micron_MT25Q @ xip_ssi {
     underlyingMemory: flash0
 }
-
-pads: 
 
 gpio_qspi:
     1 -> xip_flash@0

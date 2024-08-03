@@ -17,12 +17,17 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
 {
 
     [AllowedTranslations(AllowedTranslation.WordToDoubleWord)]
-    public class RP2040Pads : IDoubleWordPeripheral, IGPIOReceiver, IKnownSize
+    public class RP2040Pads : IDoubleWordPeripheral, IKnownSize
     {
         public RP2040Pads(IMachine machine, RP2040GPIO gpio)
         {
             this.gpio = gpio;
             this.registers = CreateRegisters();
+        }
+
+        public void Reset()
+        {
+            // implement
         }
 
         private DoubleWordRegisterCollection CreateRegisters()
@@ -78,6 +83,16 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
             return new DoubleWordRegisterCollection(this, registersMap);
         }
 
+
+        public uint ReadDoubleWord(long offset)
+        {
+            return registers.Read(offset);
+        }
+
+        public void WriteDoubleWord(long offset, uint value)
+        {
+            registers.Write(offset, value);
+        }
 
         public long Size { get { return 0x1000; } }
 

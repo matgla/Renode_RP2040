@@ -165,6 +165,11 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
 
         private void DefineRegisters()
         {
+            Registers.CPUID.Define(this)
+                .WithFlag(0, FieldMode.Read,
+                    valueProviderCallback: _ => CurrentCpu() == 1,
+                    name: "CPUID");
+
             Registers.GPIO_IN.Define(this)
                 .WithValueField(0, 30, FieldMode.Read,
                     valueProviderCallback: _ => gpio.GetGpioStateBitmap(),
@@ -202,6 +207,30 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                     name: "GPIO_OUT_XOR")
                     .WithReservedBits(30, 2);
 
+            Registers.GPIO_OE.Define(this)
+                .WithValueField(0, 30, valueProviderCallback: _ => gpio.GetOutputEnableBitmap(),
+                    writeCallback: (_, value) => gpio.SetOutputEnableBitmap(value),
+                    name: "GPIO_HI_OE")
+                .WithReservedBits(30, 2);
+
+            Registers.GPIO_OE_SET.Define(this)
+                .WithValueField(0, 30, FieldMode.Write,
+                    writeCallback: (_, value) => gpio.SetOutputEnableBitset(value),
+                    name: "GPIO_HI_SET")
+                .WithReservedBits(30, 2);
+
+            Registers.GPIO_OE_CLR.Define(this)
+                .WithValueField(0, 30, FieldMode.Write,
+                    writeCallback: (_, value) => gpio.ClearOutputEnableBitset(value),
+                    name: "GPIO_HI_CLR")
+                .WithReservedBits(30, 2);
+
+            Registers.GPIO_OE_XOR.Define(this)
+                .WithValueField(0, 30, FieldMode.Write,
+                    writeCallback: (_, value) => gpio.XorOutputEnableBitset(value),
+                    name: "GPIO_HI_XOR")
+                .WithReservedBits(30, 2);
+
             Registers.GPIO_HI_OUT.Define(this)
                 .WithValueField(0, 6,
                     valueProviderCallback: _ => gpioQspi.GetGpioStateBitmap(),
@@ -227,11 +256,30 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                     name: "GPIO_HI_OUT_XOR")
                 .WithReservedBits(6, 26);
 
+            Registers.GPIO_HI_OE.Define(this)
+                .WithValueField(0, 30, valueProviderCallback: _ => gpioQspi.GetOutputEnableBitmap(),
+                    writeCallback: (_, value) => gpioQspi.SetOutputEnableBitmap(value),
+                    name: "GPIO_HI_OE")
+                .WithReservedBits(30, 2);
 
-            Registers.CPUID.Define(this)
-                .WithFlag(0, FieldMode.Read,
-                    valueProviderCallback: _ => CurrentCpu() == 1,
-                    name: "CPUID");
+            Registers.GPIO_HI_OE_SET.Define(this)
+                .WithValueField(0, 30, FieldMode.Write,
+                    writeCallback: (_, value) => gpioQspi.SetOutputEnableBitset(value),
+                    name: "GPIO_HI_SET")
+                .WithReservedBits(30, 2);
+
+            Registers.GPIO_HI_OE_CLR.Define(this)
+                .WithValueField(0, 30, FieldMode.Write,
+                    writeCallback: (_, value) => gpioQspi.ClearOutputEnableBitset(value),
+                    name: "GPIO_HI_CLR")
+                .WithReservedBits(30, 2);
+
+            Registers.GPIO_HI_OE_XOR.Define(this)
+                .WithValueField(0, 30, FieldMode.Write,
+                    writeCallback: (_, value) => gpioQspi.XorOutputEnableBitset(value),
+                    name: "GPIO_HI_XOR")
+                .WithReservedBits(30, 2);
+
 
             Registers.FIFO_ST.Define(this)
                 .WithFlag(0, FieldMode.Read,

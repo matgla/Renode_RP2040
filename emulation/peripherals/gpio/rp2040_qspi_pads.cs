@@ -17,9 +17,9 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
 {
 
     [AllowedTranslations(AllowedTranslation.WordToDoubleWord)]
-    public class RP2040QspiPads : IDoubleWordPeripheral, IGPIOReceiver, IKnownSize
+    public class RP2040QspiPads : IDoubleWordPeripheral, IKnownSize
     {
-        public RP2040QspiPads(IMachine machine, RP2040GPIO gpio) : base(machine)
+        public RP2040QspiPads(IMachine machine, RP2040GPIO gpio)
         {
             this.gpio = gpio;
             this.registers = CreateRegisters();
@@ -29,6 +29,7 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
         private void InitializeDefaultStates()
         {
             this.gpio.SetPullDown(1, false);
+            this.gpio.SetPinOutput(1, true);
             this.gpio.SetPullUp(1, true);
             for (int i = 0; i < 4; ++i)
             {
@@ -45,6 +46,11 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
         public void WriteDoubleWord(long offset, uint value)
         {
             registers.Write(offset, value);
+        }
+
+        public void Reset()
+        {
+            // TODO: implement
         }
 
         private DoubleWordRegisterCollection CreateRegisters()
@@ -76,16 +82,16 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
                 registersMap[0x08 + i * 4] = new DoubleWordRegister(this)
                 .WithTaggedFlag("SLEWFAST", 0)
                 .WithTaggedFlag("SCHMITT", 1)
-                .WithFlag(2, valueProviderCallback: _ => gpio.GetPullDown(2 + i),
-                    writeCallback: (_, value) => gpio.SetPullDown(2 + i, value),
+                .WithFlag(2, valueProviderCallback: _ => gpio.GetPullDown(2 + p),
+                    writeCallback: (_, value) => gpio.SetPullDown(2 + p, value),
                     name: "PDE")
-                .WithFlag(3, valueProviderCallback: _ => gpio.GetPullUp(2 + i),
-                    writeCallback: (_, value) => gpio.SetPullUp(2 + i, value),
+                .WithFlag(3, valueProviderCallback: _ => gpio.GetPullUp(2 + p),
+                    writeCallback: (_, value) => gpio.SetPullUp(2 + p, value),
                     name: "PUE")
                 .WithValueField(4, 2, name: "DRIVE")
                 .WithTaggedFlag("IE", 6)
-                .WithFlag(7, valueProviderCallback: _ => gpio.IsPinOutputForcedDisabled(2 + i),
-                    writeCallback: (_, value) => gpio.ForcePinOutputDisable(2 + i, value),
+                .WithFlag(7, valueProviderCallback: _ => gpio.IsPinOutputForcedDisabled(2 + p),
+                    writeCallback: (_, value) => gpio.ForcePinOutputDisable(2 + p, value),
                     name: "OD")
                 .WithReservedBits(8, 24);
             }
