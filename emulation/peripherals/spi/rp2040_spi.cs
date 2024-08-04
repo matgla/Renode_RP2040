@@ -8,6 +8,7 @@ using System.Linq;
 using Antmicro.Renode.Core.Structure.Registers;
 using Antmicro.Renode.Utilities.Collections;
 using Antmicro.Renode.Peripherals.GPIOPort;
+using Antmicro.Renode.Peripherals.Miscellaneous;
 
 namespace Antmicro.Renode.Peripherals.SPI
 {
@@ -19,7 +20,7 @@ namespace Antmicro.Renode.Peripherals.SPI
       get { return 0x1000; }
     }
 
-    public PL022(IMachine machine, RP2040GPIO gpio, int id) : base(machine)
+    public PL022(IMachine machine, RP2040GPIO gpio, int id, RP2040Clocks clocks) : base(machine)
     {
       this.id = id;
       this.gpio = gpio;
@@ -27,6 +28,7 @@ namespace Antmicro.Renode.Peripherals.SPI
       this.rxPins = new List<int>();
       this.clockPins = new List<int>();
       this.csPins = new List<int>();
+      clocks.OnPeripheralChange(UpdateFrequency);
 
       rxBuffer = new CircularBuffer<ushort>(8);
       txBuffer = new CircularBuffer<ushort>(8);
@@ -43,12 +45,15 @@ namespace Antmicro.Renode.Peripherals.SPI
       masterSlaveSelect = false;
       slaveModeDisabled = false;
       running = false;
-      clockPrescaleDivisor = 0;
-      frequency = (ulong)machine.ClockSource.GetAllClockEntries().First().Frequency / 100;
-      steps = (ulong)machine.ClockSource.GetAllClockEntries().First().Frequency / frequency;
-      this._executionThread = machine.ObtainManagedThread(Step, 10000000);
+      clockPrescaleDivisor = 1;
+      this._executionThread = machine.ObtainManagedThread(Step, 1);
       this.gpio.SubscribeOnFunctionChange(OnGpioFunctionSelect);
       transmitCounter = 16;
+    }
+
+    private void UpdateFrequency(long baseFrequency)
+    {
+      this._executionThread.Frequency = (uint)(baseFrequency / clockPrescaleDivisor);
     }
 
     private void OnGpioFunctionSelect(int pin, RP2040GPIO.GpioFunction function)
