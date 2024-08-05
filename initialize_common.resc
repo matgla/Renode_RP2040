@@ -9,6 +9,7 @@ EnsureTypeIsLoaded "Antmicro.Renode.Peripherals.Miscellaneous.RP2040PLL"
 
 include $ORIGIN/emulation/peripherals/memory/rp2040_atomic_access.cs
 include $ORIGIN/emulation/peripherals/clocks/rp2040_clocks.cs
+EnsureTypeIsLoaded "Antmicro.Renode.Peripherals.Miscellaneous.RP2040Clocks"
 include $ORIGIN/emulation/peripherals/timer/rp2040_timer.cs
 include $ORIGIN/emulation/peripherals/power/power.cs
 include $ORIGIN/emulation/peripherals/gpio/rp2040_gpio.cs

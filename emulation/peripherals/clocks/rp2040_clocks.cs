@@ -11,136 +11,11 @@ using System.Collections.Generic;
 using Antmicro.Renode.Core;
 using Antmicro.Renode.Logging;
 using Antmicro.Renode.Core.Structure.Registers;
-using Antmicro.Renode.Peripherals.CPU;
 
 namespace Antmicro.Renode.Peripherals.Miscellaneous
 {
-
     public class RP2040Clocks : BasicDoubleWordPeripheral, IKnownSize
     {
-        private enum Registers
-        {
-            CLK_GPOUT0_CTRL = 0x00,
-            CLK_GPOUT0_DIV = 0x04,
-            CLK_GPOUT0_SELECTED = 0x08,
-            CLK_GPOUT1_CTRL = 0x0c,
-            CLK_GPOUT1_DIV = 0x10,
-            CLK_GPOUT1_SELECTED = 0x14,
-            CLK_GPOUT2_CTRL = 0x18,
-            CLK_GPOUT2_DIV = 0x1c,
-            CLK_GPOUT2_SELECTED = 0x20,
-            CLK_GPOUT3_CTRL = 0x24,
-            CLK_GPOUT3_DIV = 0x28,
-            CLK_GPOUT3_SELECTED = 0x2c,
-            CLK_REF_CTRL = 0x30,
-            CLK_REF_DIV = 0x34,
-            CLK_REF_SELECTED = 0x38,
-            CLK_SYS_CTRL = 0x3c,
-            CLK_SYS_DIV = 0x40,
-            CLK_SYS_SELECTED = 0x44,
-            CLK_PERI_CTRL = 0x48,
-            CLK_PERI_SELECTED = 0x50,
-            CLK_USB_CTRL = 0x54,
-            CLK_USB_DIV = 0x58,
-            CLK_USB_SELECTED = 0x5c,
-            CLK_ADC_CTRL = 0x60,
-            CLK_ADC_DIV = 0x64,
-            CLK_ADC_SELECTED = 0x68,
-            CLK_RTC_CTRL = 0x6c,
-            CLK_RTC_DIV = 0x70,
-            CLK_RTC_SELECTED = 0x74,
-            CLK_SYS_RESUS_CTRL = 0x78,
-            CLK_SYS_RESUS_STATUS = 0x7c,
-            FC0_REF_KHZ = 0x80,
-            FC0_MIN_KHZ = 0x84,
-            FC0_MAX_KHZ = 0x88,
-            FC0_DELAY = 0x8c,
-            FC0_INTERVAL = 0x90,
-            FC0_SRC = 0x94,
-            FC0_STATUS = 0x98,
-            FC0_RESULT = 0x9c,
-            WAKE_EN0 = 0xa0,
-            WAKE_EN1 = 0xa4,
-            SLEEP_EN0 = 0xa8,
-            SLEEP_EN1 = 0xac,
-            ENABLED0 = 0xb0,
-            ENABLED1 = 0xb4,
-            INTR = 0xb8,
-            INTE = 0xbc,
-            INTF = 0xc0,
-            INTS = 0xc4
-        }
-
-        private enum SysClockAuxSource
-        {
-            ClkSrcPllSys = 0,
-            ClkSrcPllUsb = 1,
-            ROSCClkSrc = 2,
-            XOSCClkSrc = 3,
-            ClkSrcGPin0 = 4,
-            ClkSrcGPin1 = 5,
-        }
-
-        private enum SysClockSource
-        {
-            ClkRef = 0,
-            ClkSrcClkSysAux = 1
-        }
-        private enum RefClockSource
-        {
-            ROSCClkSrcPh = 0,
-            ClkSrcClkRefAux = 1,
-            XOSCClkSrc = 2
-        }
-
-        private enum RefClockAuxSource
-        {
-            ClkSrcPllUsb = 0,
-            ClkSrcGPin0 = 1,
-            ClkSrcGPin1 = 2
-        }
-
-        private enum PeriClockAuxSource
-        {
-            ClkSys = 0,
-            ClkPllSys = 1,
-            ClkPllUsb = 2,
-            ClkXosc = 3,
-            ClkRosc = 4,
-            ClkGPin0 = 5,
-            ClkGPin1 = 6
-        }
-
-        private enum UsbClockAuxSource
-        {
-            ClkPllUsb = 0,
-            ClkPllSys = 1,
-            ClkRosc = 2,
-            ClkXosc = 3,
-            ClkGPin0 = 4,
-            ClkGPin1 = 5
-        }
-
-        private enum AdcClockAuxSource
-        {
-            ClkPllUsb = 0,
-            ClkPllSys = 1,
-            ClkRosc = 2,
-            ClkXosc = 3,
-            ClkGPin0 = 4,
-            CLKGPin1 = 5
-        }
-
-        private enum RtcClockAuxSource
-        {
-            ClkPllUsb = 0,
-            ClkPllSys = 1,
-            ClkRosc = 2,
-            ClkXosc = 3,
-            ClkGPin0 = 4,
-            ClkGPin1 = 5
-        }
-
         public RP2040Clocks(Machine machine, RP2040XOSC xosc, RP2040ROSC rosc, RP2040PLL pll, RP2040PLL pllusb) : base(machine)
         {
             refClockSource = RefClockSource.ROSCClkSrcPh;
@@ -159,6 +34,12 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             adcClockKill = false;
             rtcClockEnabled = false;
             rtcClockKill = false;
+            onSysClockChange = new List<Action<long>>();
+            onRefClockChange = new List<Action<long>>();
+            onPeriChange = new List<Action<long>>();
+            onAdcChange = new List<Action<long>>();
+            onUsbChange = new List<Action<long>>();
+            onRtcChange = new List<Action<long>>();
 
             this.xosc = xosc;
             this.rosc = rosc;
@@ -174,131 +55,326 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             this.sysDivInt = 1;
             this.sysDivFrac = 0;
             this.refDiv = 1;
-            this.sysDivInt = 1;
-            this.sysDivFrac = 0;
             this.usbDiv = 1;
             this.adcDiv = 1;
             this.rtcDivFrac = 0;
             this.rtcDivInt = 1;
 
             DefineRegisters();
-            ChangeClock();
+
+            SystemClockFrequency = 0;
+            PeripheralClockFrequency = 0;
+            ReferenceClockFrequency = 0;
+            UsbClockFrequency = 0;
+            AdcClockFrequency = 0;
+            RtcClockFrequency = 0;
+
+            UpdateAllClocks();
         }
-        private Machine mach;
 
-        private void ChangeClock()
+        public void OnSystemClockChange(Action<long> action)
         {
-            ulong sourceFrequency = 0;
-            this.Log(LogLevel.Noisy, "Reconfiguration of clocks with system clock: " + sysClockSource + ", system clock auxilary: " + sysClockAuxSource);
+            onSysClockChange.Add(action);
+        }
 
+        public void OnRefClockChange(Action<long> action)
+        {
+            onRefClockChange.Add(action);
+        }
+
+        public void OnPeripheralChange(Action<long> action)
+        {
+            onPeriChange.Add(action);
+        }
+
+        public void OnAdcChange(Action<long> action)
+        {
+            onAdcChange.Add(action);
+        }
+
+        public void OnRtcChange(Action<long> action)
+        {
+            onRtcChange.Add(action);
+        }
+
+        public void OnUsbChange(Action<long> action)
+        {
+            onUsbChange.Add(action);
+        }
+
+        public void UpdateAllClocks()
+        {
+            UpdateRefClock();
+            UpdateSysClock();
+        }
+
+        private ulong GetReferenceClockSourceFrequency()
+        {
+            switch (refClockSource)
+            {
+                case RefClockSource.ROSCClkSrcPh:
+                    return rosc.Frequency;
+                case RefClockSource.XOSCClkSrc:
+                    return xosc.Frequency;
+                case RefClockSource.ClkSrcClkRefAux:
+                    {
+                        switch (refClockAuxSource)
+                        {
+                            case RefClockAuxSource.ClkSrcPllUsb:
+                                return pllusb.CalculateOutputFrequency(xosc.Frequency);
+                            case RefClockAuxSource.ClkSrcGPin0:
+                            case RefClockAuxSource.ClkSrcGPin1:
+                                {
+                                    this.Log(LogLevel.Error, "GPin is not supported");
+                                    return 1;
+                                }
+                        }
+                        this.Log(LogLevel.Error, "Unknown aux reference clock");
+                        return 1;
+                    }
+
+            }
+
+            this.Log(LogLevel.Error, "Unknown configuration for reference clock source");
+            return 1;
+        }
+
+
+        private void UpdateRefClock()
+        {
+            ulong sourceFrequency = GetReferenceClockSourceFrequency();
+            ulong integral = refDiv == 0 ? 1ul << 16 : refDiv;
+            ReferenceClockFrequency = (uint)(sourceFrequency / integral);
+
+            if (sysClockSource == SysClockSource.ClkRef)
+            {
+                UpdateSysClock();
+            }
+        }
+
+        private ulong GetSystemClockSourceFrequency()
+        {
             if (sysClockSource == SysClockSource.ClkSrcClkSysAux)
             {
                 switch (sysClockAuxSource)
                 {
                     case SysClockAuxSource.ROSCClkSrc:
                         {
-                            sourceFrequency = rosc.Frequency;
-                            break;
+                            return rosc.Frequency;
                         }
                     case SysClockAuxSource.XOSCClkSrc:
                         {
-                            sourceFrequency = xosc.Frequency;
-                            break;
+                            return xosc.Frequency;
                         }
                     case SysClockAuxSource.ClkSrcPllSys:
                         {
-                            sourceFrequency = pll.CalculateOutputFrequency(xosc.Frequency);
-                            break;
+                            return pll.CalculateOutputFrequency(xosc.Frequency);
                         }
                     case SysClockAuxSource.ClkSrcPllUsb:
                         {
-                            sourceFrequency = pllusb.CalculateOutputFrequency(xosc.Frequency);
-                            break;
+                            return pllusb.CalculateOutputFrequency(xosc.Frequency);
                         }
                     case SysClockAuxSource.ClkSrcGPin0:
                     case SysClockAuxSource.ClkSrcGPin1:
                         {
                             this.Log(LogLevel.Warning, "GPIN clock source is not supported yet");
-                            break;
+                            return 1;
                         }
                 }
             }
             else
             {
-                switch (refClockSource)
-                {
-                    case RefClockSource.ClkSrcClkRefAux:
-                        switch (refClockAuxSource)
-                        {
-                            case RefClockAuxSource.ClkSrcGPin0:
-                            case RefClockAuxSource.ClkSrcGPin1:
-                                {
-                                    this.Log(LogLevel.Warning, "GPIN clock source is not supported yet");
-                                    break;
-                                }
-                            case RefClockAuxSource.ClkSrcPllUsb:
-                                {
-                                    sourceFrequency = pllusb.CalculateOutputFrequency(xosc.Frequency);
-                                    break;
-                                }
-                        }
-                        break;
-                    case RefClockSource.XOSCClkSrc:
-                        {
-                            sourceFrequency = xosc.Frequency;
-                            break;
-                        }
-                    case RefClockSource.ROSCClkSrcPh:
-                        {
-                            sourceFrequency = rosc.Frequency;
-                            break;
-                        }
-                }
+                return ReferenceClockFrequency;
             }
-
-            foreach (var c in machine.ClockSource.GetAllClockEntries())
-            {
-                if (c.LocalName == "systick")
-                {
-                    machine.ClockSource.ExchangeClockEntryWith(c.Handler, oldEntry => oldEntry.With(frequency: (uint)(sourceFrequency / sysClockDividerInt)));
-                    this.Log(LogLevel.Debug, "Changing system clock with base: " + sourceFrequency + " / " + sysClockDividerInt);
-                }
-                // Recalculate SPI
-            }
-
-            foreach (var c in machine.GetSystemBus(this).GetCPUs())
-            {
-                if (c.GetName().Contains("piocpu"))
-                {
-                    (c as BaseCPU).PerformanceInMips = (uint)(sourceFrequency / 1000000 / sysClockDividerInt);
-                    this.Log(LogLevel.Debug, "Changing performance of: " + c.GetName() + ", to: " + (c as BaseCPU).PerformanceInMips);
-                }
-            }
-        }
-
-        private void UpdatePeripheralsClock()
-        {
-        }
-
-        private void UpdateRefClock()
-        {
+            this.Log(LogLevel.Error, "Unknown system clock source configuraton");
+            return 1;
         }
 
         private void UpdateSysClock()
         {
+            ulong sourceFrequency = GetSystemClockSourceFrequency();
+            ulong integral = sysDivInt == 0 ? 1 << 16 : sysDivInt;
+            uint newFrequency = (uint)((decimal)sourceFrequency / (integral + (decimal)sysDivFrac / 256));
+            if (newFrequency != SystemClockFrequency)
+            {
+                SystemClockFrequency = newFrequency;
+                this.Log(LogLevel.Noisy, "System clock changed to: " + SystemClockFrequency);
+
+                foreach (var c in machine.ClockSource.GetAllClockEntries())
+                {
+                    if (c.LocalName == "systick")
+                    {
+                        machine.ClockSource.ExchangeClockEntryWith(c.Handler, oldEntry => oldEntry.With(frequency: SystemClockFrequency));
+                    }
+                }
+
+                foreach (var a in onSysClockChange)
+                {
+                    a(SystemClockFrequency);
+                }
+
+                if (periClockAuxSource == PeriClockAuxSource.ClkSys ||
+                    periClockAuxSource == PeriClockAuxSource.ClkPllSys)
+                {
+                    UpdatePeripheralsClock();
+                }
+                if (usbClockAuxSource == UsbClockAuxSource.ClkPllSys)
+                {
+                    UpdateUsbClock();
+                }
+                if (adcClockAuxSource == AdcClockAuxSource.ClkPllSys)
+                {
+                    UpdateAdcClock();
+                }
+                if (rtcClockAuxSource == RtcClockAuxSource.ClkPllSys)
+                {
+                    UpdateRtcClock();
+                }
+            }
+        }
+
+        private ulong GetPeripheralSourceFrequency()
+        {
+            switch (periClockAuxSource)
+            {
+                case PeriClockAuxSource.ClkSys:
+                    return SystemClockFrequency;
+                case PeriClockAuxSource.ClkPllSys:
+                    return pll.CalculateOutputFrequency(xosc.Frequency);
+                case PeriClockAuxSource.ClkPllUsb:
+                    return pllusb.CalculateOutputFrequency(xosc.Frequency);
+                case PeriClockAuxSource.ClkXosc:
+                    return xosc.Frequency;
+                case PeriClockAuxSource.ClkRosc:
+                    return rosc.Frequency;
+                case PeriClockAuxSource.ClkGPin0:
+                case PeriClockAuxSource.ClkGPin1:
+                    {
+                        this.Log(LogLevel.Error, "GPin is not supported");
+                        return 1;
+                    }
+            }
+            this.Log(LogLevel.Error, "Unknown configuration for peripheral aux source");
+            return 1;
+        }
+
+        private void UpdatePeripheralsClock()
+        {
+            uint newFrequency = (uint)GetPeripheralSourceFrequency();
+            if (newFrequency != PeripheralClockFrequency)
+            {
+                PeripheralClockFrequency = newFrequency;
+                foreach (var a in onPeriChange)
+                {
+                    a(PeripheralClockFrequency);
+                }
+            }
+        }
+
+        private ulong GetUsbClockSourceFrequency()
+        {
+            switch (usbClockAuxSource)
+            {
+                case UsbClockAuxSource.ClkPllUsb:
+                    return pllusb.CalculateOutputFrequency(xosc.Frequency);
+                case UsbClockAuxSource.ClkPllSys:
+                    return pll.CalculateOutputFrequency(xosc.Frequency);
+                case UsbClockAuxSource.ClkRosc:
+                    return rosc.Frequency;
+                case UsbClockAuxSource.ClkXosc:
+                    return xosc.Frequency;
+                case UsbClockAuxSource.ClkGPin0:
+                case UsbClockAuxSource.ClkGPin1:
+                    {
+                        this.Log(LogLevel.Error, "GPin clock source not supported");
+                        return 1;
+                    }
+            }
+            this.Log(LogLevel.Error, "Unknown configuration for USB aux source");
+            return 1;
         }
 
         private void UpdateUsbClock()
         {
+            ulong integral = usbDiv == 0 ? 1ul << 16 : usbDiv;
+            UsbClockFrequency = (uint)(GetUsbClockSourceFrequency() / integral);
+
+            foreach (var a in onUsbChange)
+            {
+                a(UsbClockFrequency);
+            }
+        }
+
+        private ulong GetRtcClockSourceFrequency()
+        {
+            switch (rtcClockAuxSource)
+            {
+                case RtcClockAuxSource.ClkPllUsb:
+                    return pllusb.CalculateOutputFrequency(xosc.Frequency);
+                case RtcClockAuxSource.ClkPllSys:
+                    return pll.CalculateOutputFrequency(xosc.Frequency);
+                case RtcClockAuxSource.ClkRosc:
+                    return rosc.Frequency;
+                case RtcClockAuxSource.ClkXosc:
+                    return xosc.Frequency;
+                case RtcClockAuxSource.ClkGPin0:
+                case RtcClockAuxSource.ClkGPin1:
+                    {
+                        this.Log(LogLevel.Error, "GPin clock source not supported");
+                        return 1;
+                    }
+            }
+            this.Log(LogLevel.Error, "Unknown configuration for RTC aux source");
+            return 1;
         }
 
         private void UpdateRtcClock()
         {
+            ulong integral = rtcDivInt == 0 ? 1ul << 16 : rtcDivInt;
+            RtcClockFrequency = (uint)(GetRtcClockSourceFrequency() / ((decimal)integral + (decimal)rtcDivFrac / 256));
+
+            foreach (var a in onRtcChange)
+            {
+                a(RtcClockFrequency);
+            }
+        }
+
+        private ulong GetAdcClockSourceFrequency()
+        {
+            switch (adcClockAuxSource)
+            {
+                case AdcClockAuxSource.ClkPllUsb:
+                    return pllusb.CalculateOutputFrequency(xosc.Frequency);
+                case AdcClockAuxSource.ClkPllSys:
+                    return pll.CalculateOutputFrequency(xosc.Frequency);
+                case AdcClockAuxSource.ClkRosc:
+                    return rosc.Frequency;
+                case AdcClockAuxSource.ClkXosc:
+                    return xosc.Frequency;
+                case AdcClockAuxSource.ClkGPin0:
+                case AdcClockAuxSource.ClkGPin1:
+                    {
+                        this.Log(LogLevel.Error, "GPin clock source not supported");
+                        return 1;
+                    }
+            }
+            this.Log(LogLevel.Error, "Unknown configuration for ADC aux source");
+            return 1;
         }
 
         private void UpdateAdcClock()
         {
+            ulong integral = adcDiv == 0 ? 1ul << 16 : adcDiv;
+            AdcClockFrequency = (uint)(GetRtcClockSourceFrequency() / integral);
+
+            foreach (var a in onAdcChange)
+            {
+                a(AdcClockFrequency);
+            }
         }
+
+
+
 
         private void DefineRegisters()
         {
@@ -733,32 +809,32 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                             }
                         case 8:
                             {
-                                frequencyCounter = ((ulong)CalculateRefFrequency() << 5) / 1000;
+                                frequencyCounter = ((ulong)ReferenceClockFrequency << 5) / 1000;
                                 break;
                             }
                         case 9:
                             {
-                                frequencyCounter = ((ulong)CalculateSysFrequency() << 5) / 1000;
+                                frequencyCounter = ((ulong)SystemClockFrequency << 5) / 1000;
                                 break;
                             }
                         case 10:
                             {
-                                frequencyCounter = ((ulong)CalculatePeriFrequency() << 5) / 1000;
+                                frequencyCounter = ((ulong)PeripheralClockFrequency << 5) / 1000;
                                 break;
                             }
                         case 11:
                             {
-                                frequencyCounter = ((ulong)CalculateUsbFrequency() << 5) / 1000;
+                                frequencyCounter = ((ulong)UsbClockFrequency << 5) / 1000;
                                 break;
                             }
                         case 12:
                             {
-                                frequencyCounter = ((ulong)CalculateAdcFrequency() << 5) / 1000;
+                                frequencyCounter = ((ulong)AdcClockFrequency << 5) / 1000;
                                 break;
                             }
                         case 13:
                             {
-                                frequencyCounter = ((ulong)CalculateRtcFrequency() << 5) / 1000;
+                                frequencyCounter = ((ulong)RtcClockFrequency << 5) / 1000;
                                 break;
                             }
                     }
@@ -836,37 +912,148 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                 .WithReservedBits(1, 31);
 
         }
-
-        public void OnPeripheralChange(Action<long> action)
-        {
-            onPeriChange.Add(action);
-        }
-
-        public void OnAdcChange(Action<long> action)
-        {
-            onAdcChange.Add(action);
-        }
-
-        public void OnRtcChange(Action<long> action)
-        {
-            onRtcChange.Add(action);
-        }
-
-        public void OnUsbChange(Action<long> action)
-        {
-            onUsbChange.Add(action);
-        }
-
         public long Size { get { return 0x1000; } }
+
+        private enum Registers
+        {
+            CLK_GPOUT0_CTRL = 0x00,
+            CLK_GPOUT0_DIV = 0x04,
+            CLK_GPOUT0_SELECTED = 0x08,
+            CLK_GPOUT1_CTRL = 0x0c,
+            CLK_GPOUT1_DIV = 0x10,
+            CLK_GPOUT1_SELECTED = 0x14,
+            CLK_GPOUT2_CTRL = 0x18,
+            CLK_GPOUT2_DIV = 0x1c,
+            CLK_GPOUT2_SELECTED = 0x20,
+            CLK_GPOUT3_CTRL = 0x24,
+            CLK_GPOUT3_DIV = 0x28,
+            CLK_GPOUT3_SELECTED = 0x2c,
+            CLK_REF_CTRL = 0x30,
+            CLK_REF_DIV = 0x34,
+            CLK_REF_SELECTED = 0x38,
+            CLK_SYS_CTRL = 0x3c,
+            CLK_SYS_DIV = 0x40,
+            CLK_SYS_SELECTED = 0x44,
+            CLK_PERI_CTRL = 0x48,
+            CLK_PERI_SELECTED = 0x50,
+            CLK_USB_CTRL = 0x54,
+            CLK_USB_DIV = 0x58,
+            CLK_USB_SELECTED = 0x5c,
+            CLK_ADC_CTRL = 0x60,
+            CLK_ADC_DIV = 0x64,
+            CLK_ADC_SELECTED = 0x68,
+            CLK_RTC_CTRL = 0x6c,
+            CLK_RTC_DIV = 0x70,
+            CLK_RTC_SELECTED = 0x74,
+            CLK_SYS_RESUS_CTRL = 0x78,
+            CLK_SYS_RESUS_STATUS = 0x7c,
+            FC0_REF_KHZ = 0x80,
+            FC0_MIN_KHZ = 0x84,
+            FC0_MAX_KHZ = 0x88,
+            FC0_DELAY = 0x8c,
+            FC0_INTERVAL = 0x90,
+            FC0_SRC = 0x94,
+            FC0_STATUS = 0x98,
+            FC0_RESULT = 0x9c,
+            WAKE_EN0 = 0xa0,
+            WAKE_EN1 = 0xa4,
+            SLEEP_EN0 = 0xa8,
+            SLEEP_EN1 = 0xac,
+            ENABLED0 = 0xb0,
+            ENABLED1 = 0xb4,
+            INTR = 0xb8,
+            INTE = 0xbc,
+            INTF = 0xc0,
+            INTS = 0xc4
+        }
+
+        private enum SysClockAuxSource
+        {
+            ClkSrcPllSys = 0,
+            ClkSrcPllUsb = 1,
+            ROSCClkSrc = 2,
+            XOSCClkSrc = 3,
+            ClkSrcGPin0 = 4,
+            ClkSrcGPin1 = 5,
+        }
+
+        private enum SysClockSource
+        {
+            ClkRef = 0,
+            ClkSrcClkSysAux = 1
+        }
+        private enum RefClockSource
+        {
+            ROSCClkSrcPh = 0,
+            ClkSrcClkRefAux = 1,
+            XOSCClkSrc = 2
+        }
+
+        private enum RefClockAuxSource
+        {
+            ClkSrcPllUsb = 0,
+            ClkSrcGPin0 = 1,
+            ClkSrcGPin1 = 2
+        }
+
+        private enum PeriClockAuxSource
+        {
+            ClkSys = 0,
+            ClkPllSys = 1,
+            ClkPllUsb = 2,
+            ClkXosc = 3,
+            ClkRosc = 4,
+            ClkGPin0 = 5,
+            ClkGPin1 = 6
+        }
+
+        private enum UsbClockAuxSource
+        {
+            ClkPllUsb = 0,
+            ClkPllSys = 1,
+            ClkRosc = 2,
+            ClkXosc = 3,
+            ClkGPin0 = 4,
+            ClkGPin1 = 5
+        }
+
+        private enum AdcClockAuxSource
+        {
+            ClkPllUsb = 0,
+            ClkPllSys = 1,
+            ClkRosc = 2,
+            ClkXosc = 3,
+            ClkGPin0 = 4,
+            ClkGPin1 = 5
+        }
+
+        private enum RtcClockAuxSource
+        {
+            ClkPllUsb = 0,
+            ClkPllSys = 1,
+            ClkRosc = 2,
+            ClkXosc = 3,
+            ClkGPin0 = 4,
+            ClkGPin1 = 5
+        }
+
+        public uint SystemClockFrequency { get; private set; }
+        public uint PeripheralClockFrequency { get; private set; }
+        public uint ReferenceClockFrequency { get; private set; }
+        public uint UsbClockFrequency { get; private set; }
+        public uint AdcClockFrequency { get; private set; }
+        public uint RtcClockFrequency { get; private set; }
 
         private RefClockSource refClockSource;
         private RefClockAuxSource refClockAuxSource;
         private byte refDiv;
+        private List<Action<long>> onRefClockChange;
 
         private SysClockAuxSource sysClockAuxSource;
         private SysClockSource sysClockSource;
         private byte sysDivFrac;
         private uint sysDivInt;
+        private List<Action<long>> onSysClockChange;
 
         private PeriClockAuxSource periClockAuxSource;
         private bool periClockEnabled;
@@ -905,5 +1092,6 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
         private RP2040ROSC rosc;
         private RP2040PLL pll;
         private RP2040PLL pllusb;
+
     }
 }

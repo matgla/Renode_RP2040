@@ -2,7 +2,6 @@ using Antmicro.Renode.Core;
 using Antmicro.Renode.Core.Structure.Registers;
 using System;
 using System.IO;
-using System.Collections.Generic;
 using Antmicro.Renode.Logging;
 using Antmicro.Renode.Peripherals.GPIOPort;
 
@@ -11,6 +10,7 @@ using ELFSharp.ELF;
 using Machine = Antmicro.Renode.Core.Machine;
 
 using Antmicro.Renode.Peripherals.Miscellaneous.RP2040PIORegisters;
+using Antmicro.Renode.Peripherals.Miscellaneous;
 using Antmicro.Renode.Utilities.Binding;
 using Antmicro.Migrant;
 using Antmicro.Renode.Peripherals.Bus;
@@ -119,7 +119,7 @@ namespace Antmicro.Renode.Peripherals.CPU
 
         }
 
-        public RP2040PIOCPU(string cpuType, IMachine machine, ulong address, GPIOPort.RP2040GPIO gpio, uint id, Endianess endianness = Endianess.LittleEndian, CpuBitness bitness = CpuBitness.Bits32)
+        public RP2040PIOCPU(string cpuType, IMachine machine, ulong address, GPIOPort.RP2040GPIO gpio, uint id, RP2040Clocks clocks, Endianess endianness = Endianess.LittleEndian, CpuBitness bitness = CpuBitness.Bits32)
             : base(id, cpuType, machine, endianness, bitness)
         {
             CompilePioSim();
@@ -131,6 +131,18 @@ namespace Antmicro.Renode.Peripherals.CPU
             {
                 totalExecutedInstructions += PioExecute(steps);
             };
+            clocks.OnSystemClockChange(UpdateClocks);
+        }
+
+        private void UpdateClocks(long systemClockFrequency)
+        {
+            uint newPerformance = (uint)(systemClockFrequency / 1000000);
+            if (newPerformance == 0)
+            {
+                newPerformance = 1;
+            }
+            this.PerformanceInMips = newPerformance;
+            this.Log(LogLevel.Debug, "Changing clock frequency to: " + newPerformance + " MIPS");
         }
 
         public override void Start()

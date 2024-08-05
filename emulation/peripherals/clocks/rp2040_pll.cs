@@ -46,10 +46,6 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
 
         public ulong CalculateOutputFrequency(ulong frequency)
         {
-            if (pd)
-            {
-                return 0;
-            }
             return (ulong)Math.Round((double)(((long)frequency / refdiv) * fbdiv_int / (postdiv1 * postdiv2)));
         }
 

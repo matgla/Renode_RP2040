@@ -4,7 +4,6 @@ using Antmicro.Renode.Core;
 using Antmicro.Renode.Logging;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using Antmicro.Renode.Core.Structure.Registers;
 using Antmicro.Renode.Utilities.Collections;
 using Antmicro.Renode.Peripherals.GPIOPort;
@@ -28,7 +27,6 @@ namespace Antmicro.Renode.Peripherals.SPI
       this.rxPins = new List<int>();
       this.clockPins = new List<int>();
       this.csPins = new List<int>();
-      clocks.OnPeripheralChange(UpdateFrequency);
 
       rxBuffer = new CircularBuffer<ushort>(8);
       txBuffer = new CircularBuffer<ushort>(8);
@@ -45,15 +43,36 @@ namespace Antmicro.Renode.Peripherals.SPI
       masterSlaveSelect = false;
       slaveModeDisabled = false;
       running = false;
-      clockPrescaleDivisor = 1;
+      clockPrescaleDivisor = 2;
+      periFrequency = clocks.PeripheralClockFrequency;
+      steps = 0;
       this._executionThread = machine.ObtainManagedThread(Step, 1);
+      this.clocks = clocks;
+      RecalculateClockRate();
       this.gpio.SubscribeOnFunctionChange(OnGpioFunctionSelect);
+      clocks.OnPeripheralChange(UpdateFrequency);
       transmitCounter = 16;
     }
 
     private void UpdateFrequency(long baseFrequency)
     {
-      this._executionThread.Frequency = (uint)(baseFrequency / clockPrescaleDivisor);
+      periFrequency = (ulong)baseFrequency;
+      RecalculateClockRate();
+    }
+
+    private void RecalculateClockRate()
+    {
+      uint newFrequency = (uint)((decimal)periFrequency / (clockPrescaleDivisor * (1 + clockRate)));
+      if (newFrequency == 0)
+      {
+        newFrequency = 1;
+      }
+      if (newFrequency != this._executionThread.Frequency)
+      {
+        this._executionThread.Frequency = newFrequency;
+        this.Log(LogLevel.Info, "SPI" + id + ": Changed frequency to: " + newFrequency);
+        steps = clocks.SystemClockFrequency / newFrequency;
+      }
     }
 
     private void OnGpioFunctionSelect(int pin, RP2040GPIO.GpioFunction function)
@@ -211,11 +230,6 @@ namespace Antmicro.Renode.Peripherals.SPI
     {
     }
 
-    private void RecalculateClockRate()
-    {
-
-    }
-
     private void DefineRegisters()
     {
       Registers.SSPCR0.Define(registers)
@@ -367,7 +381,8 @@ namespace Antmicro.Renode.Peripherals.SPI
       SSPPCELLID2 = 0xff8,
       SSPPCELLID3 = 0xffc
     }
-    private ulong frequency;
     private ulong steps;
+    private ulong periFrequency;
+    private RP2040Clocks clocks;
   }
 }
