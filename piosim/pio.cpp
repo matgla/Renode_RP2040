@@ -16,33 +16,33 @@
 namespace piosim
 {
 
-PioSimulator &PioSimulator::get()
+PioSimulator &PioSimulator::get(int id)
 {
-  if (!self_)
+  if (!self_.contains(id))
   {
-    init();
+    init(id);
   }
-  return *self_;
+  return *self_.at(id);
 }
 
-void PioSimulator::init()
+void PioSimulator::init(int id)
 {
-  self_ = std::unique_ptr<PioSimulator>(new PioSimulator());
+  self_[id] = std::unique_ptr<PioSimulator>(new PioSimulator());
 }
 
-void PioSimulator::close()
+void PioSimulator::close(int id)
 {
-  if (!self_)
+  if (!self_.contains(id))
   {
     return;
   }
 
-  for (auto &sm : self_->sm_)
+  for (auto &sm : self_.at(id)->sm_)
   {
     sm.enable(false);
   }
 
-  self_.reset();
+  self_[id].reset();
 }
 
 PioSimulator::PioSimulator()
@@ -281,6 +281,6 @@ uint32_t PioSimulator::read_flevel() const
   return r;
 }
 
-std::unique_ptr<PioSimulator> PioSimulator::self_ = nullptr;
+std::map<int, std::unique_ptr<PioSimulator>> PioSimulator::self_ = {};
 
 } // namespace piosim

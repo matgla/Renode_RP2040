@@ -20,9 +20,9 @@ namespace piosim
 class PioSimulator
 {
 public:
-  static PioSimulator &get();
-  static void init();
-  static void close();
+  static PioSimulator &get(int id);
+  static void init(int id);
+  static void close(int id);
 
   void write_memory(uint32_t address, uint32_t value);
   uint32_t read_memory(uint32_t address) const;
@@ -61,7 +61,7 @@ private:
 
   // program is read-only for statemachine, no need to synchronize thread
   //
-  static std::unique_ptr<PioSimulator> self_;
+  static std::map<int, std::unique_ptr<PioSimulator>> self_;
 };
 
 } // namespace piosim

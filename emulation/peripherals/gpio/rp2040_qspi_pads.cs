@@ -31,6 +31,7 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
             this.gpio.SetPullDown(1, false);
             this.gpio.SetPinOutput(1, true);
             this.gpio.SetPullUp(1, true);
+            this.gpio.WritePin(1, true);
             for (int i = 0; i < 4; ++i)
             {
                 this.gpio.SetPullDown(2 + i, false);

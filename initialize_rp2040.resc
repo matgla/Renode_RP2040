@@ -3,5 +3,3 @@ include $ORIGIN/initialize_common.resc
 machine LoadPlatformDescription $ORIGIN/rp2040.repl
 sysbus LoadELF $ORIGIN/b2.elf
 
-# CS must be pulled up by hardware
-sysbus.gpio_qspi WritePin 1 true 

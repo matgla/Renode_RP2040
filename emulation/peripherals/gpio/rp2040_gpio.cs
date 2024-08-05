@@ -27,7 +27,7 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
             registers = CreateRegisters();
             Reset();
             functionSelect = new int[NumberOfPins];
-            ReevaluatePio = (uint cycles) => { };
+            ReevaluatePioActions = new List<Action<uint>>();
             pullDown = Enumerable.Repeat<bool>(true, NumberOfPins).ToArray();
             pullUp = new bool[NumberOfPins];
             outputEnableOverride = new OutputEnableOverride[NumberOfPins];
@@ -652,6 +652,14 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
             Connections[number].Set(value);
         }
 
+        public void ReevaluatePio(uint steps)
+        {
+            foreach (var a in ReevaluatePioActions)
+            {
+                a(steps);
+            }
+        }
+
         public long Size { get { return 0x1000; } }
         public int[] functionSelect;
 
@@ -659,7 +667,7 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
 
         // Currently I have no better idea how to retrigger CPU evaluation when GPIO state changes 
         // This is necessary to have synchronized PIO with System Clock
-        public Action<uint> ReevaluatePio { get; set; }
+        public List<Action<uint>> ReevaluatePioActions { get; set; }
 
 
         private readonly DoubleWordRegisterCollection registers;

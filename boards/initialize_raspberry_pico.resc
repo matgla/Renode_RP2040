@@ -7,5 +7,5 @@ machine LoadPlatformDescription $ORIGIN/../raspberry_pico.repl
 sysbus LoadELF $ORIGIN/../b2.elf
 
 # CS must be pulled up by hardware
-sysbus.gpio_qspi WritePin 1 true 
+#sysbus.gpio_qspi WritePin 1 true 
 

@@ -49,29 +49,29 @@ extern "C"
     gpio_get_pin_bitmap = callback;
   }
 
-  void pio_initialize_ex()
+  void pio_initialize_ex(int id)
   {
-    piosim::PioSimulator::init();
+    piosim::PioSimulator::init(id);
   }
 
-  void pio_deinitialize_ex()
+  void pio_deinitialize_ex(int id)
   {
-    piosim::PioSimulator::close();
+    piosim::PioSimulator::close(id);
   }
 
-  uint32_t pio_execute_ex(uint32_t number_of_instructions)
+  uint32_t pio_execute_ex(int id, uint32_t number_of_instructions)
   {
-    return piosim::PioSimulator::get().execute(number_of_instructions);
+    return piosim::PioSimulator::get(id).execute(number_of_instructions);
   }
 
-  uint32_t pio_read_memory_ex(uint32_t address)
+  uint32_t pio_read_memory_ex(int id, uint32_t address)
   {
-    return piosim::PioSimulator::get().read_memory(address);
+    return piosim::PioSimulator::get(id).read_memory(address);
   }
 
-  void pio_write_memory_ex(uint32_t address, uint32_t value)
+  void pio_write_memory_ex(int id, uint32_t address, uint32_t value)
   {
-    piosim::PioSimulator::get().write_memory(address, value);
+    piosim::PioSimulator::get(id).write_memory(address, value);
   }
 }
 
