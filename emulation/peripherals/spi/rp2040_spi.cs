@@ -70,8 +70,8 @@ namespace Antmicro.Renode.Peripherals.SPI
       if (newFrequency != this._executionThread.Frequency)
       {
         this._executionThread.Frequency = newFrequency;
+        this.Log(LogLevel.Debug, "SPI" + id + ": Changed frequency to: " + newFrequency);
         steps = clocks.SystemClockFrequency / newFrequency;
-        this.Log(LogLevel.Info, "SPI" + id + ": Changed frequency to: " + newFrequency + ", new steps: " + steps);
       }
     }
 

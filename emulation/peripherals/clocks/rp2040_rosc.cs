@@ -38,7 +38,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             this.Frequency = 8000000;
 
             this.freqRange = 0xaa0;
-            this.enabled = true;
+            this.Enabled = true;
             this.enableFlag = 0xfab;
 
             this.ds = new byte[8];
@@ -121,12 +121,12 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                         {
                             // simulation have always stable clock :)
                             stable = true;
-                            enabled = true;
+                            Enabled = true;
                         }
                         else if (enableFlag == 0xd1e)
                         {
                             stable = false;
-                            enabled = false;
+                            Enabled = false;
                         }
                     }, name: "ROSC_CTRL_ENABLE")
                 .WithReservedBits(24, 8);
@@ -249,7 +249,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             Registers.STATUS.Define(this)
                 .WithReservedBits(0, 12)
                 .WithFlag(12, FieldMode.Read,
-                    valueProviderCallback: _ => enabled,
+                    valueProviderCallback: _ => Enabled,
                     name: "ROSC_STATUS_ENABLED")
                 .WithReservedBits(13, 3)
                 .WithFlag(16, FieldMode.Read, valueProviderCallback: _ => true,
@@ -281,10 +281,10 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
         public long Size { get { return 0x1000; } }
 
         public ulong Frequency { get; private set; }
+        public bool Enabled { get; private set; }
 
         private ushort freqRange;
         private ushort enableFlag;
-        private bool enabled;
 
         private byte[] ds;
         private byte[] scheduledDs;

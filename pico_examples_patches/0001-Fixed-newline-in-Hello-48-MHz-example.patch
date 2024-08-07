@@ -1,0 +1,25 @@
+From b2028c809139fab595054a0f8d3b4517ca5e322c Mon Sep 17 00:00:00 2001
+From: Mateusz Stadnik <matgla@live.com>
+Date: Tue, 6 Aug 2024 17:51:31 +0200
+Subject: [PATCH] Fixed newline in Hello 48 MHz example
+
+---
+ clocks/hello_48MHz/hello_48MHz.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/clocks/hello_48MHz/hello_48MHz.c b/clocks/hello_48MHz/hello_48MHz.c
+index 19d269b..b2a0d46 100644
+--- a/clocks/hello_48MHz/hello_48MHz.c
++++ b/clocks/hello_48MHz/hello_48MHz.c
+@@ -62,7 +62,7 @@ int main() {
+     stdio_init_all();
+ 
+     measure_freqs();
+-    printf("Hello, 48MHz");
++    printf("Hello, 48MHz\n");
+ 
+     return 0;
+ }
+-- 
+2.44.0
+

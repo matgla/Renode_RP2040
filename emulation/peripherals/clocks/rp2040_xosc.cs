@@ -30,7 +30,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
         {
             this.Frequency = frequency;
 
-            this.enabled = false;
+            this.Enabled = false;
             this.stable = false;
             this.badwrite = false;
             this.dormant = 0x77616b65;
@@ -64,12 +64,12 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                         {
                             // simulation have always stable clock :)
                             stable = true;
-                            enabled = true;
+                            Enabled = true;
                         }
                         else if (enableFlag == 0xd1e)
                         {
                             stable = false;
-                            enabled = false;
+                            Enabled = false;
                         }
                     }, name: "XOSC_CTRL_ENABLE")
                 .WithReservedBits(24, 8);
@@ -81,7 +81,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                     name: "XOSC_STATUS_FREQ_RANGE")
                 .WithReservedBits(2, 10)
                 .WithFlag(12, FieldMode.Read,
-                    valueProviderCallback: _ => enabled,
+                    valueProviderCallback: _ => Enabled,
                     name: "XOSC_STATUS_ENABLED")
                 .WithReservedBits(13, 11)
                 .WithFlag(24, FieldMode.Read | FieldMode.Write,
@@ -124,8 +124,8 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
 
         public long Size { get { return 0x1000; } }
         public ulong Frequency { get; private set; }
+        public bool Enabled { get; private set; }
 
-        private bool enabled;
         private bool badwrite;
         private bool stable;
         private ushort enableFlag;

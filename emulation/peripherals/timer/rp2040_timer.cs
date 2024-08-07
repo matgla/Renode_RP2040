@@ -2,19 +2,17 @@ using Antmicro.Renode.Core;
 using Antmicro.Renode.Core.Structure.Registers;
 using System;
 using Antmicro.Renode.Time;
-using Xwt;
-using Antmicro.Renode.Logging;
 
 namespace Antmicro.Renode.Peripherals.Timers
 {
 
     public class Alarm
     {
-        public bool IrqEnabled{get;set;}
-        public GPIO Irq {get;set;}
+        public bool IrqEnabled { get; set; }
+        public GPIO Irq { get; set; }
 
-        public bool Fired {get; set;}
-        public LimitTimer Clock{get; private set;}
+        public bool Fired { get; set; }
+        public LimitTimer Clock { get; private set; }
 
         public Alarm(RP2040Timer timer, IMachine machine, int id)
         {
@@ -81,7 +79,7 @@ namespace Antmicro.Renode.Peripherals.Timers
         }
         public long Size { get { return 0x1000; } }
 
-        public GPIO[] IRQs { get; private set;}
+        public GPIO[] IRQs { get; private set; }
         public GPIO IRQ0 => IRQs[0];
         public GPIO IRQ1 => IRQs[1];
         public GPIO IRQ2 => IRQs[2];
@@ -90,7 +88,7 @@ namespace Antmicro.Renode.Peripherals.Timers
         private LimitTimer Clock;
         public override void Reset()
         {
-            Clock = new LimitTimer(machine.ClockSource, 1000000, this, "SystemClock", limit: 0xffffffffffffffff, direction: Direction.Ascending, eventEnabled: false, enabled: true, workMode: WorkMode.Periodic); 
+            Clock = new LimitTimer(machine.ClockSource, 1000000, this, "SystemClock", limit: 0xffffffffffffffff, direction: Direction.Ascending, eventEnabled: false, enabled: true, workMode: WorkMode.Periodic);
             for (int i = 0; i < alarms.Length; ++i)
             {
                 alarms[i] = new Alarm(this, machine, i)
@@ -102,43 +100,43 @@ namespace Antmicro.Renode.Peripherals.Timers
         public void DefineRegisters()
         {
             Registers.TIMERAWH.Define(this)
-                .WithValueField(0, 32, FieldMode.Read, 
+                .WithValueField(0, 32, FieldMode.Read,
                     valueProviderCallback: _ => (Clock.Value >> 32) & 0xffffffff,
                     name: "TIMERAWH");
             Registers.TIMERAWL.Define(this)
-                .WithValueField(0, 32, FieldMode.Read, 
+                .WithValueField(0, 32, FieldMode.Read,
                     valueProviderCallback: _ => Clock.Value & 0xffffffff,
                     name: "TIMERAWL");
 
             Registers.INTR.Define(this)
-                .WithFlags(0, 4, FieldMode.Write, 
-                    writeCallback: (i, _, value) => 
+                .WithFlags(0, 4, FieldMode.Write,
+                    writeCallback: (i, _, value) =>
                     {
-                        if (value == false) 
+                        if (value == false)
                         {
                             alarms[i].Irq.Unset();
-                        } 
+                        }
                     },
                     name: "INTR");
-            
+
             Registers.ARMED.Define(this)
-                .WithFlags(0, 4, FieldMode.Write, 
+                .WithFlags(0, 4, FieldMode.Write,
                     writeCallback: (i, _, value) => alarms[i].Enable(!value),
                     name: "ARMED");
 
             Registers.INTS.Define(this)
-                .WithFlags(0, 4, FieldMode.Read, 
+                .WithFlags(0, 4, FieldMode.Read,
                     valueProviderCallback: (i, _) => alarms[i].IrqEnabled,
                     name: "INTS");
 
             Registers.INTE.Define(this)
-                .WithFlags(0, 4, FieldMode.Write | FieldMode.Read, 
-                    writeCallback: (i, _, value) => alarms[i].IrqEnabled = true, 
+                .WithFlags(0, 4, FieldMode.Write | FieldMode.Read,
+                    writeCallback: (i, _, value) => alarms[i].IrqEnabled = true,
                     name: "INTE");
 
             Registers.INTF.Define(this)
-                .WithFlags(0, 4, FieldMode.Write | FieldMode.Read, 
-                    writeCallback: (i, _, value) => alarms[i].Irq.Set(value), 
+                .WithFlags(0, 4, FieldMode.Write | FieldMode.Read,
+                    writeCallback: (i, _, value) => alarms[i].Irq.Set(value),
                     name: "INTF");
 
             int alarmNumber = 0;

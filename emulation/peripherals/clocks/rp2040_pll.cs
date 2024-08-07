@@ -7,11 +7,10 @@
  */
 
 using System;
+using System.Collections.Generic;
 
 using Antmicro.Renode.Core;
 using Antmicro.Renode.Core.Structure.Registers;
-using Antmicro.Renode.Time;
-using Antmicro.Renode.Peripherals.Timers;
 using Antmicro.Renode.Logging;
 
 
@@ -30,7 +29,6 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
 
         public RP2040PLL(Machine machine) : base(machine)
         {
-            locked = true;
             bypass = false;
             refdiv = 1;
             vcopd = true;
@@ -40,13 +38,31 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             fbdiv_int = 0;
             postdiv1 = 0x7;
             postdiv2 = 0x7;
-
+            users = new List<Action>();
             DefineRegisters();
+        }
+
+        public void RegisterClient(Action callback)
+        {
+            users.Add(callback);
         }
 
         public ulong CalculateOutputFrequency(ulong frequency)
         {
             return (ulong)Math.Round((double)(((long)frequency / refdiv) * fbdiv_int / (postdiv1 * postdiv2)));
+        }
+
+        public bool PllEnabled()
+        {
+            return !pd;
+        }
+
+        private void UpdateUsers()
+        {
+            foreach (var a in users)
+            {
+                a();
+            }
         }
 
         private void DefineRegisters()
@@ -60,23 +76,39 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                     writeCallback: (_, value) => bypass = value,
                     name: "PLL_CS_BYPASS")
                 .WithReservedBits(9, 22)
-                .WithFlag(31, FieldMode.Read, valueProviderCallback: _ => locked,
+                .WithFlag(31, FieldMode.Read, valueProviderCallback: _ => !pd,
                     name: "PLL_CS_LOCK");
 
             Registers.PWR.Define(this)
                 .WithFlag(0, valueProviderCallback: _ => pd,
-                    writeCallback: (_, value) => pd = value,
+                    writeCallback: (_, value) =>
+                    {
+                        pd = value;
+                        UpdateUsers();
+                    },
                     name: "PLL_PWR_PD")
                 .WithReservedBits(1, 1)
                 .WithFlag(2, valueProviderCallback: _ => dsmpd,
-                    writeCallback: (_, value) => dsmpd = value,
+                    writeCallback: (_, value) =>
+                    {
+                        dsmpd = value;
+                        UpdateUsers();
+                    },
                     name: "PLL_PWR_DSMPD")
                 .WithFlag(3, valueProviderCallback: _ => postdivpd,
-                    writeCallback: (_, value) => postdivpd = value,
+                    writeCallback: (_, value) =>
+                    {
+                        postdivpd = value;
+                        UpdateUsers();
+                    },
                     name: "PLL_PWR_POSTDIVPD")
                 .WithReservedBits(4, 1)
                 .WithFlag(5, valueProviderCallback: _ => vcopd,
-                    writeCallback: (_, value) => vcopd = value,
+                    writeCallback: (_, value) =>
+                    {
+                        vcopd = value;
+                        UpdateUsers();
+                    },
                     name: "PLL_PWR_VCOPD")
                 .WithReservedBits(6, 26);
 
@@ -100,7 +132,6 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
 
         public long Size { get { return 0x1000; } }
 
-        private bool locked;
         private bool bypass;
         private byte refdiv;
         private bool vcopd;
@@ -110,5 +141,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
         private ushort fbdiv_int;
         private byte postdiv1;
         private byte postdiv2;
+
+        private List<Action> users;
     }
 }

@@ -11,13 +11,15 @@ using System.Collections.Generic;
 using Antmicro.Renode.Core;
 using Antmicro.Renode.Logging;
 using Antmicro.Renode.Core.Structure.Registers;
+using Antmicro.Renode.Peripherals.IRQControllers;
 
 namespace Antmicro.Renode.Peripherals.Miscellaneous
 {
     public class RP2040Clocks : BasicDoubleWordPeripheral, IKnownSize
     {
-        public RP2040Clocks(Machine machine, RP2040XOSC xosc, RP2040ROSC rosc, RP2040PLL pll, RP2040PLL pllusb) : base(machine)
+        public RP2040Clocks(Machine machine, RP2040XOSC xosc, RP2040ROSC rosc, RP2040PLL pll, RP2040PLL pllusb, NVIC nvic0, NVIC nvic1) : base(machine)
         {
+            IRQ = new GPIO();
             refClockSource = RefClockSource.ROSCClkSrcPh;
             refClockAuxSource = RefClockAuxSource.ClkSrcPllUsb;
             sysClockAuxSource = SysClockAuxSource.ClkSrcPllSys;
@@ -40,11 +42,16 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             onAdcChange = new List<Action<long>>();
             onUsbChange = new List<Action<long>>();
             onRtcChange = new List<Action<long>>();
-
             this.xosc = xosc;
             this.rosc = rosc;
             this.pll = pll;
             this.pllusb = pllusb;
+            this.nvic = new NVIC[2];
+            this.nvic[0] = nvic0;
+            this.nvic[1] = nvic1;
+
+            this.pll.RegisterClient(OnPllChanged);
+            this.pllusb.RegisterClient(OnPllChanged);
 
             frequencyCounterRefFreq = 0;
             frequencyCounterMinFreq = 0;
@@ -59,6 +66,11 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             this.adcDiv = 1;
             this.rtcDivFrac = 0;
             this.rtcDivInt = 1;
+
+            resused = false;
+            resusIrqEnabled = false;
+            resusIrqForced = false;
+            resusForced = false;
 
             DefineRegisters();
 
@@ -108,6 +120,11 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             UpdateSysClock();
         }
 
+        private void OnPllChanged()
+        {
+            UpdateAllClocks();
+        }
+
         private ulong GetReferenceClockSourceFrequency()
         {
             switch (refClockSource)
@@ -138,6 +155,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             this.Log(LogLevel.Error, "Unknown configuration for reference clock source");
             return 1;
         }
+
 
 
         private void UpdateRefClock()
@@ -195,10 +213,18 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             ulong sourceFrequency = GetSystemClockSourceFrequency();
             ulong integral = sysDivInt == 0 ? 1 << 16 : sysDivInt;
             uint newFrequency = (uint)((decimal)sourceFrequency / (integral + (decimal)sysDivFrac / 256));
+            if (newFrequency == 0)
+            {
+                newFrequency = 1;
+            }
             if (newFrequency != SystemClockFrequency)
             {
                 SystemClockFrequency = newFrequency;
-                this.Log(LogLevel.Noisy, "System clock changed to: " + SystemClockFrequency);
+
+                foreach (var n in nvic)
+                {
+                    n.Frequency = SystemClockFrequency;
+                }
 
                 foreach (var c in machine.ClockSource.GetAllClockEntries())
                 {
@@ -207,6 +233,8 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                         machine.ClockSource.ExchangeClockEntryWith(c.Handler, oldEntry => oldEntry.With(frequency: SystemClockFrequency));
                     }
                 }
+
+
 
                 foreach (var a in onSysClockChange)
                 {
@@ -229,6 +257,55 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                 if (rtcClockAuxSource == RtcClockAuxSource.ClkPllSys)
                 {
                     UpdateRtcClock();
+                }
+            }
+
+            // if clock is destroyed call resus action
+            if (sysClockSource == SysClockSource.ClkSrcClkSysAux)
+            {
+                bool newResus = false;
+                switch (sysClockAuxSource)
+                {
+                    case SysClockAuxSource.ClkSrcGPin1:
+                    case SysClockAuxSource.ClkSrcGPin0:
+                        {
+                            return;
+                        }
+                    case SysClockAuxSource.ClkSrcPllSys:
+                        {
+                            newResus = !pll.PllEnabled();
+                            break;
+                        }
+                    case SysClockAuxSource.ClkSrcPllUsb:
+                        {
+                            newResus = !pllusb.PllEnabled();
+                            break;
+                        }
+
+                    case SysClockAuxSource.XOSCClkSrc:
+                        {
+                            newResus = !xosc.Enabled;
+                            break;
+                        }
+                    case SysClockAuxSource.ROSCClkSrc:
+                        {
+                            newResus = !rosc.Enabled;
+                            break;
+                        }
+                }
+
+                if (resusEnable)
+                {
+                    if (newResus && !resused)
+                    {
+                        sysClockSource = SysClockSource.ClkRef;
+                        resused = newResus;
+                        UpdateSysClock();
+                        if (resusIrqEnabled)
+                        {
+                            IRQ.Set(true);
+                        }
+                    }
                 }
             }
         }
@@ -372,9 +449,6 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                 a(AdcClockFrequency);
             }
         }
-
-
-
 
         private void DefineRegisters()
         {
@@ -721,13 +795,32 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                     writeCallback: (_, value) => resusEnable = value,
                     name: "CLK_SYS_RESUS_CTRL_ENABLE")
                 .WithReservedBits(9, 3)
-                .WithTaggedFlag("CLK_SYS_RESUS_CTRL_FORCE", 12)
+                .WithFlag(12, valueProviderCallback: _ => resusForced,
+                    writeCallback: (_, value) =>
+                    {
+                        resusForced = value;
+                        resused = value;
+                        if (resusIrqEnabled || value)
+                        {
+                            IRQ.Set(resused); 
+                        }
+                    }, name: "CLK_SYS_RESUS_CTRL_FORCE")
                 .WithReservedBits(13, 3)
-                .WithTaggedFlag("CLK_SYS_RESUS_CTRL_CLEAR", 16)
+                .WithFlag(16, valueProviderCallback: _ => false,
+                        writeCallback: (_, value) =>
+                        {
+                            if (value)
+                            {
+                                resused = false;
+                            }
+                        },
+                    name: "CLK_SYS_RESUS_CTRL_CLEAR")
                 .WithReservedBits(17, 15);
 
             Registers.CLK_SYS_RESUS_STATUS.Define(this)
-                .WithTaggedFlag("RESUSSED", 0)
+                .WithFlag(0, FieldMode.Read,
+                    valueProviderCallback: _ => resused,
+                    name: "RESUSSED")
                 .WithReservedBits(1, 31);
 
             Registers.FC0_REF_KHZ.Define(this)
@@ -896,22 +989,38 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                 name: "ENABLED1");
 
             Registers.INTR.Define(this)
-                .WithTaggedFlag("CLK_SYS_RESUS", 0)
+                .WithFlag(0, FieldMode.Read, valueProviderCallback: _ => resused,
+                    name: "CLK_SYS_RESUS")
                 .WithReservedBits(1, 31);
 
             Registers.INTE.Define(this)
-                .WithTaggedFlag("CLK_SYS_RESUS", 0)
+                .WithFlag(0, valueProviderCallback: _ => resusIrqEnabled,
+                    writeCallback: (_, value) => resusIrqEnabled = value,
+                    name: "CLK_SYS_RESUS")
                 .WithReservedBits(1, 31);
 
             Registers.INTF.Define(this)
-                .WithTaggedFlag("CLK_SYS_RESUS", 0)
+                .WithFlag(0, valueProviderCallback: _ => resusIrqForced,
+                    writeCallback: (_, value) =>
+                    {
+                        resusIrqForced = value;
+                        RaiseInterrupt();
+                    },
+                    name: "CLK_SYS_RESUS")
                 .WithReservedBits(1, 31);
 
             Registers.INTS.Define(this)
-                .WithTaggedFlag("CLK_SYS_RESUS", 0)
+                .WithFlag(0, FieldMode.Read,
+                    valueProviderCallback: _ => resused || resusIrqForced,
+                    name: "CLK_SYS_RESUS")
                 .WithReservedBits(1, 31);
-
         }
+
+        private void RaiseInterrupt()
+        {
+            IRQ.Set(true);
+        }
+
         public long Size { get { return 0x1000; } }
 
         private enum Registers
@@ -1043,6 +1152,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
         public uint UsbClockFrequency { get; private set; }
         public uint AdcClockFrequency { get; private set; }
         public uint RtcClockFrequency { get; private set; }
+        public GPIO IRQ { get; private set; }
 
         private RefClockSource refClockSource;
         private RefClockAuxSource refClockAuxSource;
@@ -1093,5 +1203,11 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
         private RP2040PLL pll;
         private RP2040PLL pllusb;
 
+        private bool resused;
+        private bool resusIrqEnabled;
+        private bool resusIrqForced;
+        private bool resusForced;
+
+        private NVIC[] nvic;
     }
 }

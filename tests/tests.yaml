@@ -1,5 +1,8 @@
+- tests/adc/hello_adc/hello_adc.robot
 - tests/blink/blink.robot
 - tests/clocks/detached_clk_peri/detached_clk_peri.robot
+- tests/clocks/hello_48MHz/hello_48MHz.robot
+- tests/clocks/hello_resus/hello_resus.robot
 - tests/timer/hello_timer/hello_timer.robot
 - tests/timer/timer_lowlevel/timer_lowlevel.robot
 - tests/divider/hello_divider/hello_divider.robot

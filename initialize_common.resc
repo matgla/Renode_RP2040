@@ -1,5 +1,6 @@
 mach create $machine_name 
 
+
 include $ORIGIN/emulation/peripherals/clocks/rp2040_xosc.cs
 EnsureTypeIsLoaded "Antmicro.Renode.Peripherals.Miscellaneous.RP2040XOSC"
 include $ORIGIN/emulation/peripherals/clocks/rp2040_rosc.cs
@@ -16,6 +17,7 @@ include $ORIGIN/emulation/peripherals/gpio/rp2040_gpio.cs
 EnsureTypeIsLoaded "Antmicro.Renode.Peripherals.GPIOPort.RP2040GPIO"
 
 include $ORIGIN/emulation/peripherals/gpio/rp2040_pads.cs
+EnsureTypeIsLoaded "Antmicro.Renode.Peripherals.GPIOPort.RP2040Pads"
 include $ORIGIN/emulation/peripherals/gpio/rp2040_qspi_pads.cs
 
 include $ORIGIN/emulation/peripherals/pio/pio_registers.cs
@@ -33,7 +35,8 @@ include $ORIGIN/emulation/peripherals/spi/rp2040_spi.cs
 EnsureTypeIsLoaded "Antmicro.Renode.Peripherals.SPI.PL022"
 include $ORIGIN/emulation/peripherals/spi/rp2040_xip_ssi.cs
 
-
 include $ORIGIN/emulation/peripherals/sio/rp2040_sio.cs
+
+include $ORIGIN/emulation/peripherals/adc/rp2040_adc.cs
 
 

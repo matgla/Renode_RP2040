@@ -6,10 +6,8 @@
  * Distributed under the terms of the MIT License.
  */
 
-using System;
 using System.Collections.Generic;
 using Antmicro.Renode.Core;
-using Antmicro.Renode.Logging;
 using Antmicro.Renode.Peripherals.Bus;
 using Antmicro.Renode.Core.Structure.Registers;
 
@@ -23,10 +21,13 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
         {
             this.gpio = gpio;
             this.registers = CreateRegisters();
+            Reset();
         }
 
         public void Reset()
         {
+            voltageSelect = false;
+            PadsVoltage = 3.3;
             // implement
         }
 
@@ -34,7 +35,19 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
         {
             var registersMap = new Dictionary<long, DoubleWordRegister>();
             registersMap[0] = new DoubleWordRegister(this)
-                .WithTaggedFlag("VOLTAGE_SELECT", 0)
+                .WithFlag(0, valueProviderCallback: _ => voltageSelect,
+                    writeCallback: (_, value) =>
+                    {
+                        voltageSelect = value;
+                        if (value)
+                        {
+                            PadsVoltage = 1.8;
+                        }
+                        else
+                        {
+                            PadsVoltage = 3.3;
+                        }
+                    }, name: "VOLTAGE_SELECT")
                 .WithReservedBits(1, 31);
 
             for (int p = 0; p < gpio.NumberOfPins; ++p)
@@ -95,9 +108,12 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
         }
 
         public long Size { get { return 0x1000; } }
+        public double PadsVoltage { get; private set; }
 
         private RP2040GPIO gpio;
         private readonly DoubleWordRegisterCollection registers;
+
+        private bool voltageSelect;
     }
 
 }
