@@ -1,0 +1,571 @@
+From e6607952395dcda3a42e7bc3761dc39bba4cbe07 Mon Sep 17 00:00:00 2001
+From: Mateusz Stadnik <matgla@live.com>
+Date: Wed, 4 Sep 2024 16:45:39 +0200
+Subject: [PATCH] added more dma examples
+
+---
+ dma/CMakeLists.txt              |  5 ++
+ dma/sniff_crc16/CMakeLists.txt  | 11 +++++
+ dma/sniff_crc16/sniff_crc.c     | 83 +++++++++++++++++++++++++++++++++
+ dma/sniff_crc16r/CMakeLists.txt | 11 +++++
+ dma/sniff_crc16r/sniff_crc.c    | 82 ++++++++++++++++++++++++++++++++
+ dma/sniff_crc32/CMakeLists.txt  | 11 +++++
+ dma/sniff_crc32/sniff_crc.c     | 81 ++++++++++++++++++++++++++++++++
+ dma/sniff_even/CMakeLists.txt   | 11 +++++
+ dma/sniff_even/sniff_crc.c      | 81 ++++++++++++++++++++++++++++++++
+ dma/sniff_sum/CMakeLists.txt    | 11 +++++
+ dma/sniff_sum/sniff_crc.c       | 81 ++++++++++++++++++++++++++++++++
+ 11 files changed, 468 insertions(+)
+ create mode 100644 dma/sniff_crc16/CMakeLists.txt
+ create mode 100644 dma/sniff_crc16/sniff_crc.c
+ create mode 100644 dma/sniff_crc16r/CMakeLists.txt
+ create mode 100644 dma/sniff_crc16r/sniff_crc.c
+ create mode 100644 dma/sniff_crc32/CMakeLists.txt
+ create mode 100644 dma/sniff_crc32/sniff_crc.c
+ create mode 100644 dma/sniff_even/CMakeLists.txt
+ create mode 100644 dma/sniff_even/sniff_crc.c
+ create mode 100644 dma/sniff_sum/CMakeLists.txt
+ create mode 100644 dma/sniff_sum/sniff_crc.c
+
+diff --git a/dma/CMakeLists.txt b/dma/CMakeLists.txt
+index c98fc1e..556c396 100644
+--- a/dma/CMakeLists.txt
++++ b/dma/CMakeLists.txt
+@@ -3,6 +3,11 @@ if (TARGET hardware_dma)
+     add_subdirectory_exclude_platforms(control_blocks)
+     add_subdirectory_exclude_platforms(hello_dma)
+     add_subdirectory_exclude_platforms(sniff_crc)
++    add_subdirectory_exclude_platforms(sniff_crc16)
++    add_subdirectory_exclude_platforms(sniff_crc16r)
++    add_subdirectory_exclude_platforms(sniff_crc32)
++    add_subdirectory_exclude_platforms(sniff_even)
++    add_subdirectory_exclude_platforms(sniff_sum)
+ else()
+     message("Skipping DMA examples as hardware_dma is unavailable on this platform")
+ endif()
+diff --git a/dma/sniff_crc16/CMakeLists.txt b/dma/sniff_crc16/CMakeLists.txt
+new file mode 100644
+index 0000000..cd1cb26
+--- /dev/null
++++ b/dma/sniff_crc16/CMakeLists.txt
+@@ -0,0 +1,11 @@
++add_executable(sniff_crc16
++        sniff_crc.c
++        )
++
++target_link_libraries(sniff_crc16 pico_stdlib hardware_dma)
++
++# create map/bin/hex file etc.
++pico_add_extra_outputs(sniff_crc16)
++
++# add url via pico_set_program_url
++example_auto_set_url(sniff_crc16)
+diff --git a/dma/sniff_crc16/sniff_crc.c b/dma/sniff_crc16/sniff_crc.c
+new file mode 100644
+index 0000000..0d1aa0b
+--- /dev/null
++++ b/dma/sniff_crc16/sniff_crc.c
+@@ -0,0 +1,83 @@
++/**
++ * Copyright (c) 2023 Raspberry Pi (Trading) Ltd.
++ *
++ * SPDX-License-Identifier: BSD-3-Clause
++ */
++
++// Use the DMA engine's 'sniff' capability to calculate a CRC32 on data in a
++// buffer. Note:  This does NOT do an actual data copy, it 'transfers' all the
++// data to a single dummy destination byte so as to be able to crawl over the
++// input data using a 'DMA'. If a data copy *with* a CRC32 sniff is required,
++// the start address of the suitably sized destination buffer must be supplied
++// and the 'write_increment' set to true (see below).
++
++#include "hardware/dma.h"
++#include "pico/stdlib.h"
++#include <stdio.h>
++#include <string.h>
++
++#define CRC32_INIT ((uint32_t) - 1l)
++
++#define DATA_TO_CHECK_LEN 9
++#define CRC32_LEN 4
++#define TOTAL_LEN (DATA_TO_CHECK_LEN + CRC32_LEN)
++
++// commonly used crc test data and also space for the crc value
++static uint8_t src[TOTAL_LEN] = {0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37,
++                                 0x38, 0x39, 0x00, 0x00, 0x00, 0x00};
++static uint8_t dummy_dst[1];
++
++int main() {
++  uint32_t crc_res;
++
++  stdio_init_all();
++
++  printf("Buffer to DMA: ");
++  for (int i = 0; i < TOTAL_LEN; i++) {
++    printf("0x%02x ", src[i]);
++  }
++  printf("\n");
++
++  // UNcomment the next line to deliberately corrupt the buffer
++  // src[0]++;  // modify any byte, in any way, to break the CRC32 check
++
++  // Get a free channel, panic() if there are none
++  int chan = dma_claim_unused_channel(true);
++
++  // 8 bit transfers. The read address increments after each transfer but
++  // the write address remains unchanged pointing to the dummy destination.
++  // No DREQ is selected, so the DMA transfers as fast as it can.
++  dma_channel_config c = dma_channel_get_default_config(chan);
++  channel_config_set_transfer_data_size(&c, DMA_SIZE_8);
++  channel_config_set_read_increment(&c, true);
++  channel_config_set_write_increment(&c, false);
++
++  // (bit-reverse) CRC32 specific sniff set-up
++  channel_config_set_sniff_enable(&c, true);
++  dma_sniffer_set_data_accumulator(0);
++  dma_sniffer_set_output_reverse_enabled(true);
++  dma_sniffer_enable(chan, DMA_SNIFF_CTRL_CALC_VALUE_CRC16, true);
++
++  dma_channel_configure(
++      chan,      // Channel to be configured
++      &c,        // The configuration we just created
++      dummy_dst, // The (unchanging) write address
++      src,       // The initial read address
++      TOTAL_LEN, // Total number of transfers inc. appended crc; each is 1 byte
++      true       // Start immediately.
++  );
++
++  // We could choose to go and do something else whilst the DMA is doing its
++  // thing. In this case the processor has nothing else to do, so we just
++  // wait for the DMA to finish.
++  dma_channel_wait_for_finish_blocking(chan);
++
++  uint32_t sniffed_crc = dma_sniffer_get_data_accumulator();
++
++  // Buffer to DMA: 0x31 0x32 0x33 0x34 0x35 0x36 0x37 0x38 0x39 0x00 0x00 0x00
++  // 0x00 Completed DMA sniff of 13 byte buffer, DMA sniff accumulator value:
++  // 0x5fa40000
++  printf("Completed DMA sniff of %d byte buffer, DMA sniff accumulator value: "
++         "0x%x\n",
++         TOTAL_LEN, sniffed_crc);
++}
+diff --git a/dma/sniff_crc16r/CMakeLists.txt b/dma/sniff_crc16r/CMakeLists.txt
+new file mode 100644
+index 0000000..8a0b4f2
+--- /dev/null
++++ b/dma/sniff_crc16r/CMakeLists.txt
+@@ -0,0 +1,11 @@
++add_executable(sniff_crc16r
++        sniff_crc.c
++        )
++
++target_link_libraries(sniff_crc16r pico_stdlib hardware_dma)
++
++# create map/bin/hex file etc.
++pico_add_extra_outputs(sniff_crc16r)
++
++# add url via pico_set_program_url
++example_auto_set_url(sniff_crc16r)
+diff --git a/dma/sniff_crc16r/sniff_crc.c b/dma/sniff_crc16r/sniff_crc.c
+new file mode 100644
+index 0000000..187aaca
+--- /dev/null
++++ b/dma/sniff_crc16r/sniff_crc.c
+@@ -0,0 +1,82 @@
++/**
++ * Copyright (c) 2023 Raspberry Pi (Trading) Ltd.
++ *
++ * SPDX-License-Identifier: BSD-3-Clause
++ */
++
++// Use the DMA engine's 'sniff' capability to calculate a CRC32 on data in a
++// buffer. Note:  This does NOT do an actual data copy, it 'transfers' all the
++// data to a single dummy destination byte so as to be able to crawl over the
++// input data using a 'DMA'. If a data copy *with* a CRC32 sniff is required,
++// the start address of the suitably sized destination buffer must be supplied
++// and the 'write_increment' set to true (see below).
++
++#include "hardware/dma.h"
++#include "pico/stdlib.h"
++#include <stdio.h>
++#include <string.h>
++
++#define DATA_TO_CHECK_LEN 9
++#define CRC32_LEN 4
++#define TOTAL_LEN (DATA_TO_CHECK_LEN + CRC32_LEN)
++
++// commonly used crc test data and also space for the crc value
++static uint8_t src[TOTAL_LEN] = {0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37,
++                                 0x38, 0x39, 0x00, 0x00, 0x00, 0x00};
++static uint8_t dummy_dst[1];
++
++int main() {
++  uint32_t crc_res;
++
++  stdio_init_all();
++
++  printf("Buffer to DMA: ");
++  for (int i = 0; i < TOTAL_LEN; i++) {
++    printf("0x%02x ", src[i]);
++  }
++  printf("\n");
++
++  // UNcomment the next line to deliberately corrupt the buffer
++  // src[0]++;  // modify any byte, in any way, to break the CRC32 check
++
++  // Get a free channel, panic() if there are none
++  int chan = dma_claim_unused_channel(true);
++
++  // 8 bit transfers. The read address increments after each transfer but
++  // the write address remains unchanged pointing to the dummy destination.
++  // No DREQ is selected, so the DMA transfers as fast as it can.
++  dma_channel_config c = dma_channel_get_default_config(chan);
++  channel_config_set_transfer_data_size(&c, DMA_SIZE_8);
++  channel_config_set_read_increment(&c, true);
++  channel_config_set_write_increment(&c, false);
++
++  // (bit-reverse) CRC32 specific sniff set-up
++  channel_config_set_sniff_enable(&c, true);
++  dma_sniffer_set_data_accumulator(0);
++  dma_sniffer_set_output_reverse_enabled(true);
++  dma_sniffer_enable(chan, DMA_SNIFF_CTRL_CALC_VALUE_CRC16R, true);
++
++  dma_channel_configure(
++      chan,      // Channel to be configured
++      &c,        // The configuration we just created
++      dummy_dst, // The (unchanging) write address
++      src,       // The initial read address
++      TOTAL_LEN, // Total number of transfers inc. appended crc; each is 1 byte
++      true       // Start immediately.
++  );
++
++  // We could choose to go and do something else whilst the DMA is doing its
++  // thing. In this case the processor has nothing else to do, so we just
++  // wait for the DMA to finish.
++  dma_channel_wait_for_finish_blocking(chan);
++
++  // Buffer to DMA: 0x31 0x32 0x33 0x34 0x35 0x36 0x37 0x38 0x39 0x00 0x00 0x00
++  // 0x00
++  // Completed DMA sniff of 13 byte buffer, DMA sniff accumulator value:
++  // 0x8dea0000
++
++  uint32_t sniffed_crc = dma_sniffer_get_data_accumulator();
++  printf("Completed DMA sniff of %d byte buffer, DMA sniff accumulator value: "
++         "0x%x\n",
++         TOTAL_LEN, sniffed_crc);
++}
+diff --git a/dma/sniff_crc32/CMakeLists.txt b/dma/sniff_crc32/CMakeLists.txt
+new file mode 100644
+index 0000000..61ef977
+--- /dev/null
++++ b/dma/sniff_crc32/CMakeLists.txt
+@@ -0,0 +1,11 @@
++add_executable(sniff_crc32
++        sniff_crc.c
++        )
++
++target_link_libraries(sniff_crc32 pico_stdlib hardware_dma)
++
++# create map/bin/hex file etc.
++pico_add_extra_outputs(sniff_crc32)
++
++# add url via pico_set_program_url
++example_auto_set_url(sniff_crc32)
+diff --git a/dma/sniff_crc32/sniff_crc.c b/dma/sniff_crc32/sniff_crc.c
+new file mode 100644
+index 0000000..7e5c384
+--- /dev/null
++++ b/dma/sniff_crc32/sniff_crc.c
+@@ -0,0 +1,81 @@
++/**
++ * Copyright (c) 2023 Raspberry Pi (Trading) Ltd.
++ *
++ * SPDX-License-Identifier: BSD-3-Clause
++ */
++
++// Use the DMA engine's 'sniff' capability to calculate a CRC32 on data in a
++// buffer. Note:  This does NOT do an actual data copy, it 'transfers' all the
++// data to a single dummy destination byte so as to be able to crawl over the
++// input data using a 'DMA'. If a data copy *with* a CRC32 sniff is required,
++// the start address of the suitably sized destination buffer must be supplied
++// and the 'write_increment' set to true (see below).
++
++#include "hardware/dma.h"
++#include "pico/stdlib.h"
++#include <stdio.h>
++#include <string.h>
++
++#define DATA_TO_CHECK_LEN 9
++#define CRC32_LEN 4
++#define TOTAL_LEN (DATA_TO_CHECK_LEN + CRC32_LEN)
++
++// commonly used crc test data and also space for the crc value
++static uint8_t src[TOTAL_LEN] = {0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37,
++                                 0x38, 0x39, 0x00, 0x00, 0x00, 0x00};
++static uint8_t dummy_dst[1];
++
++int main() {
++  uint32_t crc_res;
++
++  stdio_init_all();
++
++  printf("Buffer to DMA: ");
++  for (int i = 0; i < TOTAL_LEN; i++) {
++    printf("0x%02x ", src[i]);
++  }
++  printf("\n");
++
++  // UNcomment the next line to deliberately corrupt the buffer
++  // src[0]++;  // modify any byte, in any way, to break the CRC32 check
++
++  // Get a free channel, panic() if there are none
++  int chan = dma_claim_unused_channel(true);
++
++  // 8 bit transfers. The read address increments after each transfer but
++  // the write address remains unchanged pointing to the dummy destination.
++  // No DREQ is selected, so the DMA transfers as fast as it can.
++  dma_channel_config c = dma_channel_get_default_config(chan);
++  channel_config_set_transfer_data_size(&c, DMA_SIZE_8);
++  channel_config_set_read_increment(&c, true);
++  channel_config_set_write_increment(&c, false);
++
++  // (bit-reverse) CRC32 specific sniff set-up
++  channel_config_set_sniff_enable(&c, true);
++  dma_sniffer_set_data_accumulator(0);
++  dma_sniffer_set_output_reverse_enabled(true);
++  dma_sniffer_enable(chan, DMA_SNIFF_CTRL_CALC_VALUE_CRC32, true);
++
++  dma_channel_configure(
++      chan,      // Channel to be configured
++      &c,        // The configuration we just created
++      dummy_dst, // The (unchanging) write address
++      src,       // The initial read address
++      TOTAL_LEN, // Total number of transfers inc. appended crc; each is 1 byte
++      true       // Start immediately.
++  );
++
++  // We could choose to go and do something else whilst the DMA is doing its
++  // thing. In this case the processor has nothing else to do, so we just
++  // wait for the DMA to finish.
++  dma_channel_wait_for_finish_blocking(chan);
++
++  // Buffer to DMA: 0x31 0x32 0x33 0x34 0x35 0x36 0x37 0x38 0x39 0x00 0x00 0x00
++  // 0x00 Completed DMA sniff of 13 byte buffer, DMA sniff accumulator value:
++  // 0xd05d3bea
++
++  uint32_t sniffed_crc = dma_sniffer_get_data_accumulator();
++  printf("Completed DMA sniff of %d byte buffer, DMA sniff accumulator value: "
++         "0x%x\n",
++         TOTAL_LEN, sniffed_crc);
++}
+diff --git a/dma/sniff_even/CMakeLists.txt b/dma/sniff_even/CMakeLists.txt
+new file mode 100644
+index 0000000..5513f2b
+--- /dev/null
++++ b/dma/sniff_even/CMakeLists.txt
+@@ -0,0 +1,11 @@
++add_executable(sniff_even
++        sniff_crc.c
++        )
++
++target_link_libraries(sniff_even pico_stdlib hardware_dma)
++
++# create map/bin/hex file etc.
++pico_add_extra_outputs(sniff_even)
++
++# add url via pico_set_program_url
++example_auto_set_url(sniff_even)
+diff --git a/dma/sniff_even/sniff_crc.c b/dma/sniff_even/sniff_crc.c
+new file mode 100644
+index 0000000..ed7446c
+--- /dev/null
++++ b/dma/sniff_even/sniff_crc.c
+@@ -0,0 +1,81 @@
++/**
++ * Copyright (c) 2023 Raspberry Pi (Trading) Ltd.
++ *
++ * SPDX-License-Identifier: BSD-3-Clause
++ */
++
++// Use the DMA engine's 'sniff' capability to calculate a CRC32 on data in a
++// buffer. Note:  This does NOT do an actual data copy, it 'transfers' all the
++// data to a single dummy destination byte so as to be able to crawl over the
++// input data using a 'DMA'. If a data copy *with* a CRC32 sniff is required,
++// the start address of the suitably sized destination buffer must be supplied
++// and the 'write_increment' set to true (see below).
++
++#include "hardware/dma.h"
++#include "pico/stdlib.h"
++#include <stdio.h>
++#include <string.h>
++
++#define DATA_TO_CHECK_LEN 9
++#define CRC32_LEN 4
++#define TOTAL_LEN (DATA_TO_CHECK_LEN + CRC32_LEN)
++
++// commonly used crc test data and also space for the crc value
++static uint8_t src[TOTAL_LEN] = {0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37,
++                                 0x38, 0x39, 0x00, 0x00, 0x00, 0x00};
++static uint8_t dummy_dst[1];
++
++int main() {
++  uint32_t crc_res;
++
++  stdio_init_all();
++
++  printf("Buffer to DMA: ");
++  for (int i = 0; i < TOTAL_LEN; i++) {
++    printf("0x%02x ", src[i]);
++  }
++  printf("\n");
++
++  // UNcomment the next line to deliberately corrupt the buffer
++  // src[0]++;  // modify any byte, in any way, to break the CRC32 check
++
++  // Get a free channel, panic() if there are none
++  int chan = dma_claim_unused_channel(true);
++
++  // 8 bit transfers. The read address increments after each transfer but
++  // the write address remains unchanged pointing to the dummy destination.
++  // No DREQ is selected, so the DMA transfers as fast as it can.
++  dma_channel_config c = dma_channel_get_default_config(chan);
++  channel_config_set_transfer_data_size(&c, DMA_SIZE_8);
++  channel_config_set_read_increment(&c, true);
++  channel_config_set_write_increment(&c, false);
++
++  // (bit-reverse) CRC32 specific sniff set-up
++  channel_config_set_sniff_enable(&c, true);
++  dma_sniffer_set_data_accumulator(0);
++  dma_sniffer_set_output_reverse_enabled(true);
++  dma_sniffer_enable(chan, DMA_SNIFF_CTRL_CALC_VALUE_EVEN, true);
++
++  dma_channel_configure(
++      chan,      // Channel to be configured
++      &c,        // The configuration we just created
++      dummy_dst, // The (unchanging) write address
++      src,       // The initial read address
++      TOTAL_LEN, // Total number of transfers inc. appended crc; each is 1 byte
++      true       // Start immediately.
++  );
++
++  // We could choose to go and do something else whilst the DMA is doing its
++  // thing. In this case the processor has nothing else to do, so we just
++  // wait for the DMA to finish.
++  dma_channel_wait_for_finish_blocking(chan);
++
++  // Buffer to DMA: 0x31 0x32 0x33 0x34 0x35 0x36 0x37 0x38 0x39 0x00 0x00 0x00
++  // 0x00
++  // Completed DMA sniff of 13 byte buffer, DMA sniff accumulator value:
++  // 0x80000000
++  uint32_t sniffed_crc = dma_sniffer_get_data_accumulator();
++  printf("Completed DMA sniff of %d byte buffer, DMA sniff accumulator value: "
++         "0x%x\n",
++         TOTAL_LEN, sniffed_crc);
++}
+diff --git a/dma/sniff_sum/CMakeLists.txt b/dma/sniff_sum/CMakeLists.txt
+new file mode 100644
+index 0000000..76d0592
+--- /dev/null
++++ b/dma/sniff_sum/CMakeLists.txt
+@@ -0,0 +1,11 @@
++add_executable(sniff_sum
++        sniff_crc.c
++        )
++
++target_link_libraries(sniff_sum pico_stdlib hardware_dma)
++
++# create map/bin/hex file etc.
++pico_add_extra_outputs(sniff_sum)
++
++# add url via pico_set_program_url
++example_auto_set_url(sniff_sum)
+diff --git a/dma/sniff_sum/sniff_crc.c b/dma/sniff_sum/sniff_crc.c
+new file mode 100644
+index 0000000..366e6eb
+--- /dev/null
++++ b/dma/sniff_sum/sniff_crc.c
+@@ -0,0 +1,81 @@
++/**
++ * Copyright (c) 2023 Raspberry Pi (Trading) Ltd.
++ *
++ * SPDX-License-Identifier: BSD-3-Clause
++ */
++
++// Use the DMA engine's 'sniff' capability to calculate a CRC32 on data in a
++// buffer. Note:  This does NOT do an actual data copy, it 'transfers' all the
++// data to a single dummy destination byte so as to be able to crawl over the
++// input data using a 'DMA'. If a data copy *with* a CRC32 sniff is required,
++// the start address of the suitably sized destination buffer must be supplied
++// and the 'write_increment' set to true (see below).
++
++#include "hardware/dma.h"
++#include "pico/stdlib.h"
++#include <stdio.h>
++#include <string.h>
++
++#define DATA_TO_CHECK_LEN 9
++#define CRC32_LEN 4
++#define TOTAL_LEN (DATA_TO_CHECK_LEN + CRC32_LEN)
++
++// commonly used crc test data and also space for the crc value
++static uint8_t src[TOTAL_LEN] = {0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37,
++                                 0x38, 0x39, 0x00, 0x00, 0x00, 0x00};
++static uint8_t dummy_dst[1];
++
++int main() {
++  uint32_t crc_res;
++
++  stdio_init_all();
++
++  printf("Buffer to DMA: ");
++  for (int i = 0; i < TOTAL_LEN; i++) {
++    printf("0x%02x ", src[i]);
++  }
++  printf("\n");
++
++  // UNcomment the next line to deliberately corrupt the buffer
++  // src[0]++;  // modify any byte, in any way, to break the CRC32 check
++
++  // Get a free channel, panic() if there are none
++  int chan = dma_claim_unused_channel(true);
++
++  // 8 bit transfers. The read address increments after each transfer but
++  // the write address remains unchanged pointing to the dummy destination.
++  // No DREQ is selected, so the DMA transfers as fast as it can.
++  dma_channel_config c = dma_channel_get_default_config(chan);
++  channel_config_set_transfer_data_size(&c, DMA_SIZE_8);
++  channel_config_set_read_increment(&c, true);
++  channel_config_set_write_increment(&c, false);
++
++  // (bit-reverse) CRC32 specific sniff set-up
++  channel_config_set_sniff_enable(&c, true);
++  dma_sniffer_set_data_accumulator(0);
++  dma_sniffer_set_output_reverse_enabled(true);
++  dma_sniffer_enable(chan, DMA_SNIFF_CTRL_CALC_VALUE_SUM, true);
++
++  dma_channel_configure(
++      chan,      // Channel to be configured
++      &c,        // The configuration we just created
++      dummy_dst, // The (unchanging) write address
++      src,       // The initial read address
++      TOTAL_LEN, // Total number of transfers inc. appended crc; each is 1 byte
++      true       // Start immediately.
++  );
++
++  // We could choose to go and do something else whilst the DMA is doing its
++  // thing. In this case the processor has nothing else to do, so we just
++  // wait for the DMA to finish.
++  dma_channel_wait_for_finish_blocking(chan);
++
++  uint32_t sniffed_crc = dma_sniffer_get_data_accumulator();
++
++  // Buffer to DMA: 0x31 0x32 0x33 0x34 0x35 0x36 0x37 0x38 0x39 0x00 0x00 0x00
++  // 0x00 Completed DMA sniff of 13 byte buffer, DMA sniff accumulator value:
++  // 0xbb800000
++  printf("Completed DMA sniff of %d byte buffer, DMA sniff accumulator value: "
++         "0x%x\n",
++         TOTAL_LEN, sniffed_crc);
++}
+-- 
+2.46.0
+

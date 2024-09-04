@@ -128,7 +128,7 @@ namespace Antmicro.Renode.Peripherals.DMA
 
       if (checksum != null)
       {
-        Logger.Log(LogLevel.Error, "Calculate crc" + checksum.Value.type);
+        Logger.Log(LogLevel.Error, "Calculate crc: " + checksum.Value.type);
         switch (checksum.Value.type)
         {
           case ChecksumRequest.Type.Crc32Reversed:
@@ -139,7 +139,7 @@ namespace Antmicro.Renode.Peripherals.DMA
             }
           case ChecksumRequest.Type.Crc32:
             {
-              var crcEngine = new CRCEngine(CRCPolynomial.CRC32, false, false, checksum.Value.init);
+              var crcEngine = new CRCEngine(CRCPolynomial.CRC32, true, true, checksum.Value.init);
               responseWithCrc.crc = crcEngine.Calculate(buffer);
               break;
             }
