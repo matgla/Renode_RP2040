@@ -15,12 +15,12 @@ There is predefined Raspberry Pico board description in: 'boards/raspberry_pico.
 |       :---:     |     :---:     |       :---:        |
 |    **SIO**      |      $${\color{yellow}✓}$$       | Partially supported, limitations to be filled when known                 |
 | **IRQ**  | $${\color{red}✗}$$ | Propagation from peripherals is not implemented |
-| **DMA**  | $${\color{red}✗}$$  | DMA in peripherals not yet implemented, MCU may support due to official ARM emulation |
+| **DMA**  | $${\color{red}✗}$$  | DMA in peripherals not yet implemented |
 | **Clocks** | $${\color{yellow}✓}$$ | Clocks are currently just stubs to pass PicoSDK initialization, but virtual time is always correct | 
 | **GPIO** | $${\color{yellow}✓}$$ | Pins manipulation implemented, limitations not yet known except when some pins changed PIO may needs to be manually reevaluated due to CPU emulation (it's not step by step). Look for RP2040_SPI (PL022) peripheral as an example |
-| **XOSC** |  $${\color{red}✗}$$  | |
-| **ROSC** | $${\color{red}✗}$$  | |
-| **PLL** | $${\color{red}✗}$$  | |
+| **XOSC** |  $${\color{yellow}✓}$$  | |
+| **ROSC** | $${\color{yellow}✓}$$  | |
+| **PLL** | $${\color{yellow}✓}}$$  | |
 | **SysConfig** | $${\color{red}✗}$$  | |
 | **SysInfo** | $${\color{red}✗}$$  | | 
 | **PIO** |  $${\color{yellow}✓}$$  | Manual reevaluation may be neccessary to synchronize PIO together with actions on MCU. IRQ and DMA not yet supported |
@@ -34,6 +34,9 @@ There is predefined Raspberry Pico board description in: 'boards/raspberry_pico.
 | **RTC** | $${\color{red}✗}$$  | |
 | **ADC** | $${\color{red}✗}$$  | |
 | **SSI** | $${\color{red}✗}$$  | |
+| **XIP** | $${\color{yellow}✓}$$  | Partially implemented, bootrom correctly starts firmware |
+
+
 
 # How PIO simulation works 
 
@@ -55,8 +58,6 @@ Example use:
 (monitor) include @repos/Renode_RP2040/board/initialize_raspberry_pico.resc 
 (raspberry_pico) sysbus LoadELF @repos/Renode_RP2040/pico-examples/build/hello_world/serial/
 hello_serial.elf
-(raspberry_pico) sysbus.cpu0 VectorTableOffset `sysbus GetSymbolAddress "__VECTOR_TABLE"`
-(raspberry_pico) sysbus.cpu1 VectorTableOffset `sysbus GetSymbolAddress "__VECTOR_TABLE"`
 (raspberry_pico) showAnalyzer sysbus.uart0
 (raspberry_pico) start
 ```
@@ -90,7 +91,7 @@ I am testing simulator code using official pico-examples. Tests in use are:
 | :---: | :---:    |
 | [adc_console](https://github.com/raspberrypi/pico-examples/tree/master/adc/adc_console) | $${\color{red}✗}$$ |
 | [dma_capture](https://github.com/raspberrypi/pico-examples/tree/master/adc/dma_capture) | $${\color{red}✗}$$ |
-| [hello_adc](https://github.com/raspberrypi/pico-examples/tree/master/adc/hello_adc) | $${\color{red}✗}$$ |
+| [hello_adc](https://github.com/raspberrypi/pico-examples/tree/master/adc/hello_adc) | $${\color{green}✓}$$ |
 | [joystick_display](https://github.com/raspberrypi/pico-examples/tree/master/adc/joystick_display) | $${\color{red}✗}$$ | 
 | [microphone_adc](https://github.com/raspberrypi/pico-examples/tree/master/adc/microphone_adc) | $${\color{red}✗}$$ | 
 | [onboard_temperature](https://github.com/raspberrypi/pico-examples/tree/master/adc/onboard_temperature) | $${\color{red}✗}$$ | 
@@ -105,9 +106,9 @@ I am testing simulator code using official pico-examples. Tests in use are:
 | Example | Passed |
 | :---: | :---:    |
 | [detached_clk_peri](https://github.com/raspberrypi/pico-examples/tree/master/clocks/detached_clk_peri) | $${\color{green}✓}$$ |
-| [hello_48MHz](https://github.com/raspberrypi/pico-examples/tree/master/clocks/hello_48MHz) | $${\color{red}✗}$$ | 
+| [hello_48MHz](https://github.com/raspberrypi/pico-examples/tree/master/clocks/hello_48MHz) | $${\color{green}✓}$$ | 
 | [hello_gpout](https://github.com/raspberrypi/pico-examples/tree/master/clocks/hello_gpout) | $${\color{red}✗}$$ |
-| [hello_resus](https://github.com/raspberrypi/pico-examples/tree/master/clocks/hello_resus) | $${\color{red}✗}$$ |
+| [hello_resus](https://github.com/raspberrypi/pico-examples/tree/master/clocks/hello_resus) | $${\color{green}✓}$$ |
 
 ## Divider
 

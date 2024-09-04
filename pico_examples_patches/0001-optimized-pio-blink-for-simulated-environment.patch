@@ -1,0 +1,28 @@
+From 3e440bdc48cfe703b1c4bb4cd0853d19f6db0015 Mon Sep 17 00:00:00 2001
+From: Mateusz Stadnik <matgla@live.com>
+Date: Mon, 19 Aug 2024 15:55:13 +0200
+Subject: [PATCH] optimized pio blink for simulated environment
+
+---
+ pio/pio_blink/blink.c | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/pio/pio_blink/blink.c b/pio/pio_blink/blink.c
+index 6187186..2d7e380 100644
+--- a/pio/pio_blink/blink.c
++++ b/pio/pio_blink/blink.c
+@@ -83,6 +83,11 @@ int main() {
+ 
+     // the program exits but the pio keeps running!
+     printf("All leds should be flashing\n");
++
++    while (true)
++    {
++	sleep_ms(1000);
++    }
+ }
+ 
+ void blink_pin_forever(PIO pio, uint sm, uint offset, uint pin, uint freq) {
+-- 
+2.44.0
+

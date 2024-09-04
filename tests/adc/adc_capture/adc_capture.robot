@@ -8,8 +8,8 @@ Test Timeout    20 seconds
 Resource    ${CURDIR}/../../common.resource
 
 *** Test Cases ***
-Run successfully 'adc_console' example
-    Execute Command             include @${CURDIR}/adc_console.resc
+Run successfully 'adc_capture' example
+    Execute Command             include @${CURDIR}/adc_capture.resc
     Execute Command             logLevel -1
     
     Create Terminal Tester      sysbus.uart0

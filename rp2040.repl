@@ -54,7 +54,7 @@ piocpu0: CPU.RP2040PIOCPU @ sysbus
     address: 0x50200000
     gpio: gpio
     PerformanceInMips: 1
-    id: 3
+    id: 0
     clocks: clocks
 
 pio0_xor_alias: Memory.RP2040XorRegisterAlias @ sysbus 0x50201000 {
@@ -73,7 +73,7 @@ piocpu1: CPU.RP2040PIOCPU @ sysbus
     address: 0x50300000
     gpio: gpio
     PerformanceInMips: 1
-    id: 4
+    id: 1
     clocks: clocks
 
 pio1_xor_alias: Memory.RP2040XorRegisterAlias @ sysbus 0x50301000 {
@@ -320,3 +320,17 @@ adc_bitmask_clear_alias: Memory.RP2040BitmaskClearRegisterAlias @ sysbus 0x4004f
 gpio_qspi:
     1 -> xip_flash@0
 
+dma: DMA.RPDMA @ sysbus 0x50000000 {
+    numberOfChannels: 12
+}
+ 
+dma_xor_alias: Memory.RP2040XorRegisterAlias @ sysbus 0x50001000 {
+    originalAddress: 0x50000000
+}
+dma_bitmask_set_alias: Memory.RP2040BitmaskSetRegisterAlias @ sysbus 0x50002000 {
+    originalAddress: 0x50000000
+}
+dma_bitmask_clear_alias: Memory.RP2040BitmaskClearRegisterAlias @ sysbus 0x50003000 {
+    originalAddress: 0x50000000
+}
+    

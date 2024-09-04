@@ -33,6 +33,11 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
             outputEnableOverride = new OutputEnableOverride[NumberOfPins];
             forcedOutputDisableMap = new bool[NumberOfPins];
             outputOverride = new OutputOverride[NumberOfPins];
+            peripheralDrive = new PeripheralDrive[NumberOfPins];
+            for (int i = 0; i < peripheralDrive.Length; ++i)
+            {
+                peripheralDrive[i] = PeripheralDrive.None;
+            }
         }
 
         private bool IsPinOutput(int pin)
@@ -249,21 +254,26 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
                         writeCallback: (_, value) =>
                         {
                             outputOverride[i] = (OutputOverride)value;
+                            if (outputOverride[i] == OutputOverride.Peripheral || outputOverride[i] == OutputOverride.InversePeripheral)
+                            {
+                                // left the job for a peripheral
+                                return;
+                            }
+
                             if (IsPinOutput(i))
                             {
                                 if (outputOverride[i] == OutputOverride.Low)
                                 {
-                                    WritePin(i, false);
+                                    WritePin(i, false, GetFunction(i));
                                 }
                                 else if (outputOverride[i] == OutputOverride.High)
                                 {
-                                    WritePin(i, true);
+                                    WritePin(i, true, GetFunction(i));
                                 }
-                                // peripherals not supported yet
                             }
                             else
                             {
-                                this.Log(LogLevel.Error, "Set output but not output");
+                                this.Log(LogLevel.Error, "GPIO " + i + ": Set output but not output");
                                 SetPinAccordingToPulls(i);
                             }
                         },
@@ -282,7 +292,7 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
                                 case 0:
                                 case 1:
                                     {
-                                        // peripheral driving not yet implemented
+                                        // let a peripheral enable output
                                         break;
                                     }
                                 case 2:
@@ -292,7 +302,7 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
                                     }
                                 case 3:
                                     {
-                                        WritePin(i, outputOverride[i] == OutputOverride.High);
+                                        WritePin(i, outputOverride[i] == OutputOverride.High, GetFunction(i));
                                         break;
                                     }
                             }
@@ -460,22 +470,22 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
             return output;
         }
 
-        public void SetGpioBitmap(ulong bitmap)
+        public void SetGpioBitmap(ulong bitmap, GpioFunction peri)
         {
             for (int i = 0; i < NumberOfPins; ++i)
             {
                 if ((bitmap & (1UL << i)) != 0)
                 {
-                    WritePin(i, true);
+                    WritePin(i, true, peri);
                 }
                 else
                 {
-                    WritePin(i, false);
+                    WritePin(i, false, peri);
                 }
             }
         }
 
-        public void SetGpioBitset(ulong bitset, ulong bitmask = 0xfffffff)
+        public void SetGpioBitset(ulong bitset, GpioFunction peri, ulong bitmask = 0xfffffff)
         {
             for (int i = 0; i < NumberOfPins; ++i)
             {
@@ -488,14 +498,14 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
                 {
                     if (State[i] == false)
                     {
-                        WritePin(i, true);
+                        WritePin(i, true, peri);
                     }
                 }
                 else
                 {
                     if (State[i] == true)
                     {
-                        WritePin(i, false);
+                        WritePin(i, false, peri);
                     }
                 }
             }
@@ -522,18 +532,18 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
         }
 
 
-        public void ClearGpioBitset(ulong bitset)
+        public void ClearGpioBitset(ulong bitset, GpioFunction peri)
         {
             for (int i = 0; i < NumberOfPins; ++i)
             {
                 if ((bitset & (1UL << i)) != 0)
                 {
-                    WritePin(i, false);
+                    WritePin(i, false, peri);
                 }
             }
         }
 
-        public void XorGpioBitset(ulong bitset)
+        public void XorGpioBitset(ulong bitset, GpioFunction peri)
         {
             for (int i = 0; i < NumberOfPins; ++i)
             {
@@ -546,27 +556,58 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
                 {
                     state = state ^ false;
                 }
-                WritePin(i, state);
+                WritePin(i, state, peri);
             }
         }
 
-        public void ClearOutputEnableBitset(ulong bitset)
+        public void ClearOutputEnableBitset(ulong bitset, GpioFunction peri)
         {
             for (int i = 0; i < NumberOfPins; ++i)
             {
-                if ((bitset & (1UL << i)) != 0)
+                bool enable = (bitset & (1UL << i)) != 0;
+                if (outputEnableOverride[i] == OutputEnableOverride.Peripheral || outputEnableOverride[i] == OutputEnableOverride.InversePeripheral)
+                {
+                    if (GetFunction(i) != peri)
+                    {
+                        continue;
+                    }
+
+                    if (outputEnableOverride[i] == OutputEnableOverride.InversePeripheral)
+                    {
+                        enable = !enable;
+                    }
+                }
+
+
+                if (enable)
                 {
                     outputEnableOverride[i] = OutputEnableOverride.Disable;
                 }
             }
         }
 
-        public void XorOutputEnableBitset(ulong bitset)
+        public void XorOutputEnableBitset(ulong bitset, GpioFunction peri)
         {
             for (int i = 0; i < NumberOfPins; ++i)
             {
                 bool state;
-                if ((bitset & (1UL << i)) != 0)
+
+                bool enable = (bitset & (1UL << i)) != 0;
+                if (outputEnableOverride[i] == OutputEnableOverride.Peripheral || outputEnableOverride[i] == OutputEnableOverride.InversePeripheral)
+                {
+                    if (GetFunction(i) != peri)
+                    {
+                        continue;
+                    }
+
+                    if (outputEnableOverride[i] == OutputEnableOverride.InversePeripheral)
+                    {
+                        enable = !enable;
+                    }
+                }
+
+
+                if (enable)
                 {
                     state = IsPinOutput(i) ^ true;
                 }
@@ -588,11 +629,26 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
             return output;
         }
 
-        public void SetOutputEnableBitmap(ulong bitmap)
+        public void SetOutputEnableBitmap(ulong bitmap, GpioFunction peri)
         {
+
             for (int i = 0; i < NumberOfPins; ++i)
             {
-                if ((bitmap & (1UL << i)) != 0)
+                bool enable = (bitmap & (1UL << i)) != 0;
+                if (outputEnableOverride[i] == OutputEnableOverride.Peripheral || outputEnableOverride[i] == OutputEnableOverride.InversePeripheral)
+                {
+                    if (GetFunction(i) != peri)
+                    {
+                        continue;
+                    }
+
+                    if (outputEnableOverride[i] == OutputEnableOverride.InversePeripheral)
+                    {
+                        enable = !enable;
+                    }
+                }
+
+                if (enable)
                 {
                     outputEnableOverride[i] = OutputEnableOverride.Enable;
                 }
@@ -603,7 +659,7 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
             }
         }
 
-        public void SetOutputEnableBitset(ulong bitset, ulong bitmask = 0xfffffff)
+        public void SetOutputEnableBitset(ulong bitset, GpioFunction peri, ulong bitmask = 0xfffffff)
         {
             for (int i = 0; i < NumberOfPins; ++i)
             {
@@ -612,7 +668,21 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
                     continue;
                 }
 
-                if ((bitset & (1UL << i)) != 0)
+                bool enable = (bitset & (1UL << i)) != 0;
+                if (outputEnableOverride[i] == OutputEnableOverride.Peripheral || outputEnableOverride[i] == OutputEnableOverride.InversePeripheral)
+                {
+                    if (GetFunction(i) != peri)
+                    {
+                        continue;
+                    }
+
+                    if (outputEnableOverride[i] == OutputEnableOverride.InversePeripheral)
+                    {
+                        enable = !enable;
+                    }
+                }
+
+                if (enable)
                 {
                     outputEnableOverride[i] = OutputEnableOverride.Enable;
                 }
@@ -636,18 +706,33 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
         public override void OnGPIO(int number, bool value)
         {
             base.OnGPIO(number, value);
-            WritePin(number, value);
+            WritePin(number, value, GetFunction(number));
         }
 
+        // most probably may hide some bugs, but full emulation of gpio function interconnection may not be necessary in most cases
         public void WritePin(int number, bool value)
         {
-            this.Log(LogLevel.Noisy, "Setting GPIO" + number + " to: " + value + ", time: " + machine.ElapsedVirtualTime.TimeElapsed);
+            WritePin(number, value, GetFunction(number));
+        }
+
+        public void WritePin(int number, bool value, GpioFunction peri)
+        {
+            this.Log(LogLevel.Noisy, "Setting GPIO" + number + " to: " + value + ", time: " + machine.ElapsedVirtualTime.TimeElapsed + ", from: " + peri);
             if (!IsPinOutput(number))
             {
                 this.Log(LogLevel.Warning, "Trying to set input pin: " + number + " to: " + value);
                 return;
             }
 
+            if (peripheralDrive[number] != PeripheralDrive.None && GetFunction(number) != peri)
+            {
+                this.Log(LogLevel.Error, "Driving GPIO from not selected peripheral, gpio configured with: " + GetFunction(number) + ". Request received from: " + peri);
+            }
+
+            if (peripheralDrive[number] == PeripheralDrive.Inverse)
+            {
+                value = !value;
+            }
             State[number] = value;
             Connections[number].Set(value);
         }
@@ -693,6 +778,14 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
         private bool[] forcedOutputDisableMap;
 
         private List<Action<int, GpioFunction>> functionSelectCallbacks;
+
+        private enum PeripheralDrive
+        {
+            None,
+            Normal,
+            Inverse
+        };
+        private PeripheralDrive[] peripheralDrive;
     }
 
 }

@@ -20,16 +20,6 @@ include $ORIGIN/emulation/peripherals/gpio/rp2040_pads.cs
 EnsureTypeIsLoaded "Antmicro.Renode.Peripherals.GPIOPort.RP2040Pads"
 include $ORIGIN/emulation/peripherals/gpio/rp2040_qspi_pads.cs
 
-include $ORIGIN/emulation/peripherals/pio/pio_registers.cs
-EnsureTypeIsLoaded "Antmicro.Renode.Peripherals.Miscellaneous.RP2040PIORegisters.StateMachineClockDivider"
-EnsureTypeIsLoaded "Antmicro.Renode.Peripherals.Miscellaneous.RP2040PIORegisters.StateMachineExecutionControl"
-EnsureTypeIsLoaded "Antmicro.Renode.Peripherals.Miscellaneous.RP2040PIORegisters.StateMachineShiftControl"
-EnsureTypeIsLoaded "Antmicro.Renode.Peripherals.Miscellaneous.RP2040PIORegisters.StateMachinePinControl"
-EnsureTypeIsLoaded "Antmicro.Renode.Peripherals.Miscellaneous.RP2040PIORegisters.PIOIRQ"
-include $ORIGIN/emulation/peripherals/pio/pio_instruction_decoder.cs
-EnsureTypeIsLoaded "Antmicro.Renode.Peripherals.Miscellaneous.PioDecodedInstruction"
-include $ORIGIN/emulation/peripherals/pio/pio_statemachine.cs
-EnsureTypeIsLoaded "Antmicro.Renode.Peripherals.Miscellaneous.PioStateMachine"
 include $ORIGIN/emulation/peripherals/pio/rp2040_pio.cs
 include $ORIGIN/emulation/peripherals/spi/rp2040_spi.cs
 EnsureTypeIsLoaded "Antmicro.Renode.Peripherals.SPI.PL022"
@@ -39,4 +29,6 @@ include $ORIGIN/emulation/peripherals/sio/rp2040_sio.cs
 
 include $ORIGIN/emulation/peripherals/adc/rp2040_adc.cs
 
-
+include $ORIGIN/emulation/peripherals/dma/rpdma_engine.cs
+EnsureTypeIsLoaded "Antmicro.Renode.Peripherals.DMA.RPDmaEngine"
+include $ORIGIN/emulation/peripherals/dma/rpdma.cs

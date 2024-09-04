@@ -12,7 +12,7 @@ Run successfully 'hello_timer' example
     Create Terminal Tester      sysbus.uart0
 
     Wait For Line On Uart       Hello Timer!    timeout=5
-    Wait For Line On Uart       Timer 1 fired!  timeout=5
+    Wait For Line On Uart       Timer 983041 fired!  timeout=5
     Wait For Line On Uart       Repeat at 25(.....)$  timeout=5   treatAsRegex=true
     Wait For Line On Uart       Repeat at 30(.....)$  timeout=5   treatAsRegex=true
     Wait For Line On Uart       Repeat at 35(.....)$  timeout=5   treatAsRegex=true

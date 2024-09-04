@@ -185,98 +185,98 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             Registers.GPIO_OUT.Define(this)
                 .WithValueField(0, 30,
                     valueProviderCallback: _ => gpio.GetGpioStateBitmap(),
-                    writeCallback: (_, value) => gpio.SetGpioBitmap(value),
+                    writeCallback: (_, value) => gpio.SetGpioBitmap(value, RP2040GPIO.GpioFunction.SIO),
                     name: "GPIO_OUT")
                 .WithReservedBits(30, 2);
 
             Registers.GPIO_OUT_SET.Define(this)
                 .WithValueField(0, 30, FieldMode.Write,
-                    writeCallback: (_, value) => gpio.SetGpioBitset(value),
+                    writeCallback: (_, value) => gpio.SetGpioBitset(value, RP2040GPIO.GpioFunction.SIO),
                     name: "GPIO_OUT_SET")
                 .WithReservedBits(30, 2);
 
             Registers.GPIO_OUT_CLR.Define(this)
                 .WithValueField(0, 30, FieldMode.Write,
-                    writeCallback: (_, value) => gpio.ClearGpioBitset(value),
+                    writeCallback: (_, value) => gpio.ClearGpioBitset(value, RP2040GPIO.GpioFunction.SIO),
                     name: "GPIO_OUT_CLR")
                 .WithReservedBits(30, 2);
 
             Registers.GPIO_OUT_XOR.Define(this)
                 .WithValueField(0, 30, FieldMode.Write,
-                    writeCallback: (_, value) => gpio.XorGpioBitset(value),
+                    writeCallback: (_, value) => gpio.XorGpioBitset(value, RP2040GPIO.GpioFunction.SIO),
                     name: "GPIO_OUT_XOR")
                     .WithReservedBits(30, 2);
 
             Registers.GPIO_OE.Define(this)
                 .WithValueField(0, 30, valueProviderCallback: _ => gpio.GetOutputEnableBitmap(),
-                    writeCallback: (_, value) => gpio.SetOutputEnableBitmap(value),
+                    writeCallback: (_, value) => gpio.SetOutputEnableBitmap(value, RP2040GPIO.GpioFunction.SIO),
                     name: "GPIO_HI_OE")
                 .WithReservedBits(30, 2);
 
             Registers.GPIO_OE_SET.Define(this)
                 .WithValueField(0, 30, FieldMode.Write,
-                    writeCallback: (_, value) => gpio.SetOutputEnableBitset(value),
+                    writeCallback: (_, value) => gpio.SetOutputEnableBitset(value, RP2040GPIO.GpioFunction.SIO),
                     name: "GPIO_HI_SET")
                 .WithReservedBits(30, 2);
 
             Registers.GPIO_OE_CLR.Define(this)
                 .WithValueField(0, 30, FieldMode.Write,
-                    writeCallback: (_, value) => gpio.ClearOutputEnableBitset(value),
+                    writeCallback: (_, value) => gpio.ClearOutputEnableBitset(value, RP2040GPIO.GpioFunction.SIO),
                     name: "GPIO_HI_CLR")
                 .WithReservedBits(30, 2);
 
             Registers.GPIO_OE_XOR.Define(this)
                 .WithValueField(0, 30, FieldMode.Write,
-                    writeCallback: (_, value) => gpio.XorOutputEnableBitset(value),
+                    writeCallback: (_, value) => gpio.XorOutputEnableBitset(value, RP2040GPIO.GpioFunction.SIO),
                     name: "GPIO_HI_XOR")
                 .WithReservedBits(30, 2);
 
             Registers.GPIO_HI_OUT.Define(this)
                 .WithValueField(0, 6,
                     valueProviderCallback: _ => gpioQspi.GetGpioStateBitmap(),
-                    writeCallback: (_, value) => gpioQspi.SetGpioBitmap(value),
+                    writeCallback: (_, value) => gpioQspi.SetGpioBitmap(value, RP2040GPIO.GpioFunction.SIO),
                     name: "GPIO_HI_OUT")
                 .WithReservedBits(6, 26);
 
             Registers.GPIO_HI_OUT_SET.Define(this)
                 .WithValueField(0, 6, FieldMode.Write,
-                    writeCallback: (_, value) => gpioQspi.SetGpioBitset(value),
+                    writeCallback: (_, value) => gpioQspi.SetGpioBitset(value, RP2040GPIO.GpioFunction.SIO),
                     name: "GPIO_HI_OUT_SET")
                 .WithReservedBits(6, 26);
 
             Registers.GPIO_HI_OUT_CLR.Define(this)
                 .WithValueField(0, 6, FieldMode.Write,
-                    writeCallback: (_, value) => gpioQspi.ClearGpioBitset(value),
+                    writeCallback: (_, value) => gpioQspi.ClearGpioBitset(value, RP2040GPIO.GpioFunction.SIO),
                     name: "GPIO_HI_OUT_CLR")
                 .WithReservedBits(6, 26);
 
             Registers.GPIO_HI_OUT_XOR.Define(this)
                 .WithValueField(0, 6, FieldMode.Write,
-                    writeCallback: (_, value) => gpioQspi.XorGpioBitset(value),
+                    writeCallback: (_, value) => gpioQspi.XorGpioBitset(value, RP2040GPIO.GpioFunction.SIO),
                     name: "GPIO_HI_OUT_XOR")
                 .WithReservedBits(6, 26);
 
             Registers.GPIO_HI_OE.Define(this)
                 .WithValueField(0, 30, valueProviderCallback: _ => gpioQspi.GetOutputEnableBitmap(),
-                    writeCallback: (_, value) => gpioQspi.SetOutputEnableBitmap(value),
+                    writeCallback: (_, value) => gpioQspi.SetOutputEnableBitmap(value, RP2040GPIO.GpioFunction.SIO),
                     name: "GPIO_HI_OE")
                 .WithReservedBits(30, 2);
 
             Registers.GPIO_HI_OE_SET.Define(this)
                 .WithValueField(0, 30, FieldMode.Write,
-                    writeCallback: (_, value) => gpioQspi.SetOutputEnableBitset(value),
+                    writeCallback: (_, value) => gpioQspi.SetOutputEnableBitset(value, RP2040GPIO.GpioFunction.SIO),
                     name: "GPIO_HI_SET")
                 .WithReservedBits(30, 2);
 
             Registers.GPIO_HI_OE_CLR.Define(this)
                 .WithValueField(0, 30, FieldMode.Write,
-                    writeCallback: (_, value) => gpioQspi.ClearOutputEnableBitset(value),
+                    writeCallback: (_, value) => gpioQspi.ClearOutputEnableBitset(value, RP2040GPIO.GpioFunction.SIO),
                     name: "GPIO_HI_CLR")
                 .WithReservedBits(30, 2);
 
             Registers.GPIO_HI_OE_XOR.Define(this)
                 .WithValueField(0, 30, FieldMode.Write,
-                    writeCallback: (_, value) => gpioQspi.XorOutputEnableBitset(value),
+                    writeCallback: (_, value) => gpioQspi.XorOutputEnableBitset(value, RP2040GPIO.GpioFunction.SIO),
                     name: "GPIO_HI_XOR")
                 .WithReservedBits(30, 2);
 

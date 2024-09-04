@@ -1,15 +1,11 @@
 using Antmicro.Renode.Core;
-using Antmicro.Renode.Core.Structure.Registers;
 using System;
 using System.IO;
 using Antmicro.Renode.Logging;
-using Antmicro.Renode.Peripherals.GPIOPort;
 
 using Antmicro.Renode.Time;
 using ELFSharp.ELF;
-using Machine = Antmicro.Renode.Core.Machine;
 
-using Antmicro.Renode.Peripherals.Miscellaneous.RP2040PIORegisters;
 using Antmicro.Renode.Peripherals.Miscellaneous;
 using Antmicro.Renode.Utilities.Binding;
 using Antmicro.Migrant;
@@ -120,7 +116,7 @@ namespace Antmicro.Renode.Peripherals.CPU
         }
 
         public RP2040PIOCPU(string cpuType, IMachine machine, ulong address, GPIOPort.RP2040GPIO gpio, uint id, RP2040Clocks clocks, Endianess endianness = Endianess.LittleEndian, CpuBitness bitness = CpuBitness.Bits32)
-            : base(id, cpuType, machine, endianness, bitness)
+            : base(id + 100, cpuType, machine, endianness, bitness)
         {
             CompilePioSim();
             pioId = (int)id;
@@ -128,6 +124,7 @@ namespace Antmicro.Renode.Peripherals.CPU
             binder = new NativeBinder(this, libraryFile);
             machine.GetSystemBus(this).Register(this, new BusRangeRegistration(new Antmicro.Renode.Core.Range(address, (ulong)Size)));
             this.gpio = gpio;
+            this.gpioFunction = id == 0 ? GPIOPort.RP2040GPIO.GpioFunction.PIO0 : GPIOPort.RP2040GPIO.GpioFunction.PIO1;
             gpio.ReevaluatePioActions.Add((uint steps) =>
             {
                 totalExecutedInstructions += PioExecute(pioId, steps);
@@ -254,7 +251,7 @@ namespace Antmicro.Renode.Peripherals.CPU
         [Export]
         protected virtual void GpioPinWriteBitset(uint bitset, uint bitmap)
         {
-            this.gpio.SetGpioBitset(bitset, bitmap);
+            this.gpio.SetGpioBitset(bitset, gpioFunction, bitmap);
         }
 
         [Export]
@@ -284,6 +281,7 @@ namespace Antmicro.Renode.Peripherals.CPU
         // [This needs to be mapped to the id of the Program Counter register used by the simulator]
         private const int PCRegisterId = 0;
         private int pioId;
+        private GPIOPort.RP2040GPIO.GpioFunction gpioFunction;
 
         [Transient]
         private NativeBinder binder;
@@ -305,6 +303,8 @@ namespace Antmicro.Renode.Peripherals.CPU
 
         [Import]
         private FuncUInt32Int32UInt32 PioReadMemory;
+
+
     }
 }
 
