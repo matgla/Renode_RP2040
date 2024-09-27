@@ -282,7 +282,7 @@ namespace Antmicro.Renode.Peripherals.DMA
                   }
                 case CalculateType.Crc16CCITTReversed:
                   {
-                    checksumType = ChecksumRequest.Type.Crc16CCITT;
+                    checksumType = ChecksumRequest.Type.Crc16CCITTReversed;
                     break;
                   }
                 case CalculateType.XORReduction:

@@ -128,7 +128,6 @@ namespace Antmicro.Renode.Peripherals.DMA
 
       if (checksum != null)
       {
-        Logger.Log(LogLevel.Error, "Calculate crc: " + checksum.Value.type);
         switch (checksum.Value.type)
         {
           case ChecksumRequest.Type.Crc32Reversed:
@@ -139,7 +138,7 @@ namespace Antmicro.Renode.Peripherals.DMA
             }
           case ChecksumRequest.Type.Crc32:
             {
-              var crcEngine = new CRCEngine(CRCPolynomial.CRC32, true, true, checksum.Value.init);
+              var crcEngine = new CRCEngine(CRCPolynomial.CRC32, false, false, checksum.Value.init);
               responseWithCrc.crc = crcEngine.Calculate(buffer);
               break;
             }
@@ -151,13 +150,34 @@ namespace Antmicro.Renode.Peripherals.DMA
             }
           case ChecksumRequest.Type.Crc16CCITTReversed:
             {
-              var crcEngine = new CRCEngine(CRCPolynomial.CRC16_CCITT, true, true, checksum.Value.init);
+              var crcEngine = new CRCEngine(CRCPolynomial.CRC16_CCITT, true, false, checksum.Value.init);
               responseWithCrc.crc = crcEngine.Calculate(buffer);
               break;
             }
-
-
-
+          case ChecksumRequest.Type.XORReduction:
+            {
+              UInt32 calculated = checksum.Value.init;
+              foreach(var b in buffer) {
+                calculated ^= b;
+              }
+              uint bitCount = 0;
+              while (calculated > 0)
+              {
+                bitCount += calculated & 1;
+                calculated >>= 1;
+              } 
+              responseWithCrc.crc = Convert.ToUInt32(bitCount % 2 == 1);
+              break;
+            }
+          case ChecksumRequest.Type.Sum:
+            {
+              uint sum = 0;
+              foreach (var b in buffer) {
+                sum += b;
+              } 
+              responseWithCrc.crc = sum;
+              break;
+            }
         }
       }
 
