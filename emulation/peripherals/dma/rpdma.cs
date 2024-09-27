@@ -24,6 +24,7 @@ namespace Antmicro.Renode.Peripherals.DMA
   // 
   // basically is copy of DmaEngine with CRC calculation injected 
 
+  [AllowedTranslations(AllowedTranslation.ByteToDoubleWord | AllowedTranslation.WordToDoubleWord | AllowedTranslation.QuadWordToDoubleWord)]
   public class RPDMA : IDoubleWordPeripheral, IGPIOReceiver, IKnownSize, INumberedGPIOOutput
   {
     public RPDMA(int numberOfChannels, IMachine machine)
@@ -64,7 +65,6 @@ namespace Antmicro.Renode.Peripherals.DMA
       if (offset < 0x400)
       {
         long id = offset / Channel.Size;
-        this.Log(LogLevel.Error, "Reading id: " + id);
         channels[id].WriteDoubleWord(offset % Channel.Size, value);
         return;
       }
@@ -155,6 +155,21 @@ namespace Antmicro.Renode.Peripherals.DMA
         },
         writeCallback: (_, value) => sniffData = (uint)value, name: "SNIFF_DATA");
 
+        registersMap[(long)Registers.MULTI_CHAN_TRIGGER] = new DoubleWordRegister(this)
+          .WithValueField(0, 16, valueProviderCallback: (_) => 0,
+            writeCallback:(_, value) => {
+              for (int i = 0; i < 16; ++i)
+              {
+                if ((value & (1u << i)) == 1) 
+                {
+                  if (channels[i].Enabled) 
+                  {
+                    channels[i].TriggerTransfer();                  
+                  }
+                }
+              }
+            }, name: "MULTI_CHAN_TRIGGER")
+          .WithReservedBits(16, 16);
       return new DoubleWordRegisterCollection(this, registersMap);
     }
 
@@ -232,7 +247,6 @@ namespace Antmicro.Renode.Peripherals.DMA
       public void WriteDoubleWord(long address, uint value)
       {
         registers.Write((long)aliases[address], value);
-        this.Log(LogLevel.Error, "Writing at: " + address.ToString("X") + " -> " + value.ToString("x"));
         if ((int)(address & 0xf) == 0xc)
         {
           TriggerTransfer();
@@ -246,7 +260,6 @@ namespace Antmicro.Renode.Peripherals.DMA
 
       public void TriggerTransfer()
       {
-        this.Log(LogLevel.Error, "Starting");
         if (!Enabled)
         {
           this.Log(LogLevel.Debug, "Transfer rejected, channel: " + channelNumber + " not enabled!");
@@ -258,7 +271,6 @@ namespace Antmicro.Renode.Peripherals.DMA
           lock (parent.channelFinished)
           {
             parent.channelFinished[channelNumber] = false;
-            this.Log(LogLevel.Error, "Trigger copy");
             if (sniffEnable.Value)
             {
 
@@ -301,6 +313,7 @@ namespace Antmicro.Renode.Peripherals.DMA
             }
             else
             {
+              this.Log(LogLevel.Error, "Issue copy: " + readAddress.ToString("X") + ", dest: " + writeAddress.ToString("X") + ", dataSize: " + dataSize.Value);
               parent.engine.IssueCopy(request);
             }
             parent.channelFinished[channelNumber] = true;
@@ -324,7 +337,7 @@ namespace Antmicro.Renode.Peripherals.DMA
             }
           case DataSize.Word:
             {
-              transferType = TransferType.QuadWord;
+              transferType = TransferType.Word;
               break;
             }
         }

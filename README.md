@@ -89,7 +89,7 @@ I am testing simulator code using official pico-examples. Tests in use are:
 ## ADC
 | Example | Passed |
 | :---: | :---:    |
-| [adc_console](https://github.com/raspberrypi/pico-examples/tree/master/adc/adc_console) | $${\color{red}✗}$$ |
+| [adc_console](https://github.com/raspberrypi/pico-examples/tree/master/adc/adc_console) | $${\color{green}✓}$$ |
 | [dma_capture](https://github.com/raspberrypi/pico-examples/tree/master/adc/dma_capture) | $${\color{red}✗}$$ |
 | [hello_adc](https://github.com/raspberrypi/pico-examples/tree/master/adc/hello_adc) | $${\color{green}✓}$$ |
 | [joystick_display](https://github.com/raspberrypi/pico-examples/tree/master/adc/joystick_display) | $${\color{red}✗}$$ | 
@@ -121,8 +121,8 @@ I am testing simulator code using official pico-examples. Tests in use are:
 | :---: | :---:    |
 | [channel_irq](https://github.com/raspberrypi/pico-examples/tree/master/dma/channel_irq) | $${\color{red}✗}$$ |
 | [control_blocks](https://github.com/raspberrypi/pico-examples/tree/master/dma/control_blocks) | $${\color{red}✗}$$ |
-| [hello_dma](https://github.com/raspberrypi/pico-examples/tree/master/dma/hello_dma) | $${\color{red}✗}$$ |
-| [sniff_crc](https://github.com/raspberrypi/pico-examples/tree/master/dma/sniff_crc) | $${\color{red}✗}$$ |
+| [hello_dma](https://github.com/raspberrypi/pico-examples/tree/master/dma/hello_dma) | $${\color{green}✓}$$ |
+| [sniff_crc](https://github.com/raspberrypi/pico-examples/tree/master/dma/sniff_crc) | $${\color{green}✓}$$ |
 
 ## Flash
 | Example | Passed |
