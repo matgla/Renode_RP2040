@@ -1,0 +1,106 @@
+From ae2785cab0164e1c9fe46dde36b45d88334a35b6 Mon Sep 17 00:00:00 2001
+From: Mateusz Stadnik <matgla@live.com>
+Date: Fri, 27 Sep 2024 17:14:06 +0200
+Subject: [PATCH] fixes for new crc examples
+
+---
+ dma/sniff_crc16r/sniff_crc.c | 4 ++--
+ dma/sniff_crc32/sniff_crc.c  | 7 ++++---
+ dma/sniff_even/sniff_crc.c   | 4 ++--
+ dma/sniff_sum/sniff_crc.c    | 4 ++--
+ 4 files changed, 10 insertions(+), 9 deletions(-)
+
+diff --git a/dma/sniff_crc16r/sniff_crc.c b/dma/sniff_crc16r/sniff_crc.c
+index 187aaca..f8ae1c2 100644
+--- a/dma/sniff_crc16r/sniff_crc.c
++++ b/dma/sniff_crc16r/sniff_crc.c
+@@ -53,7 +53,7 @@ int main() {
+   // (bit-reverse) CRC32 specific sniff set-up
+   channel_config_set_sniff_enable(&c, true);
+   dma_sniffer_set_data_accumulator(0);
+-  dma_sniffer_set_output_reverse_enabled(true);
++  dma_sniffer_set_output_reverse_enabled(false);
+   dma_sniffer_enable(chan, DMA_SNIFF_CTRL_CALC_VALUE_CRC16R, true);
+ 
+   dma_channel_configure(
+@@ -73,7 +73,7 @@ int main() {
+   // Buffer to DMA: 0x31 0x32 0x33 0x34 0x35 0x36 0x37 0x38 0x39 0x00 0x00 0x00
+   // 0x00
+   // Completed DMA sniff of 13 byte buffer, DMA sniff accumulator value:
+-  // 0x8dea0000
++  // 0x57b10000
+ 
+   uint32_t sniffed_crc = dma_sniffer_get_data_accumulator();
+   printf("Completed DMA sniff of %d byte buffer, DMA sniff accumulator value: "
+diff --git a/dma/sniff_crc32/sniff_crc.c b/dma/sniff_crc32/sniff_crc.c
+index 7e5c384..755fcd7 100644
+--- a/dma/sniff_crc32/sniff_crc.c
++++ b/dma/sniff_crc32/sniff_crc.c
+@@ -53,7 +53,8 @@ int main() {
+   // (bit-reverse) CRC32 specific sniff set-up
+   channel_config_set_sniff_enable(&c, true);
+   dma_sniffer_set_data_accumulator(0);
+-  dma_sniffer_set_output_reverse_enabled(true);
++  dma_sniffer_set_output_reverse_enabled(false);
++  dma_sniffer_set_output_invert_enabled(false);
+   dma_sniffer_enable(chan, DMA_SNIFF_CTRL_CALC_VALUE_CRC32, true);
+ 
+   dma_channel_configure(
+@@ -72,8 +73,8 @@ int main() {
+ 
+   // Buffer to DMA: 0x31 0x32 0x33 0x34 0x35 0x36 0x37 0x38 0x39 0x00 0x00 0x00
+   // 0x00 Completed DMA sniff of 13 byte buffer, DMA sniff accumulator value:
+-  // 0xd05d3bea
+-
++  // 0x57dcba0b
++  
+   uint32_t sniffed_crc = dma_sniffer_get_data_accumulator();
+   printf("Completed DMA sniff of %d byte buffer, DMA sniff accumulator value: "
+          "0x%x\n",
+diff --git a/dma/sniff_even/sniff_crc.c b/dma/sniff_even/sniff_crc.c
+index ed7446c..edc45b2 100644
+--- a/dma/sniff_even/sniff_crc.c
++++ b/dma/sniff_even/sniff_crc.c
+@@ -53,7 +53,7 @@ int main() {
+   // (bit-reverse) CRC32 specific sniff set-up
+   channel_config_set_sniff_enable(&c, true);
+   dma_sniffer_set_data_accumulator(0);
+-  dma_sniffer_set_output_reverse_enabled(true);
++  dma_sniffer_set_output_reverse_enabled(false);
+   dma_sniffer_enable(chan, DMA_SNIFF_CTRL_CALC_VALUE_EVEN, true);
+ 
+   dma_channel_configure(
+@@ -73,7 +73,7 @@ int main() {
+   // Buffer to DMA: 0x31 0x32 0x33 0x34 0x35 0x36 0x37 0x38 0x39 0x00 0x00 0x00
+   // 0x00
+   // Completed DMA sniff of 13 byte buffer, DMA sniff accumulator value:
+-  // 0x80000000
++  // 0x1
+   uint32_t sniffed_crc = dma_sniffer_get_data_accumulator();
+   printf("Completed DMA sniff of %d byte buffer, DMA sniff accumulator value: "
+          "0x%x\n",
+diff --git a/dma/sniff_sum/sniff_crc.c b/dma/sniff_sum/sniff_crc.c
+index 366e6eb..2dcf78a 100644
+--- a/dma/sniff_sum/sniff_crc.c
++++ b/dma/sniff_sum/sniff_crc.c
+@@ -53,7 +53,7 @@ int main() {
+   // (bit-reverse) CRC32 specific sniff set-up
+   channel_config_set_sniff_enable(&c, true);
+   dma_sniffer_set_data_accumulator(0);
+-  dma_sniffer_set_output_reverse_enabled(true);
++  dma_sniffer_set_output_reverse_enabled(false);
+   dma_sniffer_enable(chan, DMA_SNIFF_CTRL_CALC_VALUE_SUM, true);
+ 
+   dma_channel_configure(
+@@ -74,7 +74,7 @@ int main() {
+ 
+   // Buffer to DMA: 0x31 0x32 0x33 0x34 0x35 0x36 0x37 0x38 0x39 0x00 0x00 0x00
+   // 0x00 Completed DMA sniff of 13 byte buffer, DMA sniff accumulator value:
+-  // 0xbb800000
++  // 0x1dd
+   printf("Completed DMA sniff of %d byte buffer, DMA sniff accumulator value: "
+          "0x%x\n",
+          TOTAL_LEN, sniffed_crc);
+-- 
+2.44.0
+
