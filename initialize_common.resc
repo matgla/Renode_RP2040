@@ -29,6 +29,8 @@ include $ORIGIN/emulation/peripherals/sio/rp2040_sio.cs
 
 include $ORIGIN/emulation/peripherals/adc/rp2040_adc.cs
 
+include $ORIGIN/emulation/peripherals/uart/rp2040_uart.cs
+
 include $ORIGIN/emulation/peripherals/dma/rpdma_engine.cs
 EnsureTypeIsLoaded "Antmicro.Renode.Peripherals.DMA.RPDmaEngine"
 include $ORIGIN/emulation/peripherals/dma/rpdma.cs

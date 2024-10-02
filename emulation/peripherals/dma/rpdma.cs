@@ -41,6 +41,8 @@ namespace Antmicro.Renode.Peripherals.DMA
       Reset();
     }
 
+    public GPIO[] ExternalRequest { get; }
+
     public void Reset()
     {
       channelFinished = Enumerable.Repeat<bool>(true, numberOfChannels).ToArray();

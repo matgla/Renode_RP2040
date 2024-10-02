@@ -153,13 +153,13 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
         private int CurrentCpu()
         {
             var cpu = machine.SystemBus.GetCurrentCPU();
-            return machine.SystemBus.GetCPUId(cpu);
+            return machine.SystemBus.GetCPUSlot(cpu);
         }
 
         private int OtherCpu()
         {
             var cpu = machine.SystemBus.GetCurrentCPU();
-            var cpuId = machine.SystemBus.GetCPUId(cpu);
+            var cpuId = machine.SystemBus.GetCPUSlot(cpu);
             return cpuId == 0 ? 1 : 0;
         }
 
@@ -301,7 +301,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                     valueProviderCallback: _ =>
                     {
                         var cpu = machine.SystemBus.GetCurrentCPU();
-                        var cpuId = machine.SystemBus.GetCPUId(cpu);
+                        var cpuId = machine.SystemBus.GetCPUSlot(cpu);
 
                         if (cpuFifo[cpuId].Count != 0)
                         {
@@ -324,7 +324,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                     writeCallback: (_, value) =>
                     {
                         var cpu = machine.SystemBus.GetCurrentCPU();
-                        var cpuId = machine.SystemBus.GetCPUId(cpu);
+                        var cpuId = machine.SystemBus.GetCPUSlot(cpu);
 
                         long otherCpu = Convert.ToInt64(cpuId == 0);
 
@@ -350,7 +350,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                     writeCallback: (_, value) =>
                     {
                         var cpu = machine.SystemBus.GetCurrentCPU();
-                        var cpuId = machine.SystemBus.GetCPUId(cpu);
+                        var cpuId = machine.SystemBus.GetCPUSlot(cpu);
 
                         divider[cpuId].Dividend = (int)value;
                         divider[cpuId].Dirty = true;
@@ -364,7 +364,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                     writeCallback: (_, value) =>
                     {
                         var cpu = machine.SystemBus.GetCurrentCPU();
-                        var cpuId = machine.SystemBus.GetCPUId(cpu);
+                        var cpuId = machine.SystemBus.GetCPUSlot(cpu);
 
                         divider[cpuId].Divisor = (int)value;
                         divider[cpuId].Dirty = true;
@@ -378,7 +378,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                     writeCallback: (_, value) =>
                     {
                         var cpu = machine.SystemBus.GetCurrentCPU();
-                        var cpuId = machine.SystemBus.GetCPUId(cpu);
+                        var cpuId = machine.SystemBus.GetCPUSlot(cpu);
 
                         divider[cpuId].Dividend = (int)value;
                         divider[cpuId].Dirty = true;
@@ -392,7 +392,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                     writeCallback: (_, value) =>
                     {
                         var cpu = machine.SystemBus.GetCurrentCPU();
-                        var cpuId = machine.SystemBus.GetCPUId(cpu);
+                        var cpuId = machine.SystemBus.GetCPUSlot(cpu);
 
                         divider[cpuId].Divisor = (int)value;
                         divider[cpuId].CalculateSigned();
@@ -405,7 +405,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                     writeCallback: (_, value) =>
                     {
                         var cpu = machine.SystemBus.GetCurrentCPU();
-                        var cpuId = machine.SystemBus.GetCPUId(cpu);
+                        var cpuId = machine.SystemBus.GetCPUSlot(cpu);
 
                         divider[cpuId].Dirty = true;
                         divider[cpuId].Quotient = (int)value;
@@ -413,7 +413,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                     valueProviderCallback: _ =>
                     {
                         var cpu = machine.SystemBus.GetCurrentCPU();
-                        var cpuId = machine.SystemBus.GetCPUId(cpu);
+                        var cpuId = machine.SystemBus.GetCPUSlot(cpu);
 
                         divider[cpuId].Dirty = false;
                         return (uint)divider[cpuId].Quotient;
@@ -424,7 +424,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                     writeCallback: (_, value) =>
                     {
                         var cpu = machine.SystemBus.GetCurrentCPU();
-                        var cpuId = machine.SystemBus.GetCPUId(cpu);
+                        var cpuId = machine.SystemBus.GetCPUSlot(cpu);
 
                         divider[cpuId].Dirty = true;
                         divider[cpuId].Remainder = (int)value;

@@ -37,8 +37,9 @@ nvic1: IRQControllers.NVIC @ sysbus new Bus.BusPointRegistration {
     systickFrequency: 125000000
     -> cpu1@0
 
-uart0: UART.PL011 @ sysbus 0x40034000
-    ->nvic0@20
+uart0: UART.RP2040Uart @ sysbus 0x40034000
+    IRQ ->nvic0@20
+
 uart0_xor_alias: Memory.RP2040XorRegisterAlias @ sysbus 0x40035000 {
     originalAddress: 0x40034000
 }
@@ -165,8 +166,6 @@ clocks_bitmask_set_alias: Memory.RP2040BitmaskSetRegisterAlias @ sysbus 0x4000a0
 clocks_bitmask_clear_alias: Memory.RP2040BitmaskClearRegisterAlias @ sysbus 0x4000b000 {
     originalAddress: 0x40008000
 }
-
-
 
 gpio: GPIOPort.RP2040GPIO @ sysbus 0x40014000 {
     numberOfPins: 30
