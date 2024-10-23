@@ -7,6 +7,7 @@
 - tests/timer/hello_timer/hello_timer.robot
 - tests/timer/timer_lowlevel/timer_lowlevel.robot
 - tests/divider/hello_divider/hello_divider.robot
+- tests/dma/control_blocks/control_blocks.robot
 - tests/dma/hello_dma/hello_dma.robot
 - tests/dma/sniff_crc/sniff_crc.robot
 - tests/dma/sniff_crc16/sniff_crc16.robot

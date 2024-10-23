@@ -39,6 +39,8 @@ nvic1: IRQControllers.NVIC @ sysbus new Bus.BusPointRegistration {
 
 uart0: UART.RP2040Uart @ sysbus 0x40034000
     IRQ ->nvic0@20
+    DMATransmitRequest -> dma@20
+    DMAReceiveRequest -> dma@21
 
 uart0_xor_alias: Memory.RP2040XorRegisterAlias @ sysbus 0x40035000 {
     originalAddress: 0x40034000

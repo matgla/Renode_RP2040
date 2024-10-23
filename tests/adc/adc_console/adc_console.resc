@@ -8,3 +8,7 @@ sysbus.adc FeedVoltageSampleToChannel 2 2.0 0.01 20 100
 sysbus.adc FeedVoltageSampleToChannel 3 3.0 0.001 20 100
 
 showAnalyzer sysbus.uart0
+
+# Increased accuracy is necessary to not miss ADC updates in CPU due to overflows
+# when accuracy is too low adc may push to many elements to FIFO before next synchronization
+emulation SetGlobalQuantum "0.000001"

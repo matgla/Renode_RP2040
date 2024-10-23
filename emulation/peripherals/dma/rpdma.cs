@@ -14,7 +14,10 @@ using Antmicro.Renode.Logging;
 using Antmicro.Renode.Peripherals.Bus;
 using Antmicro.Renode.Core.Structure.Registers;
 using Antmicro.Renode.Utilities;
-
+using System;
+using System.Collections.ObjectModel;
+using System.Runtime;
+using Antmicro.Renode.Storage.SCSI.Commands;
 
 namespace Antmicro.Renode.Peripherals.DMA
 {
@@ -27,6 +30,50 @@ namespace Antmicro.Renode.Peripherals.DMA
   [AllowedTranslations(AllowedTranslation.ByteToDoubleWord | AllowedTranslation.WordToDoubleWord | AllowedTranslation.QuadWordToDoubleWord)]
   public class RPDMA : IDoubleWordPeripheral, IGPIOReceiver, IKnownSize, INumberedGPIOOutput
   {
+    private enum DREQ
+    {
+      PIO0_TX0 = 0,
+      PIO0_TX1 = 1,
+      PIO0_TX2 = 2,
+      PIO0_TX3 = 3,
+      PIO0_RX0 = 4,
+      PIO0_RX1 = 5,
+      PIO0_RX2 = 6,
+      PIO0_RX3 = 7,
+      PIO1_TX0 = 8,
+      PIO1_TX1 = 9,
+      PIO1_TX2 = 10,
+      PIO1_TX3 = 11,
+      PIO1_RX0 = 12,
+      PIO1_RX1 = 13,
+      PIO1_RX2 = 14,
+      PIO1_RX3 = 15,
+      SPI0_TX = 16,
+      SPI0_RX = 17,
+      SPI1_TX = 18,
+      SPI1_RX = 19,
+      UART0_TX = 20,
+      UART0_RX = 21,
+      UART1_TX = 22,
+      UART1_RX = 23,
+      PWM_WRAP0 = 24,
+      PWM_WRAP1 = 25,
+      PWM_WRAP2 = 26,
+      PWM_WRAP3 = 27,
+      PWM_WRAP4 = 28,
+      PWM_WRAP5 = 29,
+      PWM_WRAP6 = 30,
+      PWM_WRAP7 = 31,
+      I2C0_TX = 32,
+      I2C0_RX = 33,
+      I2C1_TX = 34,
+      I2C1_RX = 35,
+      ADC = 36,
+      XIP_STREAM = 37,
+      XIP_SSITX = 38,
+      XIP_SSIRX = 39
+    };
+    private int numberOfDREQ;
     public RPDMA(int numberOfChannels, IMachine machine)
     {
       this.channels = new Channel[numberOfChannels];
@@ -38,11 +85,16 @@ namespace Antmicro.Renode.Peripherals.DMA
       engine = new RPDmaEngine(machine.GetSystemBus(this));
       this.numberOfChannels = numberOfChannels;
       registers = CreateRegisters();
+      this.numberOfDREQ = Enum.GetNames(typeof(DREQ)).Length;
+      var irqs = new Dictionary<int, IGPIO>();
+      //this.ExternalRequest = new GPIO[numberOfDREQ];
+      for (int i = 0; i < numberOfDREQ; ++i)
+      {
+        irqs[i] = new GPIO();
+      }
+      Connections = new ReadOnlyDictionary<int, IGPIO>(irqs);
       Reset();
     }
-
-    public GPIO[] ExternalRequest { get; }
-
     public void Reset()
     {
       channelFinished = Enumerable.Repeat<bool>(true, numberOfChannels).ToArray();
@@ -50,6 +102,11 @@ namespace Antmicro.Renode.Peripherals.DMA
     }
 
     public long Size { get { return 0x1000; } }
+
+    public void Trigger(int channelNumber)
+    {
+      channels[channelNumber].TriggerTransfer();
+    }
 
     public uint ReadDoubleWord(long offset)
     {
@@ -75,33 +132,18 @@ namespace Antmicro.Renode.Peripherals.DMA
 
     public void OnGPIO(int number, bool value)
     {
-      if (number < 0 || number >= channels.Length)
+      // find channel for DREQ
+      foreach (var channel in channels)
       {
-        this.Log(LogLevel.Error, "Triggered non-existing DMA channel number: {0}. Maximum value is {1}", number, channels.Length);
-        return;
-      }
-
-      if (value)
-      {
-        this.Log(LogLevel.Debug, "DMA peripheral request on stream {0} {1}", number, value);
-        if (channels[number].Enabled)
+        if (channel.transferRequestSignal == number)
         {
-          channels[number].TriggerTransfer();
-        }
-        else
-        {
-          this.Log(LogLevel.Warning, "DMA peripheral request on stream {0} ignored", number);
         }
       }
     }
 
     public IReadOnlyDictionary<int, IGPIO> Connections
     {
-      get
-      {
-        var i = 0;
-        return channels.ToDictionary(x => i++, y => (IGPIO)y.IRQ);
-      }
+      get; private set;
     }
 
     private DoubleWordRegisterCollection CreateRegisters()
@@ -157,21 +199,31 @@ namespace Antmicro.Renode.Peripherals.DMA
         },
         writeCallback: (_, value) => sniffData = (uint)value, name: "SNIFF_DATA");
 
-        registersMap[(long)Registers.MULTI_CHAN_TRIGGER] = new DoubleWordRegister(this)
-          .WithValueField(0, 16, valueProviderCallback: (_) => 0,
-            writeCallback:(_, value) => {
-              for (int i = 0; i < 16; ++i)
+      registersMap[(long)Registers.MULTI_CHAN_TRIGGER] = new DoubleWordRegister(this)
+        .WithValueField(0, 16, valueProviderCallback: (_) => 0,
+          writeCallback: (_, value) =>
+          {
+            for (int i = 0; i < 16; ++i)
+            {
+              if ((value & (1u << i)) == 1)
               {
-                if ((value & (1u << i)) == 1) 
+                if (channels[i].Enabled)
                 {
-                  if (channels[i].Enabled) 
-                  {
-                    channels[i].TriggerTransfer();                  
-                  }
+                  channels[i].TriggerTransfer();
                 }
               }
-            }, name: "MULTI_CHAN_TRIGGER")
-          .WithReservedBits(16, 16);
+            }
+          }, name: "MULTI_CHAN_TRIGGER")
+        .WithReservedBits(16, 16);
+
+      registersMap[(long)Registers.INTR] = new DoubleWordRegister(this)
+        .WithValueField(0, 16, FieldMode.Read, valueProviderCallback: (_) => {
+          uint irqs = 0; 
+          for (int i = 0; i < channels.Length; ++i) {
+            irqs |= (channels[i].InterruptRaised == true ? 1u : 0u) << i;
+          }
+          return irqs;
+        }, name: "INTR");
       return new DoubleWordRegisterCollection(this, registersMap);
     }
 
@@ -202,9 +254,11 @@ namespace Antmicro.Renode.Peripherals.DMA
       public Channel(RPDMA parent, int channelNumber)
       {
         aliases = new Dictionary<long, Registers>();
+        Reset();
         this.parent = parent;
         this.channelNumber = channelNumber;
-        IRQ = new GPIO();
+        this.chainTo = channelNumber;
+        //IRQ = new GPIO();
         DefineAliases();
         registers = CreateRegisters();
       }
@@ -234,6 +288,10 @@ namespace Antmicro.Renode.Peripherals.DMA
 
       public void Reset()
       {
+        parent = null;
+        channelNumber = 0;
+        chainTo = 0;
+        InterruptRaised = false;
       }
 
       private enum Registers
@@ -251,7 +309,17 @@ namespace Antmicro.Renode.Peripherals.DMA
         registers.Write((long)aliases[address], value);
         if ((int)(address & 0xf) == 0xc)
         {
-          TriggerTransfer();
+          if (value == 0)
+          {
+            if (irqQuiet.Value == true)
+            {
+              InterruptRaised = true;
+            }
+          }
+          else 
+          {
+            TriggerTransfer();
+          }
         }
       }
 
@@ -267,67 +335,68 @@ namespace Antmicro.Renode.Peripherals.DMA
           this.Log(LogLevel.Debug, "Transfer rejected, channel: " + channelNumber + " not enabled!");
           return;
         }
-        Request request = CreateRequest();
-        if (request.Size > 0)
+        RPXXXXDmaRequest request = CreateRequest();
+        lock (parent.channelFinished)
         {
-          lock (parent.channelFinished)
+          parent.channelFinished[channelNumber] = false;
+          if (sniffEnable.Value)
           {
-            parent.channelFinished[channelNumber] = false;
-            if (sniffEnable.Value)
+            ChecksumRequest.Type checksumType = ChecksumRequest.Type.Crc32;
+            switch (this.parent.sniffCalcType.Value)
             {
-
-              ChecksumRequest.Type checksumType = ChecksumRequest.Type.Crc32;
-              switch (this.parent.sniffCalcType.Value)
-              {
-                case CalculateType.Crc32Reversed:
-                  {
-                    checksumType = ChecksumRequest.Type.Crc32Reversed;
-                    break;
-                  }
-                case CalculateType.Sum:
-                  {
-                    checksumType = ChecksumRequest.Type.Sum;
-                    break;
-                  }
-                case CalculateType.Crc16CCITT:
-                  {
-                    checksumType = ChecksumRequest.Type.Crc16CCITT;
-                    break;
-                  }
-                case CalculateType.Crc16CCITTReversed:
-                  {
-                    checksumType = ChecksumRequest.Type.Crc16CCITTReversed;
-                    break;
-                  }
-                case CalculateType.XORReduction:
-                  {
-                    checksumType = ChecksumRequest.Type.XORReduction;
-                    break;
-                  }
-              }
-              ChecksumRequest req = new ChecksumRequest()
-              {
-                type = checksumType,
-                init = this.parent.sniffData,
-              };
-              var response = parent.engine.IssueCopy(request, null, req);
-              this.parent.sniffData = response.crc;
+              case CalculateType.Crc32Reversed:
+                {
+                  checksumType = ChecksumRequest.Type.Crc32Reversed;
+                  break;
+                }
+              case CalculateType.Sum:
+                {
+                  checksumType = ChecksumRequest.Type.Sum;
+                  break;
+                }
+              case CalculateType.Crc16CCITT:
+                {
+                  checksumType = ChecksumRequest.Type.Crc16CCITT;
+                  break;
+                }
+              case CalculateType.Crc16CCITTReversed:
+                {
+                  checksumType = ChecksumRequest.Type.Crc16CCITTReversed;
+                  break;
+                }
+              case CalculateType.XORReduction:
+                {
+                  checksumType = ChecksumRequest.Type.XORReduction;
+                  break;
+                }
             }
-            else
+            ChecksumRequest req = new ChecksumRequest()
             {
-              this.Log(LogLevel.Error, "Issue copy: " + readAddress.ToString("X") + ", dest: " + writeAddress.ToString("X") + ", dataSize: " + dataSize.Value);
-              parent.engine.IssueCopy(request);
-            }
-            parent.channelFinished[channelNumber] = true;
-            if (!irqQuiet.Value)
-            {
-              parent.machine.LocalTimeSource.ExecuteInNearestSyncedState(_ => IRQ.Set());
-            }
+              type = checksumType,
+              init = this.parent.sniffData,
+            };
+            var response = parent.engine.IssueCopy(request, null, req);
+            this.parent.sniffData = response.crc;
+          }
+          else
+          {
+            var response = parent.engine.IssueCopy(request);
+            readAddress = (uint)response.response.ReadAddress.Value;
+            writeAddress = (uint)response.response.WriteAddress.Value;
+          }
+          parent.channelFinished[channelNumber] = true;
+          if (!irqQuiet.Value)
+          {
+            // parent.machine.LocalTimeSource.ExecuteInNearestSyncedState(_ => IRQ.Set());
+          }
+          if (chainTo != channelNumber)
+          {
+            parent.machine.LocalTimeSource.ExecuteInNearestSyncedState(_ => this.parent.Trigger(chainTo));
           }
         }
       }
 
-      private Request CreateRequest()
+      private RPXXXXDmaRequest CreateRequest()
       {
         TransferType transferType = TransferType.Byte;
         switch (dataSize.Value)
@@ -337,13 +406,15 @@ namespace Antmicro.Renode.Peripherals.DMA
               transferType = TransferType.Word;
               break;
             }
+
           case DataSize.Word:
             {
-              transferType = TransferType.Word;
+              transferType = TransferType.DoubleWord;
               break;
             }
         }
-        return new Request(readAddress, writeAddress, (int)transferCount, transferType, transferType, incrementRead.Value, incrementWrite.Value);
+        var request = new Request(readAddress, writeAddress, (int)transferCount * (int)transferType, transferType, transferType, incrementRead.Value, incrementWrite.Value);
+        return new RPXXXXDmaRequest(request, ringSize == 0 ? 0 : 1 << ringSize, ringSelect.Value); 
       }
 
       private DoubleWordRegisterCollection CreateRegisters()
@@ -375,7 +446,10 @@ namespace Antmicro.Renode.Peripherals.DMA
           .WithValueField(11, 4, valueProviderCallback: _ => (ulong)chainTo,
             writeCallback: (_, value) => chainTo = (int)value, name: "CHAIN_TO")
           .WithValueField(15, 5, valueProviderCallback: _ => (ulong)transferRequestSignal,
-            writeCallback: (_, value) => transferRequestSignal = (int)value, name: "TREQ_SEL")
+            writeCallback: (_, value) =>
+            {
+              transferRequestSignal = (int)value;
+            }, name: "TREQ_SEL")
           .WithFlag(21, out irqQuiet, name: "IRQ_QUIET")
           .WithFlag(22, out byteSwap, name: "BSWAP")
           .WithFlag(23, out sniffEnable, name: "SNIFF_EN")
@@ -388,7 +462,7 @@ namespace Antmicro.Renode.Peripherals.DMA
         return new DoubleWordRegisterCollection(this, registersMap);
       }
 
-      public GPIO IRQ { get; private set; }
+      //public GPIO IRQ { get; private set; }
       public bool Enabled { get; private set; }
 
       private uint readAddress;
@@ -407,18 +481,19 @@ namespace Antmicro.Renode.Peripherals.DMA
       private int ringSize;
       private IFlagRegisterField ringSelect;
       private int chainTo;
-      private int transferRequestSignal;
+      public int transferRequestSignal;
       private IFlagRegisterField irqQuiet;
       private IFlagRegisterField byteSwap;
       private IFlagRegisterField sniffEnable;
       private IFlagRegisterField writeError;
       private IFlagRegisterField readError;
       private IFlagRegisterField ahbError;
-
+      public bool InterruptRaised;
       private DoubleWordRegisterCollection registers;
       private Dictionary<long, Registers> aliases;
       private RPDMA parent;
       private int channelNumber;
+
     }
 
     private readonly Channel[] channels;

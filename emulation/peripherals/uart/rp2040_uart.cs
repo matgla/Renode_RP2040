@@ -23,6 +23,8 @@ namespace Antmicro.Renode.Peripherals.UART
             uartClockFrequency = frequency;
 
             IRQ = new GPIO();
+            DMAReceiveRequest = new GPIO();
+            DMATransmitRequest = new GPIO();
             interruptRawStatuses = new bool[InterruptsCount];
             interruptMasks = new bool[InterruptsCount];
 
@@ -129,7 +131,6 @@ namespace Antmicro.Renode.Peripherals.UART
         {
             if(!flag.Value)
             {
-                this.Log(LogLevel.Error, errorMessage);
                 return false;
             }
             return true;
@@ -353,6 +354,13 @@ namespace Antmicro.Renode.Peripherals.UART
             if(!loopbackEnable.Value)
             {
                 TransmitCharacter((byte)value);
+                // we finished write, so we can request next data portion 
+                if (dmaTxEnable.Value)
+                {
+                    DMATransmitRequest.Set(false);
+                    DMATransmitRequest.Set(true);
+                    // dmaTxEnable.Set(true);
+                }
             }
             interruptRawStatuses[(int)Interrupts.Transmit] = true;
             UpdateInterrupts();

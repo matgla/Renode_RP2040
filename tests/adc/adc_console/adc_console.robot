@@ -3,7 +3,7 @@
 Suite Setup     Setup
 Suite Teardown  Teardown
 Test Teardown   Test Teardown
-Test Timeout    20 seconds
+Test Timeout    80 seconds
 
 Resource    ${CURDIR}/../../common.resource
 
@@ -41,7 +41,7 @@ Capture Samples On Channel
     Wait For Line On Uart   Switched to channel ${channel}      timeout=1
     Write Char On Uart      S 
     Wait For Line On Uart   Starting capture                    timeout=1 
-    Wait For Line On Uart   Done                                timeout=2
+    Wait For Line On Uart   Done                                timeout=10
     FOR    ${sample}    IN   @{samples}   
         FOR    ${repeat}    IN RANGE   ${repeats} 
             ${l}    Wait For Next Line On Uart                  timeout=1 
