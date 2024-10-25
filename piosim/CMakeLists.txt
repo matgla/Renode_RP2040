@@ -38,4 +38,6 @@ target_sources(piosim
     fifo.cpp
 )
 
-# target_link_libraries(piosim PUBLIC profiler)
+if (ENABLE_TESTS)
+  add_subdirectory(tests)
+endif ()

@@ -12,6 +12,8 @@
 
 #include "pio.hpp"
 
+#include <iostream>
+
 extern "C"
 {
   void (*log_as_cpu)(int, const char *);

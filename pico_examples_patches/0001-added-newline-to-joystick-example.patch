@@ -1,0 +1,25 @@
+From c97c417fba296fc2fb7d34cfb08cd470aa702d82 Mon Sep 17 00:00:00 2001
+From: Mateusz Stadnik <matgla@live.com>
+Date: Thu, 24 Oct 2024 18:13:30 +0200
+Subject: [PATCH] added newline to joystick example
+
+---
+ adc/joystick_display/joystick_display.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/adc/joystick_display/joystick_display.c b/adc/joystick_display/joystick_display.c
+index c0a6197..236628a 100644
+--- a/adc/joystick_display/joystick_display.c
++++ b/adc/joystick_display/joystick_display.c
+@@ -33,7 +33,7 @@ int main() {
+         printf("]  Y: [");
+         for (uint i = 0; i < bar_width; ++i)
+             putchar( i == bar_y_pos ? 'o' : ' ');
+-        printf("]");
++        printf("]\n");
+         sleep_ms(50);
+ 
+     }
+-- 
+2.47.0
+

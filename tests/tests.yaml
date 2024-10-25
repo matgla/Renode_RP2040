@@ -1,4 +1,5 @@
 - tests/adc/adc_console/adc_console.robot
+- tests/adc/joystick_display/joystick_display.robot
 - tests/adc/hello_adc/hello_adc.robot
 - tests/blink/blink.robot
 - tests/clocks/detached_clk_peri/detached_clk_peri.robot

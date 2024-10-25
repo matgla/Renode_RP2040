@@ -18,6 +18,7 @@ using System;
 using System.Collections.ObjectModel;
 using System.Runtime;
 using Antmicro.Renode.Storage.SCSI.Commands;
+using Antmicro.Renode.Peripherals.IRQControllers.PLIC;
 
 namespace Antmicro.Renode.Peripherals.DMA
 {
@@ -217,13 +218,57 @@ namespace Antmicro.Renode.Peripherals.DMA
         .WithReservedBits(16, 16);
 
       registersMap[(long)Registers.INTR] = new DoubleWordRegister(this)
-        .WithValueField(0, 16, FieldMode.Read, valueProviderCallback: (_) => {
-          uint irqs = 0; 
-          for (int i = 0; i < channels.Length; ++i) {
+        .WithValueField(0, 16, FieldMode.Read | FieldMode.Write, valueProviderCallback: (_) =>
+        {
+          uint irqs = 0;
+          for (int i = 0; i < channels.Length; ++i)
+          {
             irqs |= (channels[i].InterruptRaised == true ? 1u : 0u) << i;
           }
           return irqs;
+        }, writeCallback: (_, value) =>
+        {
+          for (int i = 0; i < channels.Length; ++i)
+          {
+            if (((value >> i) & 0x01) == 1)
+            {
+              channels[i].InterruptRaised = false;
+            }
+          }
         }, name: "INTR");
+
+      registersMap[(long)Registers.INTS0] = new DoubleWordRegister(this)
+        .WithValueField(0, 16, FieldMode.Read | FieldMode.Write, valueProviderCallback: (_) =>
+        {
+          uint irqs = 0;
+          return irqs;
+        }, writeCallback: (_, value) =>
+        {
+          for (int i = 0; i < channels.Length; ++i)
+          {
+            if (((value >> i) & 0x01) == 1)
+            {
+              channels[i].InterruptRaised = false;
+            }
+          }
+        }, name: "INTS0");
+
+      registersMap[(long)Registers.INTS1] = new DoubleWordRegister(this)
+        .WithValueField(0, 16, FieldMode.Read | FieldMode.Write, valueProviderCallback: (_) =>
+        {
+          uint irqs = 0;
+          return irqs;
+        }, writeCallback: (_, value) =>
+        {
+          for (int i = 0; i < channels.Length; ++i)
+          {
+            if (((value >> i) & 0x01) == 1)
+            {
+              channels[i].InterruptRaised = false;
+            }
+          }
+        }, name: "INTS1");
+
       return new DoubleWordRegisterCollection(this, registersMap);
     }
 
@@ -316,7 +361,7 @@ namespace Antmicro.Renode.Peripherals.DMA
               InterruptRaised = true;
             }
           }
-          else 
+          else
           {
             TriggerTransfer();
           }
@@ -414,7 +459,7 @@ namespace Antmicro.Renode.Peripherals.DMA
             }
         }
         var request = new Request(readAddress, writeAddress, (int)transferCount * (int)transferType, transferType, transferType, incrementRead.Value, incrementWrite.Value);
-        return new RPXXXXDmaRequest(request, ringSize == 0 ? 0 : 1 << ringSize, ringSelect.Value); 
+        return new RPXXXXDmaRequest(request, ringSize == 0 ? 0 : 1 << ringSize, ringSelect.Value);
       }
 
       private DoubleWordRegisterCollection CreateRegisters()

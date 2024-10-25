@@ -83,6 +83,15 @@ include @initialize_rp2040.resc
 Many RP2040 simulators may interwork together. I am using that possibility in full MSPC simulation. To interwork between them GPIOConnector may be used, please check existing usage (`simulation` directory):
  [MSPC Board Simulation](https://github.com/matgla/mspc-south-bridge/) 
 
+# Emulation accuracy 
+Renode is using optimizations to speed up emulation executing huge number of instructions at once per core. 
+This leads to accuracy problems which may be visible in some testing scenarios.
+To improve accuracy you can use command: 
+``` emulation SetGlobalQuantum "0.000001" ```
+With value necessary for your needs. 
+
+You can check example usages inside tests/pio/pio_blink/pio_blink.resc or tests/adc/adc_console/adc_console.resc.
+
 # Testing 
 I am testing simulator code using official pico-examples. Tests in use are: 
 

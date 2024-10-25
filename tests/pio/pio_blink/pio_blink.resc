@@ -12,4 +12,6 @@ sysbus LoadELF $global.TEST_FILE
 sysbus.cpu0 VectorTableOffset 0x00000000
 sysbus.cpu1 VectorTableOffset 0x00000000 
 
+logLevel -1
 showAnalyzer sysbus.uart0
+emulation SetGlobalQuantum "0.00001"
