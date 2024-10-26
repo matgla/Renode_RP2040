@@ -18,7 +18,6 @@ using System;
 using System.Collections.ObjectModel;
 using System.Runtime;
 using Antmicro.Renode.Storage.SCSI.Commands;
-using Antmicro.Renode.Peripherals.IRQControllers.PLIC;
 
 namespace Antmicro.Renode.Peripherals.DMA
 {
