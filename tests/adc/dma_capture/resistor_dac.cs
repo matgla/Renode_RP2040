@@ -21,11 +21,9 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
         // signal 100 means that parallel GPIO change was done
         public void OnGPIO(int number, bool value)
         {
-            //this.Log(LogLevel.Error, "Resistor DAC called with: " + number + ", value: " + value);
-            //this.adc.FeedVoltageSampleToChannel(this.channel, (decimal)3.3, 1);
             if (number == 100)
             {
-                this.Log(LogLevel.Error, "Operation done: " + data);
+                this.adc.FeedVoltageSampleToChannel(this.channel, (decimal)(3.3 * data / 31), 1);
             }
             else
             {
@@ -33,7 +31,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                 {
                     data |= (1 << number);
                 }
-                else 
+                else
                 {
                     data &= ~(1 << number);
                 }

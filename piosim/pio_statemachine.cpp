@@ -74,6 +74,7 @@ PioStatemachine::PioStatemachine(int id, std::span<const uint16_t> program,
   , isr_counter_{0}
   , delay_counter_{0}
   , delay_{0}
+  , dividerCounter_{0}
   , tx_{}
   , rx_{}
   , clock_divider_register_{.frac = 0, .integral = 1}
@@ -137,6 +138,7 @@ void PioStatemachine::restart()
   isr_counter_ = 0;
   delay_counter_ = 0;
   delay_ = 0;
+  dividerCounter_ = 0;
 }
 
 void PioStatemachine::clock_divider_restart()
@@ -800,6 +802,12 @@ bool PioStatemachine::step()
     return true;
   }
 
+  if (++dividerCounter_ < clock_divider_)
+  {
+    return true;
+  }
+  dividerCounter_ = 0;
+
   if (delay_counter_ < delay_)
   {
     ++delay_counter_;
@@ -894,7 +902,6 @@ const Fifo &PioStatemachine::rx_fifo() const
 
 void PioStatemachine::push_tx(uint32_t data)
 {
-  renode_log(LogLevel::Error, std::string("Writing data: ") + std::to_string(data));
   tx_.push(data);
 }
 

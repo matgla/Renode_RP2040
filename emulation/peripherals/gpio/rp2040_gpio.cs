@@ -495,7 +495,6 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
 
         public void SetGpioBitset(ulong bitset, GpioFunction peri, ulong bitmask = 0xfffffff)
         {
-            this.Log(LogLevel.Error, "bitset: " + bitset.ToString("x") + ", bitmask: " + bitmask.ToString("x"));
             lock (State)
             {
                 for (int i = 0; i < NumberOfPins; ++i)

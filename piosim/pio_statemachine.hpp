@@ -108,6 +108,7 @@ private:
 
   uint64_t delay_counter_;
   uint64_t delay_;
+  uint64_t dividerCounter_;
 
   Fifo tx_;
   Fifo rx_;

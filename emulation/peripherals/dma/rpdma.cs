@@ -544,7 +544,6 @@ namespace Antmicro.Renode.Peripherals.DMA
           .WithValueField(15, 6, valueProviderCallback: _ => (ulong)transferRequestSignal,
             writeCallback: (_, value) =>
             {
-              this.Log(LogLevel.Error, "Setting TREQ: " + value);
               transferRequestSignal = (int)value;
             }, name: "TREQ_SEL")
           .WithFlag(21, out irqQuiet, name: "IRQ_QUIET")

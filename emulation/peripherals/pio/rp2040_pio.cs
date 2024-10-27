@@ -208,7 +208,6 @@ namespace Antmicro.Renode.Peripherals.CPU
             {
                 // [Here comes the invocation of the external simulator for the given amount of instructions]
                 // [This is the place where simulation of acutal instructions is to be executed]
-                this.Log(LogLevel.Error, "steps: " + numberOfInstructionsToExecute);
                 instructionsExecutedThisRound += (ulong)PioExecute(pioId, (uint)numberOfInstructionsToExecute);
             }
             catch (Exception)
