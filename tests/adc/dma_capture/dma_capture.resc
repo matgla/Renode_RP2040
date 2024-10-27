@@ -17,4 +17,4 @@ machine StartGdbServer 3333 true sysbus.cpu1
 
 showAnalyzer sysbus.uart0
 
-emulation SetGlobalQuantum "0.00000001"
+emulation SetGlobalQuantum "0.000000001"

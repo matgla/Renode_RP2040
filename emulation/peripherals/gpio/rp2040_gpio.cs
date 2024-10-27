@@ -38,6 +38,7 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
             {
                 peripheralDrive[i] = PeripheralDrive.None;
             }
+            OperationDone = new GPIO();
         }
 
         private bool IsPinOutput(int pin)
@@ -488,11 +489,13 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
                         WritePin(i, false, peri);
                     }
                 }
+                OperationDone.Toggle();
             }
         }
 
         public void SetGpioBitset(ulong bitset, GpioFunction peri, ulong bitmask = 0xfffffff)
         {
+            this.Log(LogLevel.Error, "bitset: " + bitset.ToString("x") + ", bitmask: " + bitmask.ToString("x"));
             lock (State)
             {
                 for (int i = 0; i < NumberOfPins; ++i)
@@ -504,21 +507,14 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
 
                     if ((bitset & (1UL << i)) != 0)
                     {
-                        //if (State[i] == false)
-                        // {
-                        this.Log(LogLevel.Error, "Writing true: " + i);
                         WritePin(i, true, peri);
-                        // }
                     }
                     else
                     {
-                        // if (State[i] == true)
-                        // {
-                        this.Log(LogLevel.Error, "Writing false: " + i);
                         WritePin(i, false, peri);
-                        // }
                     }
                 }
+                OperationDone.Toggle();
             }
         }
 
@@ -768,7 +764,6 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
                 value = !value;
             }
             State[number] = value;
-            Connections[number].Unset();
             Connections[number].Set(value);
         }
 
@@ -788,7 +783,7 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
         // Currently I have no better idea how to retrigger CPU evaluation when GPIO state changes 
         // This is necessary to have synchronized PIO with System Clock
         public List<Action<uint>> ReevaluatePioActions { get; set; }
-
+        public GPIO OperationDone { get; }
 
         private readonly DoubleWordRegisterCollection registers;
         private bool[] pullDown;

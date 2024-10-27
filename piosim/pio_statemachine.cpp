@@ -894,6 +894,7 @@ const Fifo &PioStatemachine::rx_fifo() const
 
 void PioStatemachine::push_tx(uint32_t data)
 {
+  renode_log(LogLevel::Error, std::string("Writing data: ") + std::to_string(data));
   tx_.push(data);
 }
 

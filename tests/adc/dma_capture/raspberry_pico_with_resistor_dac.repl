@@ -7,3 +7,4 @@ resistor_dac: Miscellaneous.ResistorDAC @ sysbus {
 
 gpio:
     [6-10] -> resistor_dac@[0-4]
+    OperationDone -> resistor_dac@100

@@ -395,8 +395,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                     {
                         var cpu = machine.SystemBus.GetCurrentCPU();
                         var cpuId = machine.SystemBus.GetCPUSlot(cpu);
-
-                        divider[cpuId].Dividend = (int)value;
+                        divider[cpuId].Dividend = (long)value;
                         divider[cpuId].Dirty = true;
                         divider[cpuId].CalculateUnsigned();
                     },
@@ -409,8 +408,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                     {
                         var cpu = machine.SystemBus.GetCurrentCPU();
                         var cpuId = machine.SystemBus.GetCPUSlot(cpu);
-
-                        divider[cpuId].Divisor = (int)value;
+                        divider[cpuId].Divisor = (long)value;
                         divider[cpuId].Dirty = true;
                         divider[cpuId].CalculateUnsigned();
                     },
