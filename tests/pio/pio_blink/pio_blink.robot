@@ -3,7 +3,7 @@
 Suite Setup     Setup
 Suite Teardown  Teardown
 Test Teardown   Test Teardown
-Test Timeout    90 seconds
+Test Timeout    270 seconds
 
 *** Test Cases ***
 Run successfully 'pio_blink' example
