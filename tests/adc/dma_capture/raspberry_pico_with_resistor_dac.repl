@@ -1,0 +1,9 @@
+using "../../../rp2040.repl"
+
+resistor_dac: Miscellaneous.ResistorDAC @ sysbus {
+    adc: adc;
+    adcChannel: 0
+}
+
+gpio:
+    [6-10] -> resistor_dac@[0-4]

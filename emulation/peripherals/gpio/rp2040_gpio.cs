@@ -462,48 +462,28 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
 
         public uint GetGpioStateBitmap()
         {
-            uint output = 0;
-            for (int i = 0; i < NumberOfPins; ++i)
+            lock (State)
             {
-                output |= Convert.ToUInt32(State[i]) << i;
+                uint output = 0;
+                for (int i = 0; i < NumberOfPins; ++i)
+                {
+                    output |= Convert.ToUInt32(State[i]) << i;
+                }
+                return output;
             }
-            return output;
         }
 
         public void SetGpioBitmap(ulong bitmap, GpioFunction peri)
         {
-            for (int i = 0; i < NumberOfPins; ++i)
+            lock (State)
             {
-                if ((bitmap & (1UL << i)) != 0)
+                for (int i = 0; i < NumberOfPins; ++i)
                 {
-                    WritePin(i, true, peri);
-                }
-                else
-                {
-                    WritePin(i, false, peri);
-                }
-            }
-        }
-
-        public void SetGpioBitset(ulong bitset, GpioFunction peri, ulong bitmask = 0xfffffff)
-        {
-            for (int i = 0; i < NumberOfPins; ++i)
-            {
-                if ((bitmask & (1UL << i)) == 0)
-                {
-                    continue;
-                }
-
-                if ((bitset & (1UL << i)) != 0)
-                {
-                    if (State[i] == false)
+                    if ((bitmap & (1UL << i)) != 0)
                     {
                         WritePin(i, true, peri);
                     }
-                }
-                else
-                {
-                    if (State[i] == true)
+                    else
                     {
                         WritePin(i, false, peri);
                     }
@@ -511,22 +491,56 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
             }
         }
 
+        public void SetGpioBitset(ulong bitset, GpioFunction peri, ulong bitmask = 0xfffffff)
+        {
+            lock (State)
+            {
+                for (int i = 0; i < NumberOfPins; ++i)
+                {
+                    if ((bitmask & (1UL << i)) == 0)
+                    {
+                        continue;
+                    }
+
+                    if ((bitset & (1UL << i)) != 0)
+                    {
+                        //if (State[i] == false)
+                        // {
+                        this.Log(LogLevel.Error, "Writing true: " + i);
+                        WritePin(i, true, peri);
+                        // }
+                    }
+                    else
+                    {
+                        // if (State[i] == true)
+                        // {
+                        this.Log(LogLevel.Error, "Writing false: " + i);
+                        WritePin(i, false, peri);
+                        // }
+                    }
+                }
+            }
+        }
+
         public void SetPinDirectionBitset(ulong bitset, ulong bitmask = 0xffffffff)
         {
-            for (int i = 0; i < NumberOfPins; ++i)
+            lock (State)
             {
-                if ((bitmask & (1UL << i)) == 0)
+                for (int i = 0; i < NumberOfPins; ++i)
                 {
-                    continue;
-                }
+                    if ((bitmask & (1UL << i)) == 0)
+                    {
+                        continue;
+                    }
 
-                if ((bitset & (1UL << i)) != 0)
-                {
-                    outputEnableOverride[i] = OutputEnableOverride.Enable;
-                }
-                else
-                {
-                    outputEnableOverride[i] = OutputEnableOverride.Disable;
+                    if ((bitset & (1UL << i)) != 0)
+                    {
+                        outputEnableOverride[i] = OutputEnableOverride.Enable;
+                    }
+                    else
+                    {
+                        outputEnableOverride[i] = OutputEnableOverride.Disable;
+                    }
                 }
             }
         }
@@ -534,161 +548,181 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
 
         public void ClearGpioBitset(ulong bitset, GpioFunction peri)
         {
-            for (int i = 0; i < NumberOfPins; ++i)
+            lock (State)
             {
-                if ((bitset & (1UL << i)) != 0)
+                for (int i = 0; i < NumberOfPins; ++i)
                 {
-                    WritePin(i, false, peri);
+                    if ((bitset & (1UL << i)) != 0)
+                    {
+                        WritePin(i, false, peri);
+                    }
                 }
             }
         }
 
         public void XorGpioBitset(ulong bitset, GpioFunction peri)
         {
-            for (int i = 0; i < NumberOfPins; ++i)
+            lock (State)
             {
-                bool state = State[i];
-                if ((bitset & (1UL << i)) != 0)
+                for (int i = 0; i < NumberOfPins; ++i)
                 {
-                    state = state ^ true;
+                    bool state = State[i];
+                    if ((bitset & (1UL << i)) != 0)
+                    {
+                        state = state ^ true;
+                    }
+                    else
+                    {
+                        state = state ^ false;
+                    }
+                    WritePin(i, state, peri);
                 }
-                else
-                {
-                    state = state ^ false;
-                }
-                WritePin(i, state, peri);
             }
         }
 
         public void ClearOutputEnableBitset(ulong bitset, GpioFunction peri)
         {
-            for (int i = 0; i < NumberOfPins; ++i)
+            lock (outputEnableOverride)
             {
-                bool enable = (bitset & (1UL << i)) != 0;
-                if (outputEnableOverride[i] == OutputEnableOverride.Peripheral || outputEnableOverride[i] == OutputEnableOverride.InversePeripheral)
+                for (int i = 0; i < NumberOfPins; ++i)
                 {
-                    if (GetFunction(i) != peri)
+                    bool enable = (bitset & (1UL << i)) != 0;
+                    if (outputEnableOverride[i] == OutputEnableOverride.Peripheral || outputEnableOverride[i] == OutputEnableOverride.InversePeripheral)
                     {
-                        continue;
+                        if (GetFunction(i) != peri)
+                        {
+                            continue;
+                        }
+
+                        if (outputEnableOverride[i] == OutputEnableOverride.InversePeripheral)
+                        {
+                            enable = !enable;
+                        }
                     }
 
-                    if (outputEnableOverride[i] == OutputEnableOverride.InversePeripheral)
+
+                    if (enable)
                     {
-                        enable = !enable;
+                        outputEnableOverride[i] = OutputEnableOverride.Disable;
                     }
-                }
-
-
-                if (enable)
-                {
-                    outputEnableOverride[i] = OutputEnableOverride.Disable;
                 }
             }
         }
 
         public void XorOutputEnableBitset(ulong bitset, GpioFunction peri)
         {
-            for (int i = 0; i < NumberOfPins; ++i)
+            lock (outputEnableOverride)
             {
-                bool state;
-
-                bool enable = (bitset & (1UL << i)) != 0;
-                if (outputEnableOverride[i] == OutputEnableOverride.Peripheral || outputEnableOverride[i] == OutputEnableOverride.InversePeripheral)
+                for (int i = 0; i < NumberOfPins; ++i)
                 {
-                    if (GetFunction(i) != peri)
+                    bool state;
+
+                    bool enable = (bitset & (1UL << i)) != 0;
+                    if (outputEnableOverride[i] == OutputEnableOverride.Peripheral || outputEnableOverride[i] == OutputEnableOverride.InversePeripheral)
                     {
-                        continue;
+                        if (GetFunction(i) != peri)
+                        {
+                            continue;
+                        }
+
+                        if (outputEnableOverride[i] == OutputEnableOverride.InversePeripheral)
+                        {
+                            enable = !enable;
+                        }
                     }
 
-                    if (outputEnableOverride[i] == OutputEnableOverride.InversePeripheral)
+
+                    if (enable)
                     {
-                        enable = !enable;
+                        state = IsPinOutput(i) ^ true;
                     }
+                    else
+                    {
+                        state = IsPinOutput(i) ^ false;
+                    }
+                    outputEnableOverride[i] = state ? OutputEnableOverride.Enable : OutputEnableOverride.Disable;
                 }
-
-
-                if (enable)
-                {
-                    state = IsPinOutput(i) ^ true;
-                }
-                else
-                {
-                    state = IsPinOutput(i) ^ false;
-                }
-                outputEnableOverride[i] = state ? OutputEnableOverride.Enable : OutputEnableOverride.Disable;
             }
         }
 
         public uint GetOutputEnableBitmap()
         {
-            uint output = 0;
-            for (int i = 0; i < NumberOfPins; ++i)
+            lock (outputEnableOverride)
             {
-                output |= Convert.ToUInt32(outputEnableOverride[i] == OutputEnableOverride.Enable) << i;
+                uint output = 0;
+                for (int i = 0; i < NumberOfPins; ++i)
+                {
+                    output |= Convert.ToUInt32(outputEnableOverride[i] == OutputEnableOverride.Enable) << i;
+                }
+                return output;
             }
-            return output;
         }
 
         public void SetOutputEnableBitmap(ulong bitmap, GpioFunction peri)
         {
-
-            for (int i = 0; i < NumberOfPins; ++i)
+            lock (outputEnableOverride)
             {
-                bool enable = (bitmap & (1UL << i)) != 0;
-                if (outputEnableOverride[i] == OutputEnableOverride.Peripheral || outputEnableOverride[i] == OutputEnableOverride.InversePeripheral)
+                for (int i = 0; i < NumberOfPins; ++i)
                 {
-                    if (GetFunction(i) != peri)
+                    bool enable = (bitmap & (1UL << i)) != 0;
+                    if (outputEnableOverride[i] == OutputEnableOverride.Peripheral || outputEnableOverride[i] == OutputEnableOverride.InversePeripheral)
                     {
-                        continue;
+                        if (GetFunction(i) != peri)
+                        {
+                            continue;
+                        }
+
+                        if (outputEnableOverride[i] == OutputEnableOverride.InversePeripheral)
+                        {
+                            enable = !enable;
+                        }
                     }
 
-                    if (outputEnableOverride[i] == OutputEnableOverride.InversePeripheral)
+                    if (enable)
                     {
-                        enable = !enable;
+                        outputEnableOverride[i] = OutputEnableOverride.Enable;
                     }
-                }
-
-                if (enable)
-                {
-                    outputEnableOverride[i] = OutputEnableOverride.Enable;
-                }
-                else
-                {
-                    outputEnableOverride[i] = OutputEnableOverride.Disable;
+                    else
+                    {
+                        outputEnableOverride[i] = OutputEnableOverride.Disable;
+                    }
                 }
             }
         }
 
         public void SetOutputEnableBitset(ulong bitset, GpioFunction peri, ulong bitmask = 0xfffffff)
         {
-            for (int i = 0; i < NumberOfPins; ++i)
+            lock (outputEnableOverride)
             {
-                if ((bitmask & (1UL << i)) == 0)
+                for (int i = 0; i < NumberOfPins; ++i)
                 {
-                    continue;
-                }
-
-                bool enable = (bitset & (1UL << i)) != 0;
-                if (outputEnableOverride[i] == OutputEnableOverride.Peripheral || outputEnableOverride[i] == OutputEnableOverride.InversePeripheral)
-                {
-                    if (GetFunction(i) != peri)
+                    if ((bitmask & (1UL << i)) == 0)
                     {
                         continue;
                     }
 
-                    if (outputEnableOverride[i] == OutputEnableOverride.InversePeripheral)
+                    bool enable = (bitset & (1UL << i)) != 0;
+                    if (outputEnableOverride[i] == OutputEnableOverride.Peripheral || outputEnableOverride[i] == OutputEnableOverride.InversePeripheral)
                     {
-                        enable = !enable;
-                    }
-                }
+                        if (GetFunction(i) != peri)
+                        {
+                            continue;
+                        }
 
-                if (enable)
-                {
-                    outputEnableOverride[i] = OutputEnableOverride.Enable;
-                }
-                else
-                {
-                    outputEnableOverride[i] = OutputEnableOverride.Disable;
+                        if (outputEnableOverride[i] == OutputEnableOverride.InversePeripheral)
+                        {
+                            enable = !enable;
+                        }
+                    }
+
+                    if (enable)
+                    {
+                        outputEnableOverride[i] = OutputEnableOverride.Enable;
+                    }
+                    else
+                    {
+                        outputEnableOverride[i] = OutputEnableOverride.Disable;
+                    }
                 }
             }
         }
@@ -734,6 +768,7 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
                 value = !value;
             }
             State[number] = value;
+            Connections[number].Unset();
             Connections[number].Set(value);
         }
 

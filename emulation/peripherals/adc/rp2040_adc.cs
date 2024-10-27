@@ -24,7 +24,7 @@ using Antmicro.Renode.Utilities.RESD;
 
 namespace Antmicro.Renode.Peripherals.Analog
 {
-  public class RP2040ADC : BasicDoubleWordPeripheral, IKnownSize
+  public class RP2040ADC : BasicDoubleWordPeripheral, IKnownSize, IBytePeripheral
   {
     public RP2040ADC(IMachine machine, RP2040Clocks clocks, RP2040Pads pads) : base(machine)
     {
@@ -41,8 +41,30 @@ namespace Antmicro.Renode.Peripherals.Analog
       this.samplingThread = machine.ObtainManagedThread(Sample, 1);
       this.samplingThread.Stop();
       this.pads = pads;
+      this.DMARequest = new GPIO();
       Reset();
       DefineRegisters();
+    }
+
+    public void WriteByte(long address, byte data)
+    {
+
+    }
+
+    public byte ReadByte(long address)
+    {
+      // adc may be accessed in byte mode with shifting to right
+      // that's why I can't use AllowedTranslation
+      if (address == 0x0c)
+      {
+        ushort ret = 0;
+        if (!fifo.TryDequeue(out ret))
+        {
+          fifoUnderflowed = true;
+        }
+        return (byte)ret;
+      }
+      return 0;
     }
 
     public void FeedVoltageSampleToChannel(int channel, string path)
@@ -109,6 +131,7 @@ namespace Antmicro.Renode.Peripherals.Analog
 
     public override void Reset()
     {
+      dreqEnabled = false;
       state = State.Waiting;
       time = 0;
       enabled = false;
@@ -173,20 +196,29 @@ namespace Antmicro.Renode.Peripherals.Analog
               {
                 fifoOverflowed = true;
               }
-              if (fifoShift)
-              {
-                fifo.Enqueue((ushort)((int)conversionResult >> 4));
-              }
               else
               {
-                fifo.Enqueue(conversionResult);
+                if (fifoShift)
+                {
+                  fifo.Enqueue((ushort)((int)conversionResult >> 4));
+                }
+                else
+                {
+                  fifo.Enqueue(conversionResult);
+                }
               }
+
               if (fifo.Count >= fifoThreshold)
               {
                 if (fifoIrqEnabled)
                 {
                   IRQ.Set(true);
                 }
+              }
+              if (dreqEnabled)
+              {
+                DMARequest.Set(false);
+                DMARequest.Set(true);
               }
             }
             if (trigger == Trigger.StartOnce)
@@ -377,7 +409,10 @@ namespace Antmicro.Renode.Peripherals.Analog
 
       Registers.RESULT.Define(this)
         .WithValueField(0, 12, FieldMode.Read,
-          valueProviderCallback: _ => conversionResult,
+          valueProviderCallback: _ =>
+          {
+            return conversionResult;
+          },
           name: "RESULT");
 
       Registers.FCS.Define(this)
@@ -390,9 +425,9 @@ namespace Antmicro.Renode.Peripherals.Analog
         .WithFlag(2, valueProviderCallback: _ => fifoError,
           writeCallback: (_, value) => fifoError = value,
           name: "ERR")
-        .WithFlag(3, valueProviderCallback: _ => fifoError,
-          writeCallback: (_, value) => fifoError = value,
-          name: "ERR")
+        .WithFlag(3, valueProviderCallback: _ => dreqEnabled,
+          writeCallback: (_, value) => dreqEnabled = value,
+          name: "DREQ")
         .WithReservedBits(4, 4)
         .WithFlag(8, FieldMode.Read, valueProviderCallback: _ => fifo.Count == 0,
           name: "EMPTY")
@@ -488,9 +523,11 @@ namespace Antmicro.Renode.Peripherals.Analog
     };
 
     public GPIO IRQ;
+    public GPIO DMARequest { get; }
 
     private RP2040Clocks clocks;
 
+    private bool dreqEnabled;
     private bool enabled;
     private bool temperatureSensorEnabled;
     private bool ready;

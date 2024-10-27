@@ -132,11 +132,16 @@ namespace Antmicro.Renode.Peripherals.DMA
 
     public void OnGPIO(int number, bool value)
     {
+      if (!value)
+      {
+        return;
+      }
       // find channel for DREQ
       foreach (var channel in channels)
       {
         if (channel.transferRequestSignal == number)
         {
+          channel.PacedTransfer(number);
         }
       }
     }
@@ -336,6 +341,7 @@ namespace Antmicro.Renode.Peripherals.DMA
         channelNumber = 0;
         chainTo = 0;
         InterruptRaised = false;
+        transferCounter = 0;
       }
 
       private enum Registers
@@ -379,7 +385,33 @@ namespace Antmicro.Renode.Peripherals.DMA
           this.Log(LogLevel.Debug, "Transfer rejected, channel: " + channelNumber + " not enabled!");
           return;
         }
-        RPXXXXDmaRequest request = CreateRequest();
+        if (transferRequestSignal != channelNumber)
+        {
+          this.Log(LogLevel.Debug, "Transfer waiting for trigger " + transferRequestSignal + " on channel " + channelNumber);
+          parent.channelFinished[channelNumber] = false;
+          return;
+        }
+
+        ProcessTransfer(false);
+      }
+
+      public void PacedTransfer(int dreq)
+      {
+        if (!Enabled)
+        {
+          this.Log(LogLevel.Debug, "Transfer rejected, channel: " + channelNumber + " not enabled!");
+          return;
+        }
+        if (dreq != transferRequestSignal || parent.channelFinished[channelNumber])
+        {
+          return;
+        }
+        ProcessTransfer(true);
+      }
+
+      private void ProcessTransfer(bool paced)
+      {
+        RPXXXXDmaRequest request = CreateRequest(paced);
         lock (parent.channelFinished)
         {
           parent.channelFinished[channelNumber] = false;
@@ -428,7 +460,19 @@ namespace Antmicro.Renode.Peripherals.DMA
             readAddress = (uint)response.response.ReadAddress.Value;
             writeAddress = (uint)response.response.WriteAddress.Value;
           }
-          parent.channelFinished[channelNumber] = true;
+
+          if (paced)
+          {
+            transferCounter++;
+            if (transferCounter == transferCount)
+            {
+              parent.channelFinished[channelNumber] = true;
+            }
+          }
+          else
+          {
+            parent.channelFinished[channelNumber] = true;
+          }
           if (!irqQuiet.Value)
           {
             // parent.machine.LocalTimeSource.ExecuteInNearestSyncedState(_ => IRQ.Set());
@@ -439,8 +483,7 @@ namespace Antmicro.Renode.Peripherals.DMA
           }
         }
       }
-
-      private RPXXXXDmaRequest CreateRequest()
+      private RPXXXXDmaRequest CreateRequest(bool paced = false)
       {
         TransferType transferType = TransferType.Byte;
         switch (dataSize.Value)
@@ -457,7 +500,12 @@ namespace Antmicro.Renode.Peripherals.DMA
               break;
             }
         }
-        var request = new Request(readAddress, writeAddress, (int)transferCount * (int)transferType, transferType, transferType, incrementRead.Value, incrementWrite.Value);
+        int size = (int)transferType;
+        if (!paced)
+        {
+          size *= (int)transferCount;
+        }
+        var request = new Request(readAddress, writeAddress, size, transferType, transferType, incrementRead.Value, incrementWrite.Value);
         return new RPXXXXDmaRequest(request, ringSize == 0 ? 0 : 1 << ringSize, ringSelect.Value);
       }
 
@@ -475,7 +523,11 @@ namespace Antmicro.Renode.Peripherals.DMA
 
         registersMap[(long)Registers.TRANS_COUNT] = new DoubleWordRegister(this)
           .WithValueField(0, 32, valueProviderCallback: _ => transferCount,
-              writeCallback: (_, value) => transferCount = (uint)value);
+              writeCallback: (_, value) =>
+              {
+                transferCount = (uint)value;
+                transferCounter = 0;
+              });
 
         registersMap[(long)Registers.CTRL] = new DoubleWordRegister(this)
           .WithFlag(0, valueProviderCallback: _ => Enabled,
@@ -489,9 +541,10 @@ namespace Antmicro.Renode.Peripherals.DMA
           .WithFlag(10, out ringSelect, name: "RING_SEL")
           .WithValueField(11, 4, valueProviderCallback: _ => (ulong)chainTo,
             writeCallback: (_, value) => chainTo = (int)value, name: "CHAIN_TO")
-          .WithValueField(15, 5, valueProviderCallback: _ => (ulong)transferRequestSignal,
+          .WithValueField(15, 6, valueProviderCallback: _ => (ulong)transferRequestSignal,
             writeCallback: (_, value) =>
             {
+              this.Log(LogLevel.Error, "Setting TREQ: " + value);
               transferRequestSignal = (int)value;
             }, name: "TREQ_SEL")
           .WithFlag(21, out irqQuiet, name: "IRQ_QUIET")
@@ -537,6 +590,8 @@ namespace Antmicro.Renode.Peripherals.DMA
       private Dictionary<long, Registers> aliases;
       private RPDMA parent;
       private int channelNumber;
+
+      private int transferCounter;
 
     }
 

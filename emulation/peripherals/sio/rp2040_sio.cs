@@ -129,6 +129,9 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             fifoStatus = new FifoStatus[2];
             divider = new Divider[2];
             spinlocks = new int[32];
+            Core0IRQ = new GPIO();
+            Core1IRQ = new GPIO();
+            coreSynchronization = new object();
             for (int i = 0; i < 32; ++i)
             {
                 spinlocks[i] = 0;
@@ -288,11 +291,35 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                 .WithFlag(1, FieldMode.Read,
                     valueProviderCallback: _ => fifoStatus[OtherCpu()].Rdy,
                     name: "FIFO_ST_RDY")
-                .WithFlag(2, FieldMode.Read,
+                .WithFlag(2, FieldMode.Read | FieldMode.Write,
                     valueProviderCallback: _ => fifoStatus[OtherCpu()].Wof,
-                    name: "FIFO_ST_WOF")
-                .WithFlag(3, FieldMode.Read,
+                    writeCallback: (_, value) =>
+                    {
+                        fifoStatus[CurrentCpu()].Wof = false;
+                        if (CurrentCpu() == 0)
+                        {
+                            Core0IRQ.Set(false);
+                        }
+                        else
+                        {
+                            Core1IRQ.Set(false);
+                        }
+                    },
+                name: "FIFO_ST_WOF")
+                .WithFlag(3, FieldMode.Read | FieldMode.Write,
                     valueProviderCallback: _ => fifoStatus[CurrentCpu()].Roe,
+                    writeCallback: (_, value) =>
+                    {
+                        fifoStatus[CurrentCpu()].Roe = false;
+                        if (CurrentCpu() == 0)
+                        {
+                            Core0IRQ.Set(false);
+                        }
+                        else
+                        {
+                            Core1IRQ.Set(false);
+                        }
+                    },
                     name: "FIFO_ST_ROE")
                 .WithReservedBits(4, 28);
 
@@ -300,21 +327,27 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                 .WithValueField(0, 32, FieldMode.Read,
                     valueProviderCallback: _ =>
                     {
-                        var cpu = machine.SystemBus.GetCurrentCPU();
-                        var cpuId = machine.SystemBus.GetCPUSlot(cpu);
-
-                        if (cpuFifo[cpuId].Count != 0)
+                        lock (coreSynchronization)
                         {
-                            fifoStatus[cpuId].Roe = false;
-                            ulong ret = (ulong)cpuFifo[cpuId].Dequeue();
-                            if (cpuFifo[cpuId].Count == 0)
+                            var cpu = machine.SystemBus.GetCurrentCPU();
+                            var cpuId = machine.SystemBus.GetCPUSlot(cpu);
+                            if (cpuFifo[cpuId].Count != 0)
+                            {
+                                fifoStatus[cpuId].Roe = false;
+                                ulong ret = (ulong)cpuFifo[cpuId].Dequeue();
+                                if (cpuFifo[cpuId].Count == 0)
+                                {
+                                    fifoStatus[cpuId].Vld = false;
+                                }
+                                fifoStatus[cpuId].Rdy = true;
+                                return ret;
+                            }
+                            else
                             {
                                 fifoStatus[cpuId].Vld = false;
                             }
-                            fifoStatus[cpuId].Rdy = true;
-                            return ret;
+                            fifoStatus[cpuId].Roe = true;
                         }
-                        fifoStatus[cpuId].Roe = true;
                         return 0;
                     },
                     name: "FIFO_RD");
@@ -328,20 +361,31 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
 
                         long otherCpu = Convert.ToInt64(cpuId == 0);
 
-                        if (cpuFifo[otherCpu].Count < 7)
+                        lock (coreSynchronization)
                         {
-                            cpuFifo[otherCpu].Append((long)value);
-
-                            fifoStatus[otherCpu].Wof = false;
-                            fifoStatus[otherCpu].Vld = true;
-                            if (cpuFifo[otherCpu].Count == 7)
+                            if (cpuFifo[otherCpu].Count < 7)
                             {
-                                fifoStatus[otherCpu].Rdy = false;
+                                cpuFifo[otherCpu].Enqueue((long)value);
+
+                                fifoStatus[otherCpu].Wof = false;
+                                fifoStatus[otherCpu].Vld = true;
+                                if (cpuFifo[otherCpu].Count == 7)
+                                {
+                                    fifoStatus[otherCpu].Rdy = false;
+                                }
                             }
+                            else
+                            {
+                                fifoStatus[otherCpu].Wof = true;
+                            }
+                        }
+                        if (cpuId == 0)
+                        {
+                            Core1IRQ.Set(true);
                         }
                         else
                         {
-                            fifoStatus[otherCpu].Wof = true;
+                            Core0IRQ.Set(true);
                         }
                     }, name: "FIFO_WR");
 
@@ -472,9 +516,14 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                 }
             }
         }
+
+        public GPIO Core0IRQ { get; }
+        public GPIO Core1IRQ { get; }
+
         private int[] spinlocks;
         private IPeripheral gpioPeripheral;
         private RP2040GPIO gpio;
         private RP2040GPIO gpioQspi;
+        private object coreSynchronization;
     }
 }

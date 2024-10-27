@@ -92,6 +92,11 @@ With value necessary for your needs.
 
 You can check example usages inside tests/pio/pio_blink/pio_blink.resc or tests/adc/adc_console/adc_console.resc.
 
+# Renode Version
+
+This respository is highly coupled with Renode version. 
+Use this repository with Renode **1.15.3**
+
 # Testing 
 I am testing simulator code using official pico-examples. Tests in use are: 
 

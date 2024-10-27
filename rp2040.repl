@@ -21,7 +21,7 @@ cpu1: CPU.CortexM @ sysbus
     id: 1
     nvic: nvic1
     init:
-        IsHalted true
+        IsHalted false 
 
 nvic0: IRQControllers.NVIC @ sysbus new Bus.BusPointRegistration {
         address: 0xe000e000;
@@ -205,6 +205,9 @@ sio: Miscellaneous.RP2040SIO @ sysbus 0xd0000000 {
     gpio: gpio;
     gpioQspi: gpio_qspi
 }
+sio:
+    Core0IRQ -> nvic0@15
+    Core1IRQ -> nvic1@16
 
 spi0: SPI.PL022 @ sysbus 0x4003c000 {
     gpio: gpio;
@@ -307,6 +310,9 @@ adc: Analog.RP2040ADC @ sysbus 0x4004c000 {
     clocks: clocks;
     pads: pads
 }
+adc: 
+    DMARequest -> dma@36
+
 
 adc_xor_alias: Memory.RP2040XorRegisterAlias @ sysbus 0x4004d000 {
     originalAddress: 0x4004c000

@@ -251,6 +251,7 @@ namespace Antmicro.Renode.Peripherals.CPU
         [Export]
         protected virtual void GpioPinWriteBitset(uint bitset, uint bitmap)
         {
+            this.Log(LogLevel.Error, "Set bitset: " + bitset + " bitmap: " + bitmap);
             this.gpio.SetGpioBitset(bitset, gpioFunction, bitmap);
         }
 
