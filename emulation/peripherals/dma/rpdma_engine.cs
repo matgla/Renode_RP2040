@@ -21,16 +21,18 @@ namespace Antmicro.Renode.Peripherals.DMA
 
   public struct RPXXXXDmaRequest 
   {
-    public RPXXXXDmaRequest(Request request, int ringSize, bool ringWrite)
+    public RPXXXXDmaRequest(Request request, int ringSize, bool ringWrite, int offset)
       : this()
     {
       this.request = request;
       this.ringSize = ringSize;
       this.ringWrite = ringWrite;
+      this.offset = offset;
     }
     public Request request;
     public int ringSize;
     public bool ringWrite;
+    public int offset;
   }
 
   public struct ChecksumRequest
@@ -73,6 +75,28 @@ namespace Antmicro.Renode.Peripherals.DMA
       var readLengthInBytes = (int)request.request.ReadTransferType;
       var writeLengthInBytes = (int)request.request.WriteTransferType;
 
+      ulong readOffset = 0;
+      ulong writeOffset = 0;
+      if (request.request.IncrementReadAddress)
+      {
+        readOffset = (ulong)request.offset;
+        if (!request.ringWrite && request.ringSize != 0)
+        {
+          readOffset = readOffset % (ulong)request.ringSize;
+        }
+      }
+
+      if (request.request.IncrementWriteAddress)
+      {
+        writeOffset = (ulong)request.offset;
+        if (request.ringWrite && request.ringSize != 0)
+        {
+          writeOffset = writeOffset % (ulong)request.ringSize;
+        }
+      }
+      writeOffset *= (ulong)writeLengthInBytes;
+      readOffset *= (ulong)readLengthInBytes;
+
       // some sanity checks
       if ((request.request.Size % readLengthInBytes) != 0 || (request.request.Size % writeLengthInBytes) != 0)
       {
@@ -96,7 +120,7 @@ namespace Antmicro.Renode.Peripherals.DMA
           // Transfer Units |  1  |  2  |  3  |  4  |
           // Source         |  A  |  B  |  C  |  D  |
           // Copied         |  A  |  B  |  C  |  D  |
-          response.ReadAddress += (ulong)ReadFromMemory(sourceAddress, buffer, request.request.Size, context: context, request.ringWrite == false ? request.ringSize : 0);
+          response.ReadAddress += (ulong)ReadFromMemory(sourceAddress + readOffset, buffer, request.request.Size, context: context, request.ringWrite == false ? request.ringSize : 0);
         }
         else
         {
@@ -104,7 +128,7 @@ namespace Antmicro.Renode.Peripherals.DMA
           // Transfer Units |  1  |  2  |  3  |  4  |
           // Source         |  A  |  B  |  C  |  D  |
           // Copied         |  D  |     |     |     |
-          sysbus.ReadBytes(sourceAddress, readLengthInBytes, buffer, 0, context: context);
+          sysbus.ReadBytes(sourceAddress + readOffset, readLengthInBytes, buffer, 0, context: context);
         }
       }
       else if (whatIsAtSource != null)
@@ -114,7 +138,7 @@ namespace Antmicro.Renode.Peripherals.DMA
         var offset = 0UL;
         while (transferred < request.request.Size)
         {
-          var readAddress = sourceAddress + offset;
+          var readAddress = sourceAddress + offset + readOffset;
           switch (request.request.ReadTransferType)
           {
             case TransferType.Byte:
@@ -219,7 +243,7 @@ namespace Antmicro.Renode.Peripherals.DMA
             // Transfer Units |  1  |  2  |  3  |  4  |
             // Source         |  A  |  B  |  C  |  D  |
             // Destination    |  A  |  B  |  C  |  D  |
-            WriteToMemory(destinationAddress, buffer, context, request.ringWrite == true ? request.ringSize : 0);
+            WriteToMemory(destinationAddress + writeOffset, buffer, context, request.ringWrite == true ? request.ringSize : 0);
           }
           else
           {
@@ -238,7 +262,7 @@ namespace Antmicro.Renode.Peripherals.DMA
                 // write just what left till full ring
                 size = (ulong)request.ringSize - chunkStartOffset % (ulong)request.ringSize;
               }
-              sysbus.WriteBytes(chunk, writeAddress, (long)size, false, context: context);
+              sysbus.WriteBytes(chunk, writeAddress + writeOffset, (long)size, false, context: context);
               chunkStartOffset += size;
             }
           }
@@ -259,14 +283,14 @@ namespace Antmicro.Renode.Peripherals.DMA
           // Destination    |  D  |     |     |     |
           var skipCount = (request.request.Size == writeLengthInBytes) ? 0 : request.request.Size - writeLengthInBytes;
           DebugHelper.Assert((skipCount + request.request.Size) <= buffer.Length);
-          sysbus.WriteBytes(buffer.Skip(skipCount).ToArray(), destinationAddress, context: context);
+          sysbus.WriteBytes(buffer.Skip(skipCount).ToArray(), destinationAddress + writeOffset, context: context);
         }
       }
       else if (whatIsAtDestination != null)
       {
         // Write to peripheral
         var transferred = 0;
-        var offset = 0UL;
+        var offset = 0UL + writeOffset;
         while (transferred < request.request.Size)
         {
           switch (request.request.WriteTransferType)
@@ -337,7 +361,7 @@ namespace Antmicro.Renode.Peripherals.DMA
       {
         int chunkSize = size - transferred > ringSize ? ringSize : size - transferred; 
         var chunk = new byte[chunkSize];
-        Array.Copy(buffer, transferred, chunk, transferred, chunkSize); 
+        Array.Copy(buffer, transferred, chunk, 0, chunkSize); 
         sysbus.WriteBytes(chunk, destinationAddress, context: context);
         transferred += chunkSize;
       }

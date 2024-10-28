@@ -15,7 +15,7 @@ using Antmicro.Renode.Core.Structure.Registers;
 namespace Antmicro.Renode.Peripherals.UART
 {
     [AllowedTranslations(AllowedTranslation.ByteToDoubleWord | AllowedTranslation.WordToDoubleWord)]
-    public class RP2040Uart: UARTBase, IDoubleWordPeripheral, IKnownSize, IProvidesRegisterCollection<DoubleWordRegisterCollection>
+    public class RP2040Uart : UARTBase, IDoubleWordPeripheral, IKnownSize, IProvidesRegisterCollection<DoubleWordRegisterCollection>
     {
         public RP2040Uart(IMachine machine, uint fifoSize = 1, uint frequency = 24000000) : base(machine)
         {
@@ -29,6 +29,9 @@ namespace Antmicro.Renode.Peripherals.UART
             interruptMasks = new bool[InterruptsCount];
 
             RegistersCollection = new DoubleWordRegisterCollection(this);
+            dreqGenerator = machine.ObtainManagedThread(TriggerTxDreq, 1000);
+            dreqGeneratorEnabled = false;
+            dreqGenerator.Stop();
             DefineRegisters();
 
             Reset();
@@ -36,7 +39,7 @@ namespace Antmicro.Renode.Peripherals.UART
 
         public uint ReadDoubleWord(long offset)
         {
-            lock(innerLock)
+            lock (innerLock)
             {
                 return RegistersCollection.Read(offset);
             }
@@ -45,7 +48,7 @@ namespace Antmicro.Renode.Peripherals.UART
         public override void Reset()
         {
             base.Reset();
-            lock(innerLock)
+            lock (innerLock)
             {
                 RegistersCollection.Reset();
 
@@ -56,12 +59,14 @@ namespace Antmicro.Renode.Peripherals.UART
                 System.Array.ForEach(interruptRawStatuses, status => status = false);
                 System.Array.ForEach(interruptMasks, mask => mask = false);
                 UpdateInterrupts();
+                dreqGenerator.Stop();
+                dreqGeneratorEnabled = false;
             }
         }
 
         public void WriteDoubleWord(long offset, uint value)
         {
-            lock(innerLock)
+            lock (innerLock)
             {
                 RegistersCollection.Write(offset, value);
             }
@@ -71,7 +76,7 @@ namespace Antmicro.Renode.Peripherals.UART
         {
             get
             {
-                var divisor = 16 * (integerBaudRate.Value + (fractionalBaudRate.Value / 64));
+                var divisor = 16 * (integerBaudRate + (fractionalBaudRate / 64));
                 return (divisor > 0) ? (uartClockFrequency / (uint)divisor) : 0;
             }
         }
@@ -84,13 +89,13 @@ namespace Antmicro.Renode.Peripherals.UART
         {
             get
             {
-                if(!parityEnable.Value)
+                if (!parityEnable.Value)
                 {
                     return Parity.None;
                 }
                 else
                 {
-                    if(!evenParitySelect.Value)
+                    if (!evenParitySelect.Value)
                     {
                         return stickParitySelect.Value ? Parity.Forced1 : Parity.Odd;
                     }
@@ -108,6 +113,10 @@ namespace Antmicro.Renode.Peripherals.UART
 
         public override Bits StopBits => twoStopBitsSelect.Value ? Bits.Two : Bits.One;
 
+        protected void TriggerTxDreq()
+        {
+            DMATransmitRequest.Toggle();
+        }
         protected override void CharWritten()
         {
             UpdateInterrupts();
@@ -129,7 +138,7 @@ namespace Antmicro.Renode.Peripherals.UART
 
         private bool AssertFlagEnabled(IFlagRegisterField flag, string errorMessage)
         {
-            if(!flag.Value)
+            if (!flag.Value)
             {
                 return false;
             }
@@ -160,7 +169,7 @@ namespace Antmicro.Renode.Peripherals.UART
                 .WithFlag(0, out uartEnable, name: "UARTEN - UART enable",
                     changeCallback: (_, value) =>
                     {
-                        if(value)
+                        if (value)
                         {
                             // Documentation states that the Transmit interrupt should be only set upon
                             // crossing the threshold and enabling/disabling FIFO, but some software
@@ -225,17 +234,52 @@ namespace Antmicro.Renode.Peripherals.UART
                 ;
 
             Registers.IntegerBaudRate.Define(this)
-                .WithValueField(0, 16, out integerBaudRate, name: "BAUD DIVINT - The integer baud rate divisor.")
+                .WithValueField(0, 16, valueProviderCallback: _ => integerBaudRate,
+                    writeCallback: (_, value) =>
+                    {
+                        integerBaudRate = value;
+                        dreqGenerator.Stop();
+                        dreqGenerator.Frequency = BaudRate / 8;
+                        if (dreqGeneratorEnabled)
+                        {
+                            dreqGenerator.Start();
+                        }
+
+                    }, name: "BAUD DIVINT - The integer baud rate divisor.")
                 ;
 
             Registers.FractionalBaudRate.Define(this)
-                .WithValueField(0, 6, out fractionalBaudRate, name: "BAUD DIVFRAC - The fractional baud rate divisor")
+                .WithValueField(0, 6, valueProviderCallback: _ => fractionalBaudRate,
+                    writeCallback: (_, value) =>
+                    {
+                        fractionalBaudRate = value;
+                        dreqGenerator.Stop();
+                        dreqGenerator.Frequency = BaudRate / 8;
+                        if (dreqGeneratorEnabled)
+                        {
+                            dreqGenerator.Start();
+                        }
+                    }, name: "BAUD DIVFRAC - The fractional baud rate divisor")
                 .WithReservedBits(6, 10)
                 ;
 
             Registers.DMAControl.Define(this)
                 .WithFlag(0, out dmaRxEnable, name: "RXDMAE - Receive DMA enable")
-                .WithFlag(1, out dmaTxEnable, name: "TXDMAE - Transmit DMA enable")
+                .WithFlag(1, FieldMode.Read | FieldMode.Write,
+                    valueProviderCallback: _ => dreqGeneratorEnabled,
+                    writeCallback: (_, value) =>
+                    {
+                        dreqGeneratorEnabled = value;
+                        if (value)
+                        {
+                            dreqGenerator.Start();
+                        }
+                        else
+                        {
+                            dreqGenerator.Stop();
+                        }
+                    },
+                     name: "TXDMAE - Transmit DMA enable")
                 .WithTaggedFlag("DMAONERR - DMA on error", 2)
                 .WithReservedBits(3, 13)
                 ;
@@ -248,7 +292,7 @@ namespace Antmicro.Renode.Peripherals.UART
                 ;
 
             Registers.InterruptClear.Define(this)
-                .WithFlags(0, 11, FieldMode.Write, writeCallback: (interrupt, _, newValue) => { if(newValue) ClearInterrupt(interrupt); })
+                .WithFlags(0, 11, FieldMode.Write, writeCallback: (interrupt, _, newValue) => { if (newValue) ClearInterrupt(interrupt); })
                 .WithReservedBits(11, 5)
                 ;
 
@@ -282,7 +326,7 @@ namespace Antmicro.Renode.Peripherals.UART
         private byte ReadDataRegister()
         {
             // DATA register can be read to check errors so reading from an empty queue isn't a problem.
-            if(TryGetCharacter(out byte character))
+            if (TryGetCharacter(out byte character))
             {
                 WarnIfWordLengthIncorrect();
                 UpdateInterrupts();
@@ -293,7 +337,7 @@ namespace Antmicro.Renode.Peripherals.UART
         private void UpdateReceiveInterruptTriggerPoint()
         {
             var levelSelect = receiveInterruptFifoLevelSelect.Value;
-            switch(levelSelect)
+            switch (levelSelect)
             {
                 case 0b000: receiveInterruptTriggerPoint = 1d / 8d * receiveFifoSize; break;
                 case 0b001: receiveInterruptTriggerPoint = 1d / 4d * receiveFifoSize; break;
@@ -318,7 +362,7 @@ namespace Antmicro.Renode.Peripherals.UART
 
         private void UpdateReceiveFifoSize()
         {
-            if(enableFifoBuffers.Value)
+            if (enableFifoBuffers.Value)
             {
                 receiveFifoSize = hardwareFifoSize;
                 this.Log(LogLevel.Debug, "FIFO buffers enabled.");
@@ -335,7 +379,7 @@ namespace Antmicro.Renode.Peripherals.UART
 
         private void WarnIfWordLengthIncorrect()
         {
-            if(wordLength.Value != WordLength.EightBits && wordLength.Value != WordLength.SevenBits)
+            if (wordLength.Value != WordLength.EightBits && wordLength.Value != WordLength.SevenBits)
             {
                 this.Log(LogLevel.Warning, "DATA read or written while {0}-bit word length is set (WLEN={1}). Only 7-bit and 8-bit words are fully supported.",
                     wordLength.Value == WordLength.FiveBits ? "5" : "6", (uint)wordLength.Value);
@@ -344,23 +388,17 @@ namespace Antmicro.Renode.Peripherals.UART
 
         private void WriteDataRegister(uint value)
         {
-            if(!AssertFlagEnabled(uartEnable, "DATA register cannot be written to; UARTEN is disabled!")
+            if (!AssertFlagEnabled(uartEnable, "DATA register cannot be written to; UARTEN is disabled!")
                 || !AssertFlagEnabled(transmitEnable, "DATA register cannot be written to; TXE is disabled!"))
             {
                 return;
             }
             WarnIfWordLengthIncorrect();
 
-            if(!loopbackEnable.Value)
+            if (!loopbackEnable.Value)
             {
                 TransmitCharacter((byte)value);
                 // we finished write, so we can request next data portion 
-                if (dmaTxEnable.Value)
-                {
-                    DMATransmitRequest.Set(false);
-                    DMATransmitRequest.Set(true);
-                    // dmaTxEnable.Set(true);
-                }
             }
             interruptRawStatuses[(int)Interrupts.Transmit] = true;
             UpdateInterrupts();
@@ -374,8 +412,8 @@ namespace Antmicro.Renode.Peripherals.UART
 
         private IFlagRegisterField enableFifoBuffers;
         private IFlagRegisterField evenParitySelect;
-        private IValueRegisterField fractionalBaudRate;
-        private IValueRegisterField integerBaudRate;
+        private ulong fractionalBaudRate;
+        private ulong integerBaudRate;
         private IFlagRegisterField loopbackEnable;
         private IFlagRegisterField parityEnable;
         private IFlagRegisterField receiveEnable;
@@ -384,7 +422,6 @@ namespace Antmicro.Renode.Peripherals.UART
         private IFlagRegisterField transmitEnable;
         private IFlagRegisterField twoStopBitsSelect;
         private IFlagRegisterField uartEnable;
-        private IFlagRegisterField dmaTxEnable;
         private IFlagRegisterField dmaRxEnable;
         private IEnumRegisterField<WordLength> wordLength;
 
@@ -399,7 +436,8 @@ namespace Antmicro.Renode.Peripherals.UART
         private double receiveInterruptTriggerPoint;
 
         private const uint InterruptsCount = 11;
-
+        private IManagedThread dreqGenerator;
+        private bool dreqGeneratorEnabled;
         private enum Interrupts
         {
             ModemRingIndicator,
@@ -417,28 +455,28 @@ namespace Antmicro.Renode.Peripherals.UART
 
         private enum Registers : long
         {
-            Data                            = 0x000,
-            ReceiveStatus                   = 0x004, //aka ErrorClear
-            Flag                            = 0x018,
-            IrDALowPowerCounter             = 0x020,
-            IntegerBaudRate                 = 0x024,
-            FractionalBaudRate              = 0x028,
-            LineControl                     = 0x02c,
-            Control                         = 0x030,
-            InterruptFIFOLevel              = 0x034,
-            InterruptMask                   = 0x038,
-            RawInterruptStatus              = 0x03c,
-            MaskedInterruptStatus           = 0x040,
-            InterruptClear                  = 0x044,
-            DMAControl                      = 0x048,
-            UARTPeriphID0                   = 0xFE0,
-            UARTPeriphID1                   = 0xFE4,
-            UARTPeriphID2                   = 0xFE8,
-            UARTPeriphID3                   = 0xFEC,
-            UARTPCellID0                    = 0xFF0,
-            UARTPCellID1                    = 0xFF4,
-            UARTPCellID2                    = 0xFF8,
-            UARTPCellID3                    = 0xFFC
+            Data = 0x000,
+            ReceiveStatus = 0x004, //aka ErrorClear
+            Flag = 0x018,
+            IrDALowPowerCounter = 0x020,
+            IntegerBaudRate = 0x024,
+            FractionalBaudRate = 0x028,
+            LineControl = 0x02c,
+            Control = 0x030,
+            InterruptFIFOLevel = 0x034,
+            InterruptMask = 0x038,
+            RawInterruptStatus = 0x03c,
+            MaskedInterruptStatus = 0x040,
+            InterruptClear = 0x044,
+            DMAControl = 0x048,
+            UARTPeriphID0 = 0xFE0,
+            UARTPeriphID1 = 0xFE4,
+            UARTPeriphID2 = 0xFE8,
+            UARTPeriphID3 = 0xFEC,
+            UARTPCellID0 = 0xFF0,
+            UARTPCellID1 = 0xFF4,
+            UARTPCellID2 = 0xFF8,
+            UARTPCellID3 = 0xFFC
         }
 
         private enum WordLength

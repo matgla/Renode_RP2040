@@ -1,0 +1,312 @@
+From ef7fb9c26e64897bd39d9830f472f989f8922d66 Mon Sep 17 00:00:00 2001
+From: Mateusz Stadnik <matgla@live.com>
+Date: Mon, 28 Oct 2024 19:49:14 +0100
+Subject: [PATCH] added more extended DMA tests with ring usage
+
+---
+ dma/CMakeLists.txt                  |   2 +
+ dma/dreq_with_ring/CMakeLists.txt   |   8 ++
+ dma/dreq_with_ring/dreq_with_ring.c | 119 ++++++++++++++++++++++++++++
+ dma/ring_tests/CMakeLists.txt       |   8 ++
+ dma/ring_tests/ring_tests.c         | 118 +++++++++++++++++++++++++++
+ 5 files changed, 255 insertions(+)
+ create mode 100644 dma/dreq_with_ring/CMakeLists.txt
+ create mode 100644 dma/dreq_with_ring/dreq_with_ring.c
+ create mode 100644 dma/ring_tests/CMakeLists.txt
+ create mode 100644 dma/ring_tests/ring_tests.c
+
+diff --git a/dma/CMakeLists.txt b/dma/CMakeLists.txt
+index 556c396..02e9f21 100644
+--- a/dma/CMakeLists.txt
++++ b/dma/CMakeLists.txt
+@@ -2,6 +2,8 @@ if (TARGET hardware_dma)
+     add_subdirectory_exclude_platforms(channel_irq)
+     add_subdirectory_exclude_platforms(control_blocks)
+     add_subdirectory_exclude_platforms(hello_dma)
++    add_subdirectory_exclude_platforms(dreq_with_ring)
++    add_subdirectory_exclude_platforms(ring_tests)
+     add_subdirectory_exclude_platforms(sniff_crc)
+     add_subdirectory_exclude_platforms(sniff_crc16)
+     add_subdirectory_exclude_platforms(sniff_crc16r)
+diff --git a/dma/dreq_with_ring/CMakeLists.txt b/dma/dreq_with_ring/CMakeLists.txt
+new file mode 100644
+index 0000000..187c947
+--- /dev/null
++++ b/dma/dreq_with_ring/CMakeLists.txt
+@@ -0,0 +1,8 @@
++add_executable(dreq_with_ring
++    dreq_with_ring.c
++)
++
++target_link_libraries(dreq_with_ring pico_stdlib hardware_dma)
++
++# create map/bin/hex file etc.
++pico_add_extra_outputs(dreq_with_ring)
+diff --git a/dma/dreq_with_ring/dreq_with_ring.c b/dma/dreq_with_ring/dreq_with_ring.c
+new file mode 100644
+index 0000000..a1bca2a
+--- /dev/null
++++ b/dma/dreq_with_ring/dreq_with_ring.c
+@@ -0,0 +1,119 @@
++#include <stdio.h>
++#include <string.h>
++
++#include "pico/stdlib.h"
++#include "hardware/dma.h"
++#include "hardware/structs/uart.h"
++
++int main() {
++    stdio_init_all();
++    printf("DMA example with both DREQ and RING\n");
++    int chan = dma_claim_unused_channel(true);
++    dma_channel_config c = dma_channel_get_default_config(chan);
++    channel_config_set_transfer_data_size(&c, DMA_SIZE_8);
++    channel_config_set_read_increment(&c, true);
++    channel_config_set_write_increment(&c, true);
++    channel_config_set_dreq(&c, uart_get_dreq(uart_default, true));
++    channel_config_set_ring(&c, true, 3);
++
++    uint8_t from[100];
++    for (int i = 0; i < sizeof(from); ++i)
++    {
++        from[i] = i;
++    }
++    uint8_t to[16];
++    memset(to, 0, 16);
++    dma_channel_configure(
++        chan,
++        &c, 
++        to, 
++        from,
++        32,
++        true
++    );
++
++    while (!(dma_hw->intr & 1u << chan))
++    {
++        tight_loop_contents();
++    }
++    dma_hw->ints0 = 1u << chan;
++
++    printf("DMA finished, INTR: %x\n", dma_hw->intr);
++    printf("TO: [");
++    for (int i = 0; i < 16; ++i)
++    {
++        printf("%d, ", to[i]);
++    }
++    printf("]\n");
++    
++    printf("Ring from\n");
++    channel_config_set_ring(&c, false, 2);
++    dma_channel_configure(
++        chan,
++        &c, 
++        to, 
++        from,
++        16,
++        true
++    );
++
++    while (!(dma_hw->intr & 1u << chan))
++    {
++        tight_loop_contents();
++    }
++    dma_hw->ints0 = 1u << chan;
++
++    printf("DMA finished, INTR: %x\n", dma_hw->intr);
++    printf("TO: [");
++    for (int i = 0; i < 16; ++i)
++    {
++        printf("%d, ", to[i]);
++    }
++    printf("]\n");
++ 
++    printf("Ring to peripheral\n");
++
++    from[0] = 'a';
++    from[1] = 'b';
++    from[2] = 'c';
++    from[3] = 'd';
++    channel_config_set_ring(&c, false, 2);
++    channel_config_set_write_increment(&c, false);
++    dma_channel_configure(
++        chan,
++        &c, 
++        &uart_get_hw(uart_default)->dr, 
++        from,
++        16,
++        true
++    );
++
++    while (!(dma_hw->intr & 1u << chan))
++    {
++        tight_loop_contents();
++    }
++    dma_hw->ints0 = 1u << chan;
++    printf("\n");
++    printf("Ring on peripheral write\n");
++    channel_config_set_ring(&c, true, 1);
++    // should print just ac since increments by one byte before ring goes back
++    channel_config_set_write_increment(&c, true);
++    dma_channel_configure(
++        chan,
++        &c, 
++        &uart_get_hw(uart_default)->dr, 
++        from,
++        4,
++        true
++    );
++
++    while (!(dma_hw->intr & 1u << chan))
++    {
++        tight_loop_contents();
++    }
++    dma_hw->ints0 = 1u << chan;
++    printf("\nAll Done\n");
++
++
++
++}
+\ No newline at end of file
+diff --git a/dma/ring_tests/CMakeLists.txt b/dma/ring_tests/CMakeLists.txt
+new file mode 100644
+index 0000000..fbff54b
+--- /dev/null
++++ b/dma/ring_tests/CMakeLists.txt
+@@ -0,0 +1,8 @@
++add_executable(ring_tests
++    ring_tests.c
++)
++
++target_link_libraries(ring_tests pico_stdlib hardware_dma)
++
++# create map/bin/hex file etc.
++pico_add_extra_outputs(ring_tests)
+diff --git a/dma/ring_tests/ring_tests.c b/dma/ring_tests/ring_tests.c
+new file mode 100644
+index 0000000..9d0172e
+--- /dev/null
++++ b/dma/ring_tests/ring_tests.c
+@@ -0,0 +1,118 @@
++#include <stdio.h>
++#include <string.h>
++
++#include "pico/stdlib.h"
++#include "hardware/dma.h"
++#include "hardware/structs/uart.h"
++
++int main() {
++    stdio_init_all();
++    printf("DMA example with RING\n");
++    int chan = dma_claim_unused_channel(true);
++    dma_channel_config c = dma_channel_get_default_config(chan);
++    channel_config_set_transfer_data_size(&c, DMA_SIZE_8);
++    channel_config_set_read_increment(&c, true);
++    channel_config_set_write_increment(&c, true);
++    channel_config_set_ring(&c, true, 3);
++
++    uint8_t from[100];
++    for (int i = 0; i < sizeof(from); ++i)
++    {
++        from[i] = i;
++    }
++    uint8_t to[16];
++    memset(to, 0, 16);
++    dma_channel_configure(
++        chan,
++        &c, 
++        to, 
++        from,
++        32,
++        true
++    );
++
++    while (!(dma_hw->intr & 1u << chan))
++    {
++        tight_loop_contents();
++    }
++    dma_hw->ints0 = 1u << chan;
++
++    printf("DMA finished, INTR: %x\n", dma_hw->intr);
++    printf("TO: [");
++    for (int i = 0; i < 16; ++i)
++    {
++        printf("%d, ", to[i]);
++    }
++    printf("]\n");
++    
++    printf("Ring from\n");
++    channel_config_set_ring(&c, false, 2);
++    dma_channel_configure(
++        chan,
++        &c, 
++        to, 
++        from,
++        16,
++        true
++    );
++
++    while (!(dma_hw->intr & 1u << chan))
++    {
++        tight_loop_contents();
++    }
++    dma_hw->ints0 = 1u << chan;
++
++    printf("DMA finished, INTR: %x\n", dma_hw->intr);
++    printf("TO: [");
++    for (int i = 0; i < 16; ++i)
++    {
++        printf("%d, ", to[i]);
++    }
++    printf("]\n");
++ 
++    printf("Ring to peripheral\n");
++
++    from[0] = 'a';
++    from[1] = 'b';
++    from[2] = 'c';
++    from[3] = 'd';
++    channel_config_set_ring(&c, false, 2);
++    channel_config_set_write_increment(&c, false);
++    dma_channel_configure(
++        chan,
++        &c, 
++        &uart_get_hw(uart_default)->dr, 
++        from,
++        16,
++        true
++    );
++
++    while (!(dma_hw->intr & 1u << chan))
++    {
++        tight_loop_contents();
++    }
++    dma_hw->ints0 = 1u << chan;
++    printf("\n");
++    printf("Ring on peripheral write\n");
++    channel_config_set_ring(&c, true, 1);
++    // should print just ac since increments by one byte before ring goes back
++    channel_config_set_write_increment(&c, true);
++    dma_channel_configure(
++        chan,
++        &c, 
++        &uart_get_hw(uart_default)->dr, 
++        from,
++        4,
++        true
++    );
++
++    while (!(dma_hw->intr & 1u << chan))
++    {
++        tight_loop_contents();
++    }
++    dma_hw->ints0 = 1u << chan;
++    printf("\nAll Done\n");
++
++
++
++}
+\ No newline at end of file
+-- 
+2.44.0
+

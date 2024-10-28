@@ -32,10 +32,12 @@ namespace Antmicro.Renode.Peripherals.Analog
       this.fifo = new CircularBuffer<ushort>(fifoSize);
       this.sampleProvider = new SensorSamplesFifo<ScalarSample>[channelsCount];
       this.resdStream = new RESDStream<VoltageSample>[channelsCount];
+      this.defaultSample = new ScalarSample[channelsCount];
       for (int channel = 0; channel < channelsCount; ++channel)
       {
         sampleProvider[channel] = new SensorSamplesFifo<ScalarSample>();
         resdStream[channel] = null;
+        defaultSample[channel] = new ScalarSample(0);
       }
       clocks.OnAdcChange(UpdateFrequency);
       this.samplingThread = machine.ObtainManagedThread(Sample, 1);
@@ -77,6 +79,21 @@ namespace Antmicro.Renode.Peripherals.Analog
       sampleProvider[channel].FeedSamplesFromFile(path);
     }
 
+    public void SetOnboardTemperature(double temperature)
+    {
+      onboardTemperature = temperature;
+    }
+
+    public void SetDefaultVoltageOnChannel(int channel, double voltage)
+    {
+      if (channel < 0 || channel >= channelsCount)
+      {
+        this.Log(LogLevel.Error, "Provided sample for non-existing channel: " + channel);
+        return;
+      }
+      var sample = new ScalarSample((decimal)voltage);
+      defaultSample[channel] = sample;
+    }
     public void FeedVoltageSampleToChannel(int channel, decimal valueInV, uint repeat)
     {
       if (channel < 0 || channel >= channelsCount)
@@ -157,6 +174,8 @@ namespace Antmicro.Renode.Peripherals.Analog
       fifoIrqForced = false;
       running = false;
       samplingThread.Stop();
+
+      onboardTemperature = 25.5;
     }
 
     private void Sample()
@@ -217,8 +236,7 @@ namespace Antmicro.Renode.Peripherals.Analog
               }
               if (dreqEnabled)
               {
-                DMARequest.Set(false);
-                DMARequest.Set(true);
+                DMARequest.Toggle();
               }
             }
             if (trigger == Trigger.StartOnce)
@@ -245,11 +263,24 @@ namespace Antmicro.Renode.Peripherals.Analog
       {
         return 0;
       }
+
+      if (channel == 4)
+      {
+        double voltage = -0.001721 * (onboardTemperature - 27) + 0.706; 
+        return !temperatureSensorEnabled ? (ushort)0 : (ushort)Math.Round(((double)voltage/ this.pads.PadsVoltage * ((1 << 12))));
+      }
+
       double sample = 0;
       if (resdStream[channel] == null)
       {
-        sampleProvider[channel].TryDequeueNewSample();
-        sample = (double)sampleProvider[channel].Sample.Value;
+        if (sampleProvider[channel].TryDequeueNewSample())
+        {
+          sample = (double)sampleProvider[channel].Sample.Value;
+        }
+        else 
+        {
+          sample = (double)defaultSample[channel].Value;
+        }
       }
       else
       {
@@ -555,7 +586,8 @@ namespace Antmicro.Renode.Peripherals.Analog
     private bool fifoIrqForced;
 
     private const int channelsCount = 5;
-    private readonly SensorSamplesFifo<ScalarSample>[] sampleProvider;
+    private SensorSamplesFifo<ScalarSample>[] sampleProvider;
+    private ScalarSample[] defaultSample;
     private readonly IManagedThread samplingThread;
 
     private const int sampleTime = 96; // in cycles
@@ -573,5 +605,6 @@ namespace Antmicro.Renode.Peripherals.Analog
     private RP2040Pads pads;
     private bool running;
     private RESDStream<VoltageSample>[] resdStream;
+    private double onboardTemperature;
   }
 }

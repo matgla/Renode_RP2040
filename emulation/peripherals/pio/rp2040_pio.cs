@@ -164,19 +164,29 @@ namespace Antmicro.Renode.Peripherals.CPU
 
         public virtual uint ReadDoubleWord(long offset)
         {
-            return (uint)PioReadMemory(pioId, (uint)offset);
+            lock (this)
+            {
+                return (uint)PioReadMemory(pioId, (uint)offset);
+            }
         }
 
         public virtual void WriteDoubleWord(long offset, uint value)
         {
-            PioWriteMemory(pioId, (uint)offset, (uint)value);
+            lock(this)
+            { 
+                PioWriteMemory(pioId, (uint)offset, (uint)value);
+            }
         }
 
         public override void Dispose()
         {
+            lock(this)
+            {
+
             PioDeinitialize(pioId);
 
             base.Dispose();
+            }
             // [Here goes an invocation disposing the external simulator (if needed)]
             // [This can be used to clean all unmanaged resources used to communicate with the simulator]
         }
@@ -208,7 +218,10 @@ namespace Antmicro.Renode.Peripherals.CPU
             {
                 // [Here comes the invocation of the external simulator for the given amount of instructions]
                 // [This is the place where simulation of acutal instructions is to be executed]
+                lock (this)
+                { 
                 instructionsExecutedThisRound += (ulong)PioExecute(pioId, (uint)numberOfInstructionsToExecute);
+                }
             }
             catch (Exception)
             {

@@ -132,10 +132,7 @@ namespace Antmicro.Renode.Peripherals.DMA
 
     public void OnGPIO(int number, bool value)
     {
-      if (!value)
-      {
-        return;
-      }
+      this.Log(LogLevel.Noisy, "Got pace: " + number);
       // find channel for DREQ
       foreach (var channel in channels)
       {
@@ -385,13 +382,17 @@ namespace Antmicro.Renode.Peripherals.DMA
           this.Log(LogLevel.Debug, "Transfer rejected, channel: " + channelNumber + " not enabled!");
           return;
         }
-        if (transferRequestSignal != channelNumber)
+        if (transferRequestSignal != 0x3f)
         {
           this.Log(LogLevel.Debug, "Transfer waiting for trigger " + transferRequestSignal + " on channel " + channelNumber);
+          transferCounter = 0;
           parent.channelFinished[channelNumber] = false;
           return;
         }
-
+        if (transferRequestSignal >= 0x3b && transferRequestSignal <= 0x3e)
+        {
+          this.Log(LogLevel.Error, "TODO: DMA Timer triggers are not yet implemented!");
+        }
         ProcessTransfer(false);
       }
 
@@ -402,7 +403,7 @@ namespace Antmicro.Renode.Peripherals.DMA
           this.Log(LogLevel.Debug, "Transfer rejected, channel: " + channelNumber + " not enabled!");
           return;
         }
-        if (dreq != transferRequestSignal || parent.channelFinished[channelNumber])
+        if (dreq != transferRequestSignal || transferCounter >= transferCount)
         {
           return;
         }
@@ -411,9 +412,9 @@ namespace Antmicro.Renode.Peripherals.DMA
 
       private void ProcessTransfer(bool paced)
       {
-        RPXXXXDmaRequest request = CreateRequest(paced);
         lock (parent.channelFinished)
         {
+          RPXXXXDmaRequest request = CreateRequest(paced);
           parent.channelFinished[channelNumber] = false;
           if (sniffEnable.Value)
           {
@@ -457,8 +458,11 @@ namespace Antmicro.Renode.Peripherals.DMA
           else
           {
             var response = parent.engine.IssueCopy(request);
-            readAddress = (uint)response.response.ReadAddress.Value;
-            writeAddress = (uint)response.response.WriteAddress.Value;
+            if (!paced)
+            {
+              readAddress = (uint)response.response.ReadAddress.Value;
+              writeAddress = (uint)response.response.WriteAddress.Value;
+            }
           }
 
           if (paced)
@@ -475,9 +479,12 @@ namespace Antmicro.Renode.Peripherals.DMA
           }
           if (!irqQuiet.Value)
           {
-            // parent.machine.LocalTimeSource.ExecuteInNearestSyncedState(_ => IRQ.Set());
+            if (parent.channelFinished[channelNumber])
+            {
+              parent.machine.LocalTimeSource.ExecuteInNearestSyncedState(_ => InterruptRaised = true);
+            }
           }
-          if (chainTo != channelNumber)
+          if (chainTo != channelNumber && parent.channelFinished[channelNumber])
           {
             parent.machine.LocalTimeSource.ExecuteInNearestSyncedState(_ => this.parent.Trigger(chainTo));
           }
@@ -504,9 +511,10 @@ namespace Antmicro.Renode.Peripherals.DMA
         if (!paced)
         {
           size *= (int)transferCount;
+          transferCounter = 0;
         }
         var request = new Request(readAddress, writeAddress, size, transferType, transferType, incrementRead.Value, incrementWrite.Value);
-        return new RPXXXXDmaRequest(request, ringSize == 0 ? 0 : 1 << ringSize, ringSelect.Value);
+        return new RPXXXXDmaRequest(request, ringSize == 0 ? 0 : 1 << ringSize, ringSelect.Value, transferCounter);
       }
 
       private DoubleWordRegisterCollection CreateRegisters()

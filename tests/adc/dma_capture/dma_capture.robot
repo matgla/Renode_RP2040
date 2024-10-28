@@ -30,16 +30,35 @@ Run successfully 'dma_capture' example
     END
 
     Log    Before: ${allSamples}
-    ${allSamples}    Remove Leading Zeros    ${allSamples}
-    Log    List Without Leading Zeros: ${allSamples}
-
-
-*** Keywords ***
-Remove Leading Zeros
-    [Arguments]    ${list}
-    ${index}    Get Length    ${list}
+    ${index}    Get Length    ${allSamples}
     FOR    ${element}    IN RANGE    ${index}
-        IF    '${list}[${element}]' != '0'
-            RETURN    Slice List    ${list}    ${element}
+        IF    '${allSamples}[${element}]' != '0'
+            ${allSamples}     Get Slice From List      ${allSamples}    ${element}
+            BREAK
         END
+    END
+
+    Log    List Without Leading Zeros: ${allSamples}
+    ${i}    Set Variable     0
+    ${raising}        Set Variable    True 
+
+    FOR    ${element}    IN    @{allSamples}
+        Log    ${element}
+        IF    ${raising} == True 
+            IF   ${i} < 31 
+                ${i}    Evaluate     ${i} + 1  
+            ELSE
+                ${raising}       Set Variable    False
+            END 
+        ELSE
+            IF     ${i} > 0 
+                ${i}    Evaluate    ${i} - 1
+            ELSE 
+                ${raising}      Set Variable     True 
+            END
+        END
+        ${expected}=     Evaluate      round((${i}/ 31) * 255, 0)
+        Log    Expected: ${expected} -> ${element}
+        ${delta}      Evaluate     abs(${expected}-${element})
+        Should Be True        ${delta} < 2 
     END
