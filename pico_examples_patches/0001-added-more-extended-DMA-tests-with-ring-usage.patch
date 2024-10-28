@@ -1,4 +1,4 @@
-From ef7fb9c26e64897bd39d9830f472f989f8922d66 Mon Sep 17 00:00:00 2001
+From a683fe8cffc3a424271790f7f4f3b41ac4c1c848 Mon Sep 17 00:00:00 2001
 From: Mateusz Stadnik <matgla@live.com>
 Date: Mon, 28 Oct 2024 19:49:14 +0100
 Subject: [PATCH] added more extended DMA tests with ring usage
@@ -6,10 +6,10 @@ Subject: [PATCH] added more extended DMA tests with ring usage
 ---
  dma/CMakeLists.txt                  |   2 +
  dma/dreq_with_ring/CMakeLists.txt   |   8 ++
- dma/dreq_with_ring/dreq_with_ring.c | 119 ++++++++++++++++++++++++++++
+ dma/dreq_with_ring/dreq_with_ring.c | 173 ++++++++++++++++++++++++++++
  dma/ring_tests/CMakeLists.txt       |   8 ++
- dma/ring_tests/ring_tests.c         | 118 +++++++++++++++++++++++++++
- 5 files changed, 255 insertions(+)
+ dma/ring_tests/ring_tests.c         | 168 +++++++++++++++++++++++++++
+ 5 files changed, 359 insertions(+)
  create mode 100644 dma/dreq_with_ring/CMakeLists.txt
  create mode 100644 dma/dreq_with_ring/dreq_with_ring.c
  create mode 100644 dma/ring_tests/CMakeLists.txt
@@ -44,10 +44,10 @@ index 0000000..187c947
 +pico_add_extra_outputs(dreq_with_ring)
 diff --git a/dma/dreq_with_ring/dreq_with_ring.c b/dma/dreq_with_ring/dreq_with_ring.c
 new file mode 100644
-index 0000000..a1bca2a
+index 0000000..34a68ce
 --- /dev/null
 +++ b/dma/dreq_with_ring/dreq_with_ring.c
-@@ -0,0 +1,119 @@
+@@ -0,0 +1,173 @@
 +#include <stdio.h>
 +#include <string.h>
 +
@@ -162,9 +162,63 @@ index 0000000..a1bca2a
 +        tight_loop_contents();
 +    }
 +    dma_hw->ints0 = 1u << chan;
++
++    printf("\nRing to data from peripheral read\n");
++    channel_config_set_ring(&c, true, 2);
++    
++    channel_config_set_dreq(&c, uart_get_dreq(uart_default, false));
++    // should print just ac since increments by one byte before ring goes back
++    channel_config_set_write_increment(&c, true);
++    channel_config_set_read_increment(&c, false);
++    dma_channel_configure(
++        chan,
++        &c,
++        to,
++        &uart_get_hw(uart_default)->dr, 
++        8,
++        true
++    );
++
++    while (!(dma_hw->intr & 1u << chan))
++    {
++        tight_loop_contents();
++    }
++    dma_hw->ints0 = 1u << chan;
++    printf("Received data from uart: [");
++    for (int i = 0; i < 8; ++i)
++    {
++        printf("%d(%c), ", to[i], to[i]);
++    }
++    printf("]\n");
++
++    printf("Ring from peripheral read\n");
++    channel_config_set_ring(&c, false, 1);
++    // should print just ac since increments by one byte before ring goes back
++    channel_config_set_write_increment(&c, true);
++    channel_config_set_read_increment(&c, true);
++    channel_config_set_transfer_data_size(&c, DMA_SIZE_8);
++    dma_channel_configure(
++        chan,
++        &c,
++        to,
++        &uart_get_hw(uart_default)->dr, 
++        4,
++        true
++    );
++
++    while (!(dma_hw->intr & 1u << chan))
++    {
++        tight_loop_contents();
++    }
++    dma_hw->ints0 = 1u << chan;
++    printf("Received data from uart: [");
++    for (int i = 0; i < 8; ++i)
++    {
++        printf("%d(%c), ", to[i], to[i]);
++    }
++    printf("]\n");
++
 +    printf("\nAll Done\n");
-+
-+
 +
 +}
 \ No newline at end of file
@@ -184,10 +238,10 @@ index 0000000..fbff54b
 +pico_add_extra_outputs(ring_tests)
 diff --git a/dma/ring_tests/ring_tests.c b/dma/ring_tests/ring_tests.c
 new file mode 100644
-index 0000000..9d0172e
+index 0000000..e628f9e
 --- /dev/null
 +++ b/dma/ring_tests/ring_tests.c
-@@ -0,0 +1,118 @@
+@@ -0,0 +1,168 @@
 +#include <stdio.h>
 +#include <string.h>
 +
@@ -301,10 +355,60 @@ index 0000000..9d0172e
 +        tight_loop_contents();
 +    }
 +    dma_hw->ints0 = 1u << chan;
++
++
++    printf("\nRing to data from peripheral read\n");
++    channel_config_set_ring(&c, true, 2);
++    // should print just ac since increments by one byte before ring goes back
++    channel_config_set_write_increment(&c, true);
++    dma_channel_configure(
++        chan,
++        &c,
++        to,
++        &uart_get_hw(uart_default)->dr, 
++        8,
++        true
++    );
++
++    while (!(dma_hw->intr & 1u << chan))
++    {
++        tight_loop_contents();
++    }
++    dma_hw->ints0 = 1u << chan;
++    printf("Received data from uart: [");
++    for (int i = 0; i < 8; ++i)
++    {
++        printf("%d, ", to[i]);
++    }
++    printf("]\n");
++
++    printf("Ring from peripheral read\n");
++    channel_config_set_ring(&c, false, 2);
++    // should print just ac since increments by one byte before ring goes back
++    channel_config_set_write_increment(&c, true);
++    channel_config_set_transfer_data_size(&c, DMA_SIZE_32);
++    dma_channel_configure(
++        chan,
++        &c,
++        to,
++        &uart_get_hw(uart_default)->dmacr, 
++        4,
++        true
++    );
++
++    while (!(dma_hw->intr & 1u << chan))
++    {
++        tight_loop_contents();
++    }
++    dma_hw->ints0 = 1u << chan;
++    printf("Received data from uart: [");
++    for (int i = 0; i < 16; ++i)
++    {
++        printf("%d, ", to[i]);
++    }
++    printf("]\n");
++
 +    printf("\nAll Done\n");
-+
-+
-+
 +}
 \ No newline at end of file
 -- 

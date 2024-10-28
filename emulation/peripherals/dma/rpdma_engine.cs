@@ -319,6 +319,7 @@ namespace Antmicro.Renode.Peripherals.DMA
             if (request.ringSize != 0 && request.ringWrite == true && (offset % (ulong)request.ringSize == 0))
             {
               response.WriteAddress -= (ulong)request.ringSize;
+              offset = writeOffset;
             }
           }
         }

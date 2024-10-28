@@ -14,7 +14,7 @@ using Antmicro.Renode.Core.Structure.Registers;
 
 namespace Antmicro.Renode.Peripherals.UART
 {
-    [AllowedTranslations(AllowedTranslation.ByteToDoubleWord | AllowedTranslation.WordToDoubleWord)]
+    [AllowedTranslations(AllowedTranslation.ByteToDoubleWord | AllowedTranslation.WordToDoubleWord | AllowedTranslation.DoubleWordToByte)]
     public class RP2040Uart : UARTBase, IDoubleWordPeripheral, IKnownSize, IProvidesRegisterCollection<DoubleWordRegisterCollection>
     {
         public RP2040Uart(IMachine machine, uint fifoSize = 1, uint frequency = 24000000) : base(machine)
@@ -36,7 +36,13 @@ namespace Antmicro.Renode.Peripherals.UART
 
             Reset();
         }
-
+        private void TriggerDREQ()
+        {
+            if (Count > 0 && dmaRxEnable.Value)
+            {
+                DMAReceiveRequest.Toggle();    
+            }
+        }
         public uint ReadDoubleWord(long offset)
         {
             lock (innerLock)
@@ -120,6 +126,7 @@ namespace Antmicro.Renode.Peripherals.UART
         protected override void CharWritten()
         {
             UpdateInterrupts();
+            TriggerDREQ();
         }
 
         protected override bool IsReceiveEnabled

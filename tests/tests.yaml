@@ -20,6 +20,8 @@
 - tests/dma/sniff_crc32/sniff_crc32.robot
 - tests/dma/sniff_even/sniff_even.robot
 - tests/dma/sniff_sum/sniff_sum.robot
+- tests/dma/dreq_with_ring/dreq_with_ring.robot
+- tests/dma/ring_tests/ring_tests.robot
 - tests/hello_world/serial/hello_serial.robot
 - tests/multicore/hello_multicore/hello_multicore.robot
 - tests/multicore/multicore_fifo_irqs/multicore_fifo_irqs.robot

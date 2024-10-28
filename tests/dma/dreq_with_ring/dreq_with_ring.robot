@@ -25,6 +25,13 @@ Run successfully 'dreq_with_ring' example
     ${l}    Wait For Next Line On Uart      timeout=1
     LOG   ${l.line}
     Should Be Equal As Strings   ${l.line}   ac
+    Wait For Line On Uart       Ring to data from peripheral read     timeout=1
+    Write To Uart               abcdefgh    
+    Wait For Line On Uart       Received data from uart: [101(e), 102(f), 103(g), 104(h), 0()         timeout=1
+    Wait For Line On Uart       Ring from peripheral read      timeout=1
+    Write To Uart               xyzw
+    ${l}    Wait For Next Line On Uart      timeout=1
+    Should Be Equal As Strings   ${l.line}      Received data from uart: [120(x), 0(), 122(z), 0(), 0(), 1(), 2(), 3(), ]      timeout=1
     Wait For Line On Uart       All Done     timeout=1
 
 
