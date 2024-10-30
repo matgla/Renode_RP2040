@@ -48,7 +48,7 @@ namespace Antmicro.Renode.Peripherals.Timers
             }
         }
     }
-    public class RP2040Timer : BasicDoubleWordPeripheral, IKnownSize
+    public class RP2040Timer : RP2040PeripheralBase, IKnownSize
     {
         private enum Registers
         {
@@ -66,7 +66,7 @@ namespace Antmicro.Renode.Peripherals.Timers
         }
 
         Alarm[] alarms;
-        public RP2040Timer(Machine machine) : base(machine)
+        public RP2040Timer(Machine machine, ulong address) : base(machine, address)
         {
             IRQs = new GPIO[4];
             for (int i = 0; i < 4; ++i)
@@ -77,8 +77,6 @@ namespace Antmicro.Renode.Peripherals.Timers
             Reset();
             DefineRegisters();
         }
-        public long Size { get { return 0x1000; } }
-
         public GPIO[] IRQs { get; private set; }
         public GPIO IRQ0 => IRQs[0];
         public GPIO IRQ1 => IRQs[1];

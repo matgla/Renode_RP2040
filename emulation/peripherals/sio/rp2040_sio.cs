@@ -51,12 +51,11 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
     }
 
     [AllowedTranslations(AllowedTranslation.ByteToDoubleWord)]
-    public class RP2040SIO : BasicDoubleWordPeripheral, IKnownSize
+    public class RP2040SIO : RP2040PeripheralBase, IKnownSize
     {
         private Queue<long>[] cpuFifo;
         private FifoStatus[] fifoStatus;
         private Divider[] divider;
-        public long Size { get { return 0x1000; } }
 
         private enum Registers
         {
@@ -123,7 +122,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             SPINLOCK_31 = 0x17c,
         }
 
-        public RP2040SIO(Machine machine, RP2040GPIO gpio, RP2040GPIO gpioQspi) : base(machine)
+        public RP2040SIO(Machine machine, RP2040GPIO gpio, RP2040GPIO gpioQspi, ulong address) : base(machine, address)
         {
             cpuFifo = new Queue<long>[2];
             fifoStatus = new FifoStatus[2];

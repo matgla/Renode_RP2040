@@ -7,7 +7,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
     {
         public PowerOnInput(Machine machine)
         {
-            PowerOnLine = new bool();
+            PowerOnLine = false;
             this.machine = machine;
             Reset();
         }

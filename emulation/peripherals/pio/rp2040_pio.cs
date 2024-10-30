@@ -135,9 +135,45 @@ namespace Antmicro.Renode.Peripherals.CPU
             clocks.OnSystemClockChange(UpdateClocks);
         }
 
+        [ConnectionRegion("XOR")]
+        public virtual void WriteDoubleWordXor(long offset, uint value)
+        {
+            PioWriteMemory(pioId, (uint)offset, PioReadMemory(pioId, (uint)offset) ^ value);
+        }
+
+        [ConnectionRegion("SET")]
+        public virtual void WriteDoubleWordSet(long offset, uint value)
+        {
+            PioWriteMemory(pioId, (uint)offset, PioReadMemory(pioId, (uint)offset) | value);
+        }
+
+        [ConnectionRegion("CLEAR")]
+        public virtual void WriteDoubleWordClear(long offset, uint value)
+        {
+            PioWriteMemory(pioId, (uint)offset, PioReadMemory(pioId, (uint)offset) & (~value));
+        }
+
+        [ConnectionRegion("XOR")]
+        public virtual uint ReadDoubleWordXor(long offset)
+        {
+            return PioReadMemory(pioId, (uint)offset);
+        }
+
+        [ConnectionRegion("SET")]
+        public virtual uint ReadDoubleWordSet(long offset)
+        {
+            return PioReadMemory(pioId, (uint)offset);
+        }
+
+        [ConnectionRegion("CLEAR")]
+        public virtual uint ReadDoubleWordClear(long offset)
+        {
+            return PioReadMemory(pioId, (uint)offset);
+        }
+
         private void UpdateClocks(long systemClockFrequency)
         {
-            uint newPerformance = (uint)(systemClockFrequency / 1000000);
+            uint newPerformance = (uint)(systemClockFrequency);
             if (newPerformance == 0)
             {
                 newPerformance = 1;
@@ -175,20 +211,20 @@ namespace Antmicro.Renode.Peripherals.CPU
 
         public virtual void WriteDoubleWord(long offset, uint value)
         {
-            lock(this)
-            { 
+            lock (this)
+            {
                 PioWriteMemory(pioId, (uint)offset, (uint)value);
             }
         }
 
         public override void Dispose()
         {
-            lock(this)
+            lock (this)
             {
 
-            PioDeinitialize(pioId);
+                PioDeinitialize(pioId);
 
-            base.Dispose();
+                base.Dispose();
             }
             // [Here goes an invocation disposing the external simulator (if needed)]
             // [This can be used to clean all unmanaged resources used to communicate with the simulator]
@@ -222,8 +258,8 @@ namespace Antmicro.Renode.Peripherals.CPU
                 // [Here comes the invocation of the external simulator for the given amount of instructions]
                 // [This is the place where simulation of acutal instructions is to be executed]
                 lock (this)
-                { 
-                instructionsExecutedThisRound += (ulong)PioExecute(pioId, (uint)numberOfInstructionsToExecute);
+                {
+                    instructionsExecutedThisRound += (ulong)PioExecute(pioId, (uint)numberOfInstructionsToExecute);
                 }
             }
             catch (Exception)
@@ -303,7 +339,7 @@ namespace Antmicro.Renode.Peripherals.CPU
         private NativeBinder binder;
 
         public long Size { get { return 0x1000; } }
-        public const ulong aliasSize = 0x1000; 
+        public const ulong aliasSize = 0x1000;
         public const ulong xorAliasOffset = 0x1000;
         public const ulong setAliasOffset = 0x2000;
         public const ulong clearAliasOffset = 0x3000;

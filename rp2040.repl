@@ -53,17 +53,6 @@ piocpu0: CPU.RP2040PIOCPU @ sysbus
     id: 0
     clocks: clocks
 
-pio0_xor_alias: Memory.RP2040XorRegisterAlias @ sysbus 0x50201000 {
-    originalAddress: 0x50200000
-}
-pio0_bitmask_set_alias: Memory.RP2040BitmaskSetRegisterAlias @ sysbus 0x50202000 {
-    originalAddress: 0x50200000
-}
-pio0_bitmask_clear_alias: Memory.RP2040BitmaskClearRegisterAlias @ sysbus 0x50203000 {
-    originalAddress: 0x50200000
-}
-
-
 piocpu1: CPU.RP2040PIOCPU @ sysbus
     cpuType: "rp2040_pio"
     address: 0x50300000
@@ -71,17 +60,6 @@ piocpu1: CPU.RP2040PIOCPU @ sysbus
     PerformanceInMips: 1
     id: 1
     clocks: clocks
-
-pio1_xor_alias: Memory.RP2040XorRegisterAlias @ sysbus 0x50301000 {
-    originalAddress: 0x50300000
-}
-pio1_bitmask_set_alias: Memory.RP2040BitmaskSetRegisterAlias @ sysbus 0x50302000 {
-    originalAddress: 0x50300000
-}
-pio1_bitmask_clear_alias: Memory.RP2040BitmaskClearRegisterAlias @ sysbus 0x50303000 {
-    originalAddress: 0x50300000
-}
-
 
 // raspberrypi,rp2040 overlay
 
@@ -98,21 +76,12 @@ dwt: Miscellaneous.DWT @ sysbus 0xE0001000
     // according to 4.7.2 RP2040 Datasheet is 1MHz 
     frequency: 1000000 
 
-timer: Timers.RP2040Timer @ sysbus 0x40054000
+timer: Timers.RP2040Timer @  sysbus 0x40054000
+    address: 0x40054000
     IRQ0 -> nvic0@0
     IRQ1 -> nvic0@1
     IRQ2 -> nvic0@2
     IRQ3 -> nvic0@3
-
-timer_xor_alias: Memory.RP2040XorRegisterAlias @ sysbus 0x40055000 {
-    originalAddress: 0x40054000
-}
-timer_bitmask_set_alias: Memory.RP2040BitmaskSetRegisterAlias @ sysbus 0x40056000 {
-    originalAddress: 0x40054000
-}
-timer_bitmask_clear_alias: Memory.RP2040BitmaskClearRegisterAlias @ sysbus 0x40057000 {
-    originalAddress: 0x40054000
-}
 
 pll: Miscellaneous.RP2040PLL @ sysbus 0x40028000 {
     address: 0x40028000
@@ -149,7 +118,8 @@ poweron: Miscellaneous.PowerOnInput @ sysbus
 
 sio: Miscellaneous.RP2040SIO @ sysbus 0xd0000000 {
     gpio: gpio;
-    gpioQspi: gpio_qspi
+    gpioQspi: gpio_qspi;
+    address: 0xd0000000
 }
 sio:
     Core0IRQ -> nvic0@15
@@ -158,31 +128,15 @@ sio:
 spi0: SPI.PL022 @ sysbus 0x4003c000 {
     gpio: gpio;
     id: 0;
-    clocks: clocks
-}
-spi0_xor_alias: Memory.RP2040XorRegisterAlias @ sysbus 0x4003d000 {
-    originalAddress: 0x4003c000
-}
-spi0_bitmask_set_alias: Memory.RP2040BitmaskSetRegisterAlias @ sysbus 0x4003e000 {
-    originalAddress: 0x4003c000
-}
-spi0_bitmask_clear_alias: Memory.RP2040BitmaskClearRegisterAlias @ sysbus 0x4003f000 {
-    originalAddress: 0x4003c000
+    clocks: clocks;
+    address: 0x4003c000
 }
 
 spi1: SPI.PL022 @ sysbus 0x40040000 {
     gpio: gpio;
     id: 1;
-    clocks: clocks
-}
-spi1_xor_alias: Memory.RP2040XorRegisterAlias @ sysbus 0x40041000 {
-    originalAddress: 0x40040000
-}
-spi1_bitmask_set_alias: Memory.RP2040BitmaskSetRegisterAlias @ sysbus 0x40042000 {
-    originalAddress: 0x40040000
-}
-spi1_bitmask_clear_alias: Memory.RP2040BitmaskClearRegisterAlias @ sysbus 0x40043000 {
-    originalAddress: 0x40040000
+    clocks: clocks;
+    address: 0x40040000
 }
 
 xosc: Miscellaneous.RP2040XOSC @ sysbus 0x40024000 {
@@ -196,15 +150,7 @@ rosc: Miscellaneous.RP2040ROSC @ sysbus 0x40060000 {
 
 
 xip_ssi: SPI.RP2040XIPSSI @ sysbus 0x18000000
-xip_ssi_xor_alias: Memory.RP2040XorRegisterAlias @ sysbus 0x18001000 {
-    originalAddress: 0x18000000
-}
-xip_ssi_bitmask_set_alias: Memory.RP2040BitmaskSetRegisterAlias @ sysbus 0x18002000 {
-    originalAddress: 0x18000000
-}
-xip_ssi_bitmask_clear_alias: Memory.RP2040BitmaskClearRegisterAlias @ sysbus 0x18003000 {
-    originalAddress: 0x18000000
-}
+    address: 0x18000000
 
 pads: GPIOPort.RP2040Pads @ sysbus 0x4001c000 {
     gpio: gpio;

@@ -35,7 +35,7 @@ namespace Antmicro.Renode.Peripherals.UART
             dreqGeneratorEnabled = false;
             dreqGenerator.Stop();
 
-
+            machine.GetSystemBus(this).Register(this, new BusRangeRegistration(new Antmicro.Renode.Core.Range(address, (ulong)Size)));
             machine.GetSystemBus(this).Register(this, new BusMultiRegistration(address + xorAliasOffset, aliasSize, "XOR"));
             machine.GetSystemBus(this).Register(this, new BusMultiRegistration(address + setAliasOffset, aliasSize, "SET"));
             machine.GetSystemBus(this).Register(this, new BusMultiRegistration(address + clearAliasOffset, aliasSize, "CLEAR"));
@@ -83,18 +83,18 @@ namespace Antmicro.Renode.Peripherals.UART
 
         public long Size
         {
-          get { return 0x1000; }
+            get { return 0x1000; }
         }
 
-        public const ulong aliasSize = 0x1000; 
+        public const ulong aliasSize = 0x1000;
         public const ulong xorAliasOffset = 0x1000;
         public const ulong setAliasOffset = 0x2000;
         public const ulong clearAliasOffset = 0x3000;
-            private void TriggerDREQ()
+        private void TriggerDREQ()
         {
             if (Count > 0 && dmaRxEnable.Value)
             {
-                DMAReceiveRequest.Toggle();    
+                DMAReceiveRequest.Toggle();
             }
         }
         public uint ReadDoubleWord(long offset)

@@ -14,12 +14,14 @@ namespace Antmicro.Renode.Peripherals.SPI
   // Slave mode is not yet supported
   public class PL022 : NullRegistrationPointPeripheralContainer<ISPIPeripheral>, IDoubleWordPeripheral, IKnownSize, IGPIOReceiver
   {
-    public long Size
-    {
-      get { return 0x1000; }
-    }
+    public long Size { get { return 0x1000; } }
 
-    public PL022(IMachine machine, RP2040GPIO gpio, int id, RP2040Clocks clocks) : base(machine)
+    public const ulong aliasSize = 0x1000;
+    public const ulong xorAliasOffset = 0x1000;
+    public const ulong setAliasOffset = 0x2000;
+    public const ulong clearAliasOffset = 0x3000;
+
+    public PL022(IMachine machine, RP2040GPIO gpio, int id, RP2040Clocks clocks, ulong address) : base(machine)
     {
       this.id = id;
       this.gpio = gpio;
@@ -52,7 +54,48 @@ namespace Antmicro.Renode.Peripherals.SPI
       this.gpio.SubscribeOnFunctionChange(OnGpioFunctionSelect);
       clocks.OnPeripheralChange(UpdateFrequency);
       transmitCounter = 16;
+      machine.GetSystemBus(this).Register(this, new BusMultiRegistration(address + xorAliasOffset, aliasSize, "XOR"));
+      machine.GetSystemBus(this).Register(this, new BusMultiRegistration(address + setAliasOffset, aliasSize, "SET"));
+      machine.GetSystemBus(this).Register(this, new BusMultiRegistration(address + clearAliasOffset, aliasSize, "CLEAR"));
     }
+
+
+    [ConnectionRegion("XOR")]
+    public virtual void WriteDoubleWordXor(long offset, uint value)
+    {
+      registers.Write(offset, registers.Read(offset) ^ value);
+    }
+
+    [ConnectionRegion("SET")]
+    public virtual void WriteDoubleWordSet(long offset, uint value)
+    {
+      registers.Write(offset, registers.Read(offset) | value);
+    }
+
+    [ConnectionRegion("CLEAR")]
+    public virtual void WriteDoubleWordClear(long offset, uint value)
+    {
+      registers.Write(offset, registers.Read(offset) & (~value));
+    }
+
+    [ConnectionRegion("XOR")]
+    public virtual uint ReadDoubleWordXor(long offset)
+    {
+      return registers.Read(offset);
+    }
+
+    [ConnectionRegion("SET")]
+    public virtual uint ReadDoubleWordSet(long offset)
+    {
+      return registers.Read(offset);
+    }
+
+    [ConnectionRegion("CLEAR")]
+    public virtual uint ReadDoubleWordClear(long offset)
+    {
+      return registers.Read(offset);
+    }
+
 
     private void UpdateFrequency(long baseFrequency)
     {

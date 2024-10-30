@@ -12,17 +12,59 @@ namespace Antmicro.Renode.Peripherals.SPI
   // Slave mode is not yet supported
   public class RP2040XIPSSI : NullRegistrationPointPeripheralContainer<ISPIPeripheral>, IDoubleWordPeripheral, IKnownSize
   {
-    public long Size
-    {
-      get { return 0x1000; }
-    }
+    public long Size { get { return 0x1000; } }
 
-    public RP2040XIPSSI(IMachine machine) : base(machine)
+    public const ulong aliasSize = 0x1000;
+    public const ulong xorAliasOffset = 0x1000;
+    public const ulong setAliasOffset = 0x2000;
+    public const ulong clearAliasOffset = 0x3000;
+    public RP2040XIPSSI(IMachine machine, ulong address) : base(machine)
     {
       registers = new DoubleWordRegisterCollection(this);
       receiveBuffer = new CircularBuffer<UInt32>(36);
+      machine.GetSystemBus(this).Register(this, new BusMultiRegistration(address + xorAliasOffset, aliasSize, "XOR"));
+      machine.GetSystemBus(this).Register(this, new BusMultiRegistration(address + setAliasOffset, aliasSize, "SET"));
+      machine.GetSystemBus(this).Register(this, new BusMultiRegistration(address + clearAliasOffset, aliasSize, "CLEAR"));
       DefineRegisters();
     }
+
+    [ConnectionRegion("XOR")]
+    public virtual void WriteDoubleWordXor(long offset, uint value)
+    {
+      registers.Write(offset, registers.Read(offset) ^ value);
+    }
+
+    [ConnectionRegion("SET")]
+    public virtual void WriteDoubleWordSet(long offset, uint value)
+    {
+      registers.Write(offset, registers.Read(offset) | value);
+    }
+
+    [ConnectionRegion("CLEAR")]
+    public virtual void WriteDoubleWordClear(long offset, uint value)
+    {
+      registers.Write(offset, registers.Read(offset) & (~value));
+    }
+
+    [ConnectionRegion("XOR")]
+    public virtual uint ReadDoubleWordXor(long offset)
+    {
+      return registers.Read(offset);
+    }
+
+    [ConnectionRegion("SET")]
+    public virtual uint ReadDoubleWordSet(long offset)
+    {
+      return registers.Read(offset);
+    }
+
+    [ConnectionRegion("CLEAR")]
+    public virtual uint ReadDoubleWordClear(long offset)
+    {
+      return registers.Read(offset);
+    }
+
+
 
     public uint ReadDoubleWord(long offset)
     {
