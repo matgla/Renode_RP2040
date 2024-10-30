@@ -12,12 +12,13 @@ using Antmicro.Renode.Core;
 using Antmicro.Renode.Logging;
 using Antmicro.Renode.Core.Structure.Registers;
 using Antmicro.Renode.Peripherals.IRQControllers;
+using Antmicro.Renode.Peripherals;
 
 namespace Antmicro.Renode.Peripherals.Miscellaneous
 {
-    public class RP2040Clocks : BasicDoubleWordPeripheral, IKnownSize
+    public class RP2040Clocks : RP2040PeripheralBase, IKnownSize
     {
-        public RP2040Clocks(Machine machine, RP2040XOSC xosc, RP2040ROSC rosc, RP2040PLL pll, RP2040PLL pllusb, NVIC nvic0, NVIC nvic1) : base(machine)
+        public RP2040Clocks(Machine machine, RP2040XOSC xosc, RP2040ROSC rosc, RP2040PLL pll, RP2040PLL pllusb, NVIC nvic0, NVIC nvic1, ulong address) : base(machine, address)
         {
             IRQ = new GPIO();
             refClockSource = RefClockSource.ROSCClkSrcPh;
@@ -1020,8 +1021,6 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
         {
             IRQ.Set(true);
         }
-
-        public long Size { get { return 0x1000; } }
 
         private enum Registers
         {

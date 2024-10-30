@@ -7,17 +7,19 @@
 // This file is licensed under the MIT License.
 // Full license text is available in 'licenses/MIT.txt'.
 //
+using Antmicro.Renode.Peripherals;
 using Antmicro.Renode.Peripherals.Bus;
 using Antmicro.Renode.Core;
 using Antmicro.Renode.Logging;
 using Antmicro.Renode.Core.Structure.Registers;
+using System.Linq;
 
 namespace Antmicro.Renode.Peripherals.UART
 {
     [AllowedTranslations(AllowedTranslation.ByteToDoubleWord | AllowedTranslation.WordToDoubleWord | AllowedTranslation.DoubleWordToByte)]
-    public class RP2040Uart : UARTBase, IDoubleWordPeripheral, IKnownSize, IProvidesRegisterCollection<DoubleWordRegisterCollection>
+    public class RP2040Uart : UARTBase, IRP2040Peripheral, IProvidesRegisterCollection<DoubleWordRegisterCollection>
     {
-        public RP2040Uart(IMachine machine, uint fifoSize = 1, uint frequency = 24000000) : base(machine)
+        public RP2040Uart(IMachine machine, ulong address, uint fifoSize = 1, uint frequency = 24000000) : base(machine)
         {
             hardwareFifoSize = fifoSize;
             uartClockFrequency = frequency;
@@ -32,11 +34,63 @@ namespace Antmicro.Renode.Peripherals.UART
             dreqGenerator = machine.ObtainManagedThread(TriggerTxDreq, 1000);
             dreqGeneratorEnabled = false;
             dreqGenerator.Stop();
+
+
+            machine.GetSystemBus(this).Register(this, new BusMultiRegistration(address + xorAliasOffset, aliasSize, "XOR"));
+            machine.GetSystemBus(this).Register(this, new BusMultiRegistration(address + setAliasOffset, aliasSize, "SET"));
+            machine.GetSystemBus(this).Register(this, new BusMultiRegistration(address + clearAliasOffset, aliasSize, "CLEAR"));
+
             DefineRegisters();
 
             Reset();
         }
-        private void TriggerDREQ()
+
+        [ConnectionRegion("XOR")]
+        public virtual void WriteDoubleWordXor(long offset, uint value)
+        {
+            RegistersCollection.Write(offset, RegistersCollection.Read(offset) ^ value);
+        }
+
+        [ConnectionRegion("SET")]
+        public virtual void WriteDoubleWordSet(long offset, uint value)
+        {
+            RegistersCollection.Write(offset, RegistersCollection.Read(offset) | value);
+        }
+
+        [ConnectionRegion("CLEAR")]
+        public virtual void WriteDoubleWordClear(long offset, uint value)
+        {
+            RegistersCollection.Write(offset, RegistersCollection.Read(offset) & (~value));
+        }
+
+        [ConnectionRegion("XOR")]
+        public virtual uint ReadDoubleWordXor(long offset)
+        {
+            return RegistersCollection.Read(offset);
+        }
+
+        [ConnectionRegion("SET")]
+        public virtual uint ReadDoubleWordSet(long offset)
+        {
+            return RegistersCollection.Read(offset);
+        }
+
+        [ConnectionRegion("CLEAR")]
+        public virtual uint ReadDoubleWordClear(long offset)
+        {
+            return RegistersCollection.Read(offset);
+        }
+
+        public long Size
+        {
+          get { return 0x1000; }
+        }
+
+        public const ulong aliasSize = 0x1000; 
+        public const ulong xorAliasOffset = 0x1000;
+        public const ulong setAliasOffset = 0x2000;
+        public const ulong clearAliasOffset = 0x3000;
+            private void TriggerDREQ()
         {
             if (Count > 0 && dmaRxEnable.Value)
             {
@@ -114,8 +168,6 @@ namespace Antmicro.Renode.Peripherals.UART
         }
 
         public DoubleWordRegisterCollection RegistersCollection { get; }
-
-        public long Size => 0x1000;
 
         public override Bits StopBits => twoStopBitsSelect.Value ? Bits.Two : Bits.One;
 

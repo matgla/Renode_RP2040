@@ -12,14 +12,15 @@ using Antmicro.Renode.Core;
 using Antmicro.Renode.Logging;
 using Antmicro.Renode.Peripherals.Bus;
 using Antmicro.Renode.Core.Structure.Registers;
+using IronPython.Compiler.Ast;
 
 namespace Antmicro.Renode.Peripherals.GPIOPort
 {
 
     [AllowedTranslations(AllowedTranslation.WordToDoubleWord)]
-    public class RP2040QspiPads : IDoubleWordPeripheral, IKnownSize
+    public class RP2040QspiPads : RP2040PeripheralBase, IKnownSize
     {
-        public RP2040QspiPads(IMachine machine, RP2040GPIO gpio)
+        public RP2040QspiPads(IMachine machine, RP2040GPIO gpio, ulong address) : base(machine, address)
         {
             this.gpio = gpio;
             this.registers = CreateRegisters();
@@ -117,8 +118,6 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
             return new DoubleWordRegisterCollection(this, registersMap);
         }
 
-
-        public long Size { get { return 0x1000; } }
 
         private RP2040GPIO gpio;
         private readonly DoubleWordRegisterCollection registers;

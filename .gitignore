@@ -9,3 +9,4 @@ pico-examples
 robot_output.xml
 report.html
 mono_crash*
+.DS_Store

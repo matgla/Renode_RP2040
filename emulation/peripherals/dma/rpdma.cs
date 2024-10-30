@@ -16,8 +16,6 @@ using Antmicro.Renode.Core.Structure.Registers;
 using Antmicro.Renode.Utilities;
 using System;
 using System.Collections.ObjectModel;
-using System.Runtime;
-using Antmicro.Renode.Storage.SCSI.Commands;
 
 namespace Antmicro.Renode.Peripherals.DMA
 {
@@ -27,8 +25,7 @@ namespace Antmicro.Renode.Peripherals.DMA
   // 
   // basically is copy of DmaEngine with CRC calculation injected 
 
-  [AllowedTranslations(AllowedTranslation.ByteToDoubleWord | AllowedTranslation.WordToDoubleWord | AllowedTranslation.QuadWordToDoubleWord)]
-  public class RPDMA : IDoubleWordPeripheral, IGPIOReceiver, IKnownSize, INumberedGPIOOutput
+  public class RPDMA : RP2040PeripheralBase, IGPIOReceiver, IKnownSize, INumberedGPIOOutput
   {
     private enum DREQ
     {
@@ -74,7 +71,7 @@ namespace Antmicro.Renode.Peripherals.DMA
       XIP_SSIRX = 39
     };
     private int numberOfDREQ;
-    public RPDMA(int numberOfChannels, IMachine machine)
+    public RPDMA(int numberOfChannels, IMachine machine, ulong address) : base(machine, address)
     {
       this.channels = new Channel[numberOfChannels];
       for (int i = 0; i < channels.Length; ++i)
@@ -100,8 +97,6 @@ namespace Antmicro.Renode.Peripherals.DMA
       channelFinished = Enumerable.Repeat<bool>(true, numberOfChannels).ToArray();
       sniffData = 0;
     }
-
-    public long Size { get { return 0x1000; } }
 
     public void Trigger(int channelNumber)
     {

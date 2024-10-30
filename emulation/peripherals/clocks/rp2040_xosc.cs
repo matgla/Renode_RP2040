@@ -15,7 +15,7 @@ using Antmicro.Renode.Peripherals.Timers;
 namespace Antmicro.Renode.Peripherals.Miscellaneous
 {
 
-    public class RP2040XOSC : BasicDoubleWordPeripheral, IKnownSize
+    public class RP2040XOSC : RP2040PeripheralBase 
     {
         private enum Registers
         {
@@ -26,7 +26,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             COUNT = 0x1c
         }
 
-        public RP2040XOSC(Machine machine, ulong frequency) : base(machine)
+        public RP2040XOSC(Machine machine, ulong frequency, ulong address) : base(machine, address)
         {
             this.Frequency = frequency;
 
@@ -122,7 +122,6 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
 
         }
 
-        public long Size { get { return 0x1000; } }
         public ulong Frequency { get; private set; }
         public bool Enabled { get; private set; }
 

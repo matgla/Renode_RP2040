@@ -15,7 +15,7 @@ using Antmicro.Renode.Logging;
 using Antmicro.Renode.Utilities;
 using Antmicro.Renode.Core.Structure.Registers;
 using Antmicro.Renode.Peripherals.Bus;
-using Antmicro.Renode.Peripherals.DMA;
+using Antmicro.Renode.Peripherals;
 using Antmicro.Renode.Peripherals.Sensors;
 using Antmicro.Renode.Peripherals.Miscellaneous;
 using Antmicro.Renode.Utilities.Collections;
@@ -24,9 +24,9 @@ using Antmicro.Renode.Utilities.RESD;
 
 namespace Antmicro.Renode.Peripherals.Analog
 {
-  public class RP2040ADC : BasicDoubleWordPeripheral, IKnownSize, IBytePeripheral
+  public class RP2040ADC : RP2040PeripheralBase
   {
-    public RP2040ADC(IMachine machine, RP2040Clocks clocks, RP2040Pads pads) : base(machine)
+    public RP2040ADC(IMachine machine, RP2040Clocks clocks, RP2040Pads pads, ulong address) : base(machine, address)
     {
       this.clocks = clocks;
       this.fifo = new CircularBuffer<ushort>(fifoSize);
@@ -46,27 +46,6 @@ namespace Antmicro.Renode.Peripherals.Analog
       this.DMARequest = new GPIO();
       Reset();
       DefineRegisters();
-    }
-
-    public void WriteByte(long address, byte data)
-    {
-
-    }
-
-    public byte ReadByte(long address)
-    {
-      // adc may be accessed in byte mode with shifting to right
-      // that's why I can't use AllowedTranslation
-      if (address == 0x0c)
-      {
-        ushort ret = 0;
-        if (!fifo.TryDequeue(out ret))
-        {
-          fifoUnderflowed = true;
-        }
-        return (byte)ret;
-      }
-      return 0;
     }
 
     public void FeedVoltageSampleToChannel(int channel, string path)
@@ -530,8 +509,6 @@ namespace Antmicro.Renode.Peripherals.Analog
           valueProviderCallback: _ => fifoIrqForced || (fifo.Count >= fifoThreshold),
           name: "FIFO");
     }
-
-    public long Size { get { return 0x1000; } }
 
     private enum Trigger
     {

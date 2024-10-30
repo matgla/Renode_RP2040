@@ -13,19 +13,19 @@ There is predefined Raspberry Pico board description in: 'boards/raspberry_pico.
 
 |    Peripheral   |  Supported    | Known Limitations  |
 |       :---:     |     :---:     |       :---:        |
-|    **SIO**      |      $${\color{yellow}✓}$$       | Partially supported, limitations to be filled when known                 |
-| **IRQ**  | $${\color{red}✗}$$ | Propagation from peripherals is not implemented |
-| **DMA**  | $${\color{red}✗}$$  | DMA in peripherals not yet implemented |
-| **Clocks** | $${\color{yellow}✓}$$ | Clocks are currently just stubs to pass PicoSDK initialization, but virtual time is always correct | 
+|    **SIO**      |      $${\color{yellow}✓}$$       | Partially supported (multicore, dividers), limitations to be filled when known                 |
+| **IRQ**  | $${\color{yellow}✓}}$$ | Propagation from some peripherals is implemented |
+| **DMA**  | $${\color{green}✓}}$$  | DMA implemented with ringing and control blocks support |
+| **Clocks** | $${\color{yellow}✓}$$ | Clocks are mostly just stubs, but with tree propagation, but virtual time is always correct | 
 | **GPIO** | $${\color{yellow}✓}$$ | Pins manipulation implemented, limitations not yet known except when some pins changed PIO may needs to be manually reevaluated due to CPU emulation (it's not step by step). Look for RP2040_SPI (PL022) peripheral as an example |
-| **XOSC** |  $${\color{yellow}✓}$$  | |
-| **ROSC** | $${\color{yellow}✓}$$  | |
-| **PLL** | $${\color{yellow}✓}}$$  | |
+| **XOSC** |  $${\color{green}✓}$$  | |
+| **ROSC** | $${\color{green}✓}$$  | |
+| **PLL** | $${\color{green}✓}}$$  | |
 | **SysConfig** | $${\color{red}✗}$$  | |
 | **SysInfo** | $${\color{red}✗}$$  | | 
 | **PIO** |  $${\color{yellow}✓}$$  | Manual reevaluation may be neccessary to synchronize PIO together with actions on MCU. IRQ and DMA not yet supported |
 | **USB** | $${\color{red}✗}$$  |  |
-| **UART** | $${\color{green}✓}$$  | Official PL011 simulation from Renode, limitations not yet known except it doen't manage GPIO states so can't interwork with PIO |
+| **UART** | $${\color{green}✓}$$  | Reimplemented PL011 to support DREQ generation for DMA and PIO interworking (in the future, not done yet) |
 | **SPI** |  $${\color{yellow}✓}$$ | Clock configuration not yet supported. Only master mode implemented with only one mode. Interworking with PIO is implemented! |
 | **I2C** |  $${\color{red}✗}$$  |  |
 | **PWM** |  $${\color{red}✗}$$  |  |
@@ -98,18 +98,18 @@ This respository is highly coupled with Renode version.
 Use this repository with Renode **1.15.3**
 
 # Testing 
-I am testing simulator code using official pico-examples. Tests in use are: 
+I am testing simulator code using official pico-examples and some custom made build on top of pico-examples. For more informations look at pico_example_patches. Current tests list with statuses: 
 
 ## ADC
 | Example | Passed |
 | :---: | :---:    |
 | [adc_console](https://github.com/raspberrypi/pico-examples/tree/master/adc/adc_console) | $${\color{green}✓}$$ |
-| [dma_capture](https://github.com/raspberrypi/pico-examples/tree/master/adc/dma_capture) | $${\color{red}✗}$$ |
+| [dma_capture](https://github.com/raspberrypi/pico-examples/tree/master/adc/dma_capture) | $${\color{green}✓}$$ |
 | [hello_adc](https://github.com/raspberrypi/pico-examples/tree/master/adc/hello_adc) | $${\color{green}✓}$$ |
-| [joystick_display](https://github.com/raspberrypi/pico-examples/tree/master/adc/joystick_display) | $${\color{red}✗}$$ | 
-| [microphone_adc](https://github.com/raspberrypi/pico-examples/tree/master/adc/microphone_adc) | $${\color{red}✗}$$ | 
-| [onboard_temperature](https://github.com/raspberrypi/pico-examples/tree/master/adc/onboard_temperature) | $${\color{red}✗}$$ | 
-| [read_vsys](https://github.com/raspberrypi/pico-examples/tree/master/adc/read_vsys) | $${\color{red}✗}$$ | 
+| [joystick_display](https://github.com/raspberrypi/pico-examples/tree/master/adc/joystick_display) | $${\color{green}✓}$$ | 
+| [microphone_adc](https://github.com/raspberrypi/pico-examples/tree/master/adc/microphone_adc) | $${\color{green}✓}$$ | 
+| [onboard_temperature](https://github.com/raspberrypi/pico-examples/tree/master/adc/onboard_temperature) | $${\color{green}✓}$$ | 
+| [read_vsys](https://github.com/raspberrypi/pico-examples/tree/master/adc/read_vsys) | $${\color{green}✓}$$ | 
 
 ## Blink
 | Example | Passed |
@@ -133,8 +133,8 @@ I am testing simulator code using official pico-examples. Tests in use are:
 ## DMA
 | Example | Passed |
 | :---: | :---:    |
-| [channel_irq](https://github.com/raspberrypi/pico-examples/tree/master/dma/channel_irq) | $${\color{red}✗}$$ |
-| [control_blocks](https://github.com/raspberrypi/pico-examples/tree/master/dma/control_blocks) | $${\color{red}✗}$$ |
+| [channel_irq](https://github.com/raspberrypi/pico-examples/tree/master/dma/channel_irq) | $${\color{green}✓}$$ |
+| [control_blocks](https://github.com/raspberrypi/pico-examples/tree/master/dma/control_blocks) | $${\color{green}✓}$$ |
 | [hello_dma](https://github.com/raspberrypi/pico-examples/tree/master/dma/hello_dma) | $${\color{green}✓}$$ |
 | [sniff_crc](https://github.com/raspberrypi/pico-examples/tree/master/dma/sniff_crc) | $${\color{green}✓}$$ |
 

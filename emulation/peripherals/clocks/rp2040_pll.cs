@@ -11,13 +11,12 @@ using System.Collections.Generic;
 
 using Antmicro.Renode.Core;
 using Antmicro.Renode.Core.Structure.Registers;
-using Antmicro.Renode.Logging;
 
 
 namespace Antmicro.Renode.Peripherals.Miscellaneous
 {
 
-    public class RP2040PLL : BasicDoubleWordPeripheral, IKnownSize
+    public class RP2040PLL : RP2040PeripheralBase, IKnownSize
     {
         private enum Registers
         {
@@ -27,7 +26,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             PRIM = 0x0c,
         }
 
-        public RP2040PLL(Machine machine) : base(machine)
+        public RP2040PLL(Machine machine, ulong address) : base(machine, address)
         {
             bypass = false;
             refdiv = 1;

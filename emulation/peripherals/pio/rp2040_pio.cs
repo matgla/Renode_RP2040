@@ -19,7 +19,7 @@ namespace Antmicro.Renode.Peripherals.CPU
     // parts of this class can be left unmodified;
     // to integrate an external simulator you need to
     // look for comments in the code below
-    public class RP2040PIOCPU : BaseCPU, IGPIOReceiver, ITimeSink, IDisposable, IDoubleWordPeripheral, IKnownSize
+    public class RP2040PIOCPU : BaseCPU, IRP2040Peripheral, IGPIOReceiver, ITimeSink, IDisposable, IDoubleWordPeripheral, IKnownSize
     {
         private static string GetSourceFileDirectory([CallerFilePath] string sourceFilePath = "")
         {
@@ -125,6 +125,9 @@ namespace Antmicro.Renode.Peripherals.CPU
             machine.GetSystemBus(this).Register(this, new BusRangeRegistration(new Antmicro.Renode.Core.Range(address, (ulong)Size)));
             this.gpio = gpio;
             this.gpioFunction = id == 0 ? GPIOPort.RP2040GPIO.GpioFunction.PIO0 : GPIOPort.RP2040GPIO.GpioFunction.PIO1;
+            machine.GetSystemBus(this).Register(this, new BusMultiRegistration(address + xorAliasOffset, aliasSize, "XOR"));
+            machine.GetSystemBus(this).Register(this, new BusMultiRegistration(address + setAliasOffset, aliasSize, "SET"));
+            machine.GetSystemBus(this).Register(this, new BusMultiRegistration(address + clearAliasOffset, aliasSize, "CLEAR"));
             gpio.ReevaluatePioActions.Add((uint steps) =>
             {
                 totalExecutedInstructions += PioExecute(pioId, steps);
@@ -300,6 +303,10 @@ namespace Antmicro.Renode.Peripherals.CPU
         private NativeBinder binder;
 
         public long Size { get { return 0x1000; } }
+        public const ulong aliasSize = 0x1000; 
+        public const ulong xorAliasOffset = 0x1000;
+        public const ulong setAliasOffset = 0x2000;
+        public const ulong clearAliasOffset = 0x3000;
 
         [Import]
         private ActionInt32 PioInitialize;

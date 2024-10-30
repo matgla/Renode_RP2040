@@ -18,9 +18,9 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
 {
 
     [AllowedTranslations(AllowedTranslation.WordToDoubleWord)]
-    public class RP2040GPIO : BaseGPIOPort, IDoubleWordPeripheral, IGPIOReceiver, IKnownSize
+    public class RP2040GPIO : BaseGPIOPort, IRP2040Peripheral, IDoubleWordPeripheral, IGPIOReceiver, IKnownSize
     {
-        public RP2040GPIO(IMachine machine, int numberOfPins) : base(machine, numberOfPins)
+        public RP2040GPIO(IMachine machine, int numberOfPins, ulong address) : base(machine, numberOfPins)
         {
             functionSelectCallbacks = new List<Action<int, GpioFunction>>();
             NumberOfPins = numberOfPins;
@@ -39,6 +39,46 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
                 peripheralDrive[i] = PeripheralDrive.None;
             }
             OperationDone = new GPIO();
+
+            machine.GetSystemBus(this).Register(this, new BusMultiRegistration(address + xorAliasOffset, aliasSize, "XOR"));
+            machine.GetSystemBus(this).Register(this, new BusMultiRegistration(address + setAliasOffset, aliasSize, "SET"));
+            machine.GetSystemBus(this).Register(this, new BusMultiRegistration(address + clearAliasOffset, aliasSize, "CLEAR"));
+        }
+
+        [ConnectionRegion("XOR")]
+        public virtual void WriteDoubleWordXor(long offset, uint value)
+        {
+            registers.Write(offset, registers.Read(offset) ^ value);
+        }
+
+        [ConnectionRegion("SET")]
+        public virtual void WriteDoubleWordSet(long offset, uint value)
+        {
+            registers.Write(offset, registers.Read(offset) | value);
+        }
+
+        [ConnectionRegion("CLEAR")]
+        public virtual void WriteDoubleWordClear(long offset, uint value)
+        {
+            registers.Write(offset, registers.Read(offset) & (~value));
+        }
+
+        [ConnectionRegion("XOR")]
+        public virtual uint ReadDoubleWordXor(long offset)
+        {
+            return registers.Read(offset);
+        }
+
+        [ConnectionRegion("SET")]
+        public virtual uint ReadDoubleWordSet(long offset)
+        {
+            return registers.Read(offset);
+        }
+
+        [ConnectionRegion("CLEAR")]
+        public virtual uint ReadDoubleWordClear(long offset)
+        {
+            return registers.Read(offset);
         }
 
         private bool IsPinOutput(int pin)
@@ -775,6 +815,11 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
         }
 
         public long Size { get { return 0x1000; } }
+
+        public const ulong aliasSize = 0x1000; 
+        public const ulong xorAliasOffset = 0x1000;
+        public const ulong setAliasOffset = 0x2000;
+        public const ulong clearAliasOffset = 0x3000;
         public int[] functionSelect;
 
         public int NumberOfPins;

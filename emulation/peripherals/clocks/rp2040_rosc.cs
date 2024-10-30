@@ -18,7 +18,7 @@ using Antmicro.Renode.Logging;
 namespace Antmicro.Renode.Peripherals.Miscellaneous
 {
 
-    public class RP2040ROSC : BasicDoubleWordPeripheral, IKnownSize
+    public class RP2040ROSC : RP2040PeripheralBase
     {
         private enum Registers
         {
@@ -33,7 +33,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             COUNT = 0x20
         }
 
-        public RP2040ROSC(Machine machine) : base(machine)
+        public RP2040ROSC(Machine machine, ulong address) : base(machine, address)
         {
             this.Frequency = 8000000;
 
@@ -277,8 +277,6 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                 .WithReservedBits(8, 24);
 
         }
-
-        public long Size { get { return 0x1000; } }
 
         public ulong Frequency { get; private set; }
         public bool Enabled { get; private set; }
