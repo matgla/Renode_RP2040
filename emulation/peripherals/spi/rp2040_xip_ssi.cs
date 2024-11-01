@@ -1,3 +1,11 @@
+/**
+ * rp2040_xip_ssi.cs
+ *
+ * Copyright (c) 2024 Mateusz Stadnik <matgla@live.com>
+ *
+ * Distributed under the terms of the MIT License.
+ */
+
 using System;
 
 using Antmicro.Renode.Peripherals.Bus;
@@ -9,6 +17,9 @@ using Antmicro.Renode.Logging;
 using IronPython.Modules;
 using Antmicro.Renode.PlatformDescription.Syntax;
 using System.Xml.Serialization;
+using Antmicro.Renode.UI;
+using System.Runtime.InteropServices;
+using Microsoft.Scripting.Interpreter;
 
 namespace Antmicro.Renode.Peripherals.SPI
 {
@@ -31,10 +42,10 @@ namespace Antmicro.Renode.Peripherals.SPI
       DmaTransmitDreq = new GPIO();
       DmaStreamDreq = new GPIO();
       dreqThread = machine.ObtainManagedThread(ProcessDreq, 1);
-      dreqThread.Stop(); 
+      dreqThread.Stop();
       dreqThread.Frequency = 1000000; // just for now, maybe I should connect that to real clock frequency
       rxDmaEnabled = false;
-      txDmaEnabled = false; 
+      txDmaEnabled = false;
       DefineRegisters();
     }
 
@@ -80,8 +91,6 @@ namespace Antmicro.Renode.Peripherals.SPI
       return registers.Read(offset);
     }
 
-
-
     public uint ReadDoubleWord(long offset)
     {
       return registers.Read(offset);
@@ -108,6 +117,13 @@ namespace Antmicro.Renode.Peripherals.SPI
       }
     }
 
+    private void ProcessXipTranmission()
+    {
+      var peripheral = RegisteredPeripheral;
+      this.Log(LogLevel.Error, "XIP to peripheral: " + dataFrameSize.Value + ", 32: " + dataFrameSize32.Value + ", NDF: " + numberOfDataFrames.Value + ", CFS: " + controlFrameSize.Value + ", XIP_CMD: " + xipCmd.Value + ", INST_L: " + instructionLength.Value + ", address: " + addressLength.Value);
+      // transmit XIP command 
+      peripheral.Transmit((byte)xipCmd.Value);
+    }
     private void PeripheralDataWrite(ulong data)
     {
       lock (receiveBuffer)
@@ -115,8 +131,23 @@ namespace Antmicro.Renode.Peripherals.SPI
         var peripheral = RegisteredPeripheral;
         if (peripheral != null)
         {
-          byte readed = peripheral.Transmit((byte)data);
-          receiveBuffer.Enqueue(readed);
+          this.Log(LogLevel.Error, "Writing to peripheral: " + dataFrameSize.Value + ", 32: " + dataFrameSize32.Value + ", NDF: " + numberOfDataFrames.Value + ", CFS: " + controlFrameSize.Value + ", XIP_CMD: " + xipCmd.Value + ", INST_L: " + instructionLength.Value + ", address: " + addressLength.Value);
+          uint nextData = 0;
+          uint dataSize = (uint)dataFrameSize.Value;
+          if (dataSize == 0)
+          {
+            dataSize = (uint)dataFrameSize32.Value;
+          }
+
+          for (int i = 0; i < Math.Ceiling((double)dataSize / 8); ++i)
+          {
+            int offset = (int)dataSize + 1 - 8 - i * 8;
+            byte c = (byte)(data >> offset);
+            this.Log(LogLevel.Error, "Offset: " + offset + ", data offset: " + " byte: " + c.ToString("x"));
+            byte readed = peripheral.Transmit(c);
+            nextData |= (uint)readed << offset;
+          }
+          receiveBuffer.Enqueue(nextData);
         }
       }
     }
@@ -124,22 +155,22 @@ namespace Antmicro.Renode.Peripherals.SPI
     private void DefineRegisters()
     {
       Registers.CTRLR0.Define(registers)
-        .WithValueField(0, 4, name: "DFS")
+        .WithValueField(0, 4, out dataFrameSize, name: "DFS")
         .WithValueField(4, 2, name: "FRF")
         .WithTaggedFlag("SCPH", 6)
         .WithTaggedFlag("SCPOL", 7)
         .WithValueField(8, 2, name: "TMOD")
         .WithTaggedFlag("SLV_OE", 10)
         .WithTaggedFlag("SRL", 11)
-        .WithValueField(12, 4, name: "CFS")
-        .WithValueField(16, 5, name: "DFS_32")
+        .WithValueField(12, 4, out controlFrameSize, name: "CFS")
+        .WithValueField(16, 5, out dataFrameSize32, name: "DFS_32")
         .WithValueField(21, 2, name: "SPI_FRF")
         .WithReservedBits(23, 1)
         .WithTaggedFlag("SSTE", 24)
         .WithValueField(25, 7);
 
       Registers.CTRLR1.Define(registers)
-        .WithValueField(0, 16, name: "NDF")
+        .WithValueField(0, 16, out numberOfDataFrames, name: "NDF")
         .WithReservedBits(16, 16);
 
       Registers.SSIENR.Define(registers)
@@ -239,12 +270,14 @@ namespace Antmicro.Renode.Peripherals.SPI
         .WithReservedBits(1, 31);
 
       Registers.DMACR.Define(registers)
-        .WithFlag(0, valueProviderCallback: _ => rxDmaEnabled, 
-          writeCallback: (_, value) => {
+        .WithFlag(0, valueProviderCallback: _ => rxDmaEnabled,
+          writeCallback: (_, value) =>
+          {
             rxDmaEnabled = value;
           }, name: "RDMAE")
-        .WithFlag(1, valueProviderCallback: _ => txDmaEnabled, 
-          writeCallback: (_, value) => {
+        .WithFlag(1, valueProviderCallback: _ => txDmaEnabled,
+          writeCallback: (_, value) =>
+          {
             if (value && !txDmaEnabled)
             {
               txDmaEnabled = false;
@@ -296,16 +329,16 @@ namespace Antmicro.Renode.Peripherals.SPI
 
       Registers.SPI_CTRLR0.Define(registers)
         .WithValueField(0, 2, name: "TRANS_TYPE")
-        .WithValueField(2, 4, name: "ADDR_L")
+        .WithValueField(2, 4, out addressLength, name: "ADDR_L")
         .WithReservedBits(6, 2)
-        .WithValueField(8, 2, name: "INST_L")
+        .WithValueField(8, 2, out instructionLength, name: "INST_L")
         .WithReservedBits(10, 1)
         .WithValueField(11, 5, name: "WAIT_CYCLES")
         .WithTaggedFlag("SPI_DDR_EN", 16)
         .WithTaggedFlag("INST_DDR_EN", 17)
         .WithTaggedFlag("SPI_RXDS_EN", 18)
         .WithReservedBits(19, 5)
-        .WithValueField(24, 8, name: "XIP_CMD");
+        .WithValueField(24, 8, out xipCmd, name: "XIP_CMD");
     }
     private DoubleWordRegisterCollection registers;
 
@@ -324,6 +357,13 @@ namespace Antmicro.Renode.Peripherals.SPI
     public GPIO DmaTransmitDreq { get; }
     public GPIO DmaStreamDreq { get; }
 
+    private IValueRegisterField numberOfDataFrames;
+    private IValueRegisterField dataFrameSize;
+    private IValueRegisterField dataFrameSize32;
+    private IValueRegisterField controlFrameSize;
+    private IValueRegisterField xipCmd;
+    private IValueRegisterField instructionLength;
+    private IValueRegisterField addressLength;
 
     private enum Registers
     {

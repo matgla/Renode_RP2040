@@ -1,5 +1,7 @@
 mach create $machine_name 
 
+include $ORIGIN/emulation/externals/w25q16.cs
+
 include $ORIGIN/emulation/peripherals/memory/memory_alias.cs
 
 include $ORIGIN/emulation/peripherals/rp2040_peripheral_base.cs
