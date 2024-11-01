@@ -78,10 +78,9 @@ namespace Antmicro.Renode.Peripherals.DMA
       {
         this.channels[i] = new Channel(this, i);
       }
-      this.machine = machine;
       engine = new RPDmaEngine(machine.GetSystemBus(this));
       this.numberOfChannels = numberOfChannels;
-      registers = CreateRegisters();
+      DefineRegisters();
       this.numberOfDREQ = Enum.GetNames(typeof(DREQ)).Length;
       var irqs = new Dictionary<int, IGPIO>();
       //this.ExternalRequest = new GPIO[numberOfDREQ];
@@ -92,10 +91,11 @@ namespace Antmicro.Renode.Peripherals.DMA
       Connections = new ReadOnlyDictionary<int, IGPIO>(irqs);
       Reset();
     }
-    public void Reset()
+    public override void Reset()
     {
       channelFinished = Enumerable.Repeat<bool>(true, numberOfChannels).ToArray();
       sniffData = 0;
+      base.Reset();
     }
 
     public void Trigger(int channelNumber)
@@ -103,7 +103,7 @@ namespace Antmicro.Renode.Peripherals.DMA
       channels[channelNumber].TriggerTransfer();
     }
 
-    public uint ReadDoubleWord(long offset)
+    public override uint ReadDoubleWord(long offset)
     {
       if (offset < 0x400)
       {
@@ -111,10 +111,10 @@ namespace Antmicro.Renode.Peripherals.DMA
         return channels[id].ReadDoubleWord(offset % Channel.Size);
       }
 
-      return registers.Read(offset);
+      return RegistersCollection.Read(offset);
     }
 
-    public void WriteDoubleWord(long offset, uint value)
+    public override void WriteDoubleWord(long offset, uint value)
     {
       if (offset < 0x400)
       {
@@ -122,12 +122,11 @@ namespace Antmicro.Renode.Peripherals.DMA
         channels[id].WriteDoubleWord(offset % Channel.Size, value);
         return;
       }
-      registers.Write(offset, value);
+      RegistersCollection.Write(offset, value);
     }
 
     public void OnGPIO(int number, bool value)
     {
-      this.Log(LogLevel.Noisy, "Got pace: " + number);
       // find channel for DREQ
       foreach (var channel in channels)
       {
@@ -143,11 +142,9 @@ namespace Antmicro.Renode.Peripherals.DMA
       get; private set;
     }
 
-    private DoubleWordRegisterCollection CreateRegisters()
+    private void DefineRegisters()
     {
-      var registersMap = new Dictionary<long, DoubleWordRegister>();
-
-      registersMap[(long)Registers.SNIFF_CTRL] = new DoubleWordRegister(this)
+      Registers.SNIFF_CTRL.Define(this)
         .WithFlag(0, out sniffEnable, name: "EN")
         .WithValueField(1, 4, valueProviderCallback: _ => sniffChannel,
           writeCallback: (_, value) => sniffChannel = (byte)value, name: "DMACH")
@@ -157,7 +154,7 @@ namespace Antmicro.Renode.Peripherals.DMA
         .WithFlag(11, out sniffOutInversed, name: "OUT_INV")
         .WithReservedBits(12, 20);
 
-      registersMap[(long)Registers.SNIFF_DATA] = new DoubleWordRegister(this)
+      Registers.SNIFF_DATA.Define(this)
         .WithValueField(0, 32, valueProviderCallback: _ =>
         {
           if (sniffCalcType.Value == CalculateType.Crc16CCITT
@@ -196,7 +193,7 @@ namespace Antmicro.Renode.Peripherals.DMA
         },
         writeCallback: (_, value) => sniffData = (uint)value, name: "SNIFF_DATA");
 
-      registersMap[(long)Registers.MULTI_CHAN_TRIGGER] = new DoubleWordRegister(this)
+      Registers.MULTI_CHAN_TRIGGER.Define(this)
         .WithValueField(0, 16, valueProviderCallback: (_) => 0,
           writeCallback: (_, value) =>
           {
@@ -213,7 +210,7 @@ namespace Antmicro.Renode.Peripherals.DMA
           }, name: "MULTI_CHAN_TRIGGER")
         .WithReservedBits(16, 16);
 
-      registersMap[(long)Registers.INTR] = new DoubleWordRegister(this)
+      Registers.INTR.Define(this)
         .WithValueField(0, 16, FieldMode.Read | FieldMode.Write, valueProviderCallback: (_) =>
         {
           uint irqs = 0;
@@ -233,7 +230,7 @@ namespace Antmicro.Renode.Peripherals.DMA
           }
         }, name: "INTR");
 
-      registersMap[(long)Registers.INTS0] = new DoubleWordRegister(this)
+      Registers.INTS0.Define(this)
         .WithValueField(0, 16, FieldMode.Read | FieldMode.Write, valueProviderCallback: (_) =>
         {
           uint irqs = 0;
@@ -249,7 +246,7 @@ namespace Antmicro.Renode.Peripherals.DMA
           }
         }, name: "INTS0");
 
-      registersMap[(long)Registers.INTS1] = new DoubleWordRegister(this)
+      Registers.INTS1.Define(this)
         .WithValueField(0, 16, FieldMode.Read | FieldMode.Write, valueProviderCallback: (_) =>
         {
           uint irqs = 0;
@@ -264,8 +261,6 @@ namespace Antmicro.Renode.Peripherals.DMA
             }
           }
         }, name: "INTS1");
-
-      return new DoubleWordRegisterCollection(this, registersMap);
     }
 
 
@@ -290,9 +285,9 @@ namespace Antmicro.Renode.Peripherals.DMA
       N_CHANNELS = 0x448,
     }
 
-    private class Channel : IPeripheral
+    private class Channel : BasicDoubleWordPeripheral 
     {
-      public Channel(RPDMA parent, int channelNumber)
+      public Channel(RPDMA parent, int channelNumber) : base(parent.machine)
       {
         aliases = new Dictionary<long, Registers>();
         Reset();
@@ -301,7 +296,7 @@ namespace Antmicro.Renode.Peripherals.DMA
         this.chainTo = channelNumber;
         //IRQ = new GPIO();
         DefineAliases();
-        registers = CreateRegisters();
+        DefineRegisters();
       }
 
       public static long Size { get { return 0x40; } }
@@ -327,7 +322,7 @@ namespace Antmicro.Renode.Peripherals.DMA
         aliases[0x3c] = Registers.READ_ADDR;
       }
 
-      public void Reset()
+      public override void Reset()
       {
         parent = null;
         channelNumber = 0;
@@ -346,9 +341,9 @@ namespace Antmicro.Renode.Peripherals.DMA
       }
 
 
-      public void WriteDoubleWord(long address, uint value)
+      public override void WriteDoubleWord(long address, uint value)
       {
-        registers.Write((long)aliases[address], value);
+        RegistersCollection.Write((long)aliases[address], value);
         if ((int)(address & 0xf) == 0xc)
         {
           if (value == 0)
@@ -365,9 +360,9 @@ namespace Antmicro.Renode.Peripherals.DMA
         }
       }
 
-      public uint ReadDoubleWord(long address)
+      public override uint ReadDoubleWord(long address)
       {
-        return registers.Read((long)aliases[address]);
+        return RegistersCollection.Read((long)aliases[address]);
       }
 
       public void TriggerTransfer()
@@ -512,19 +507,17 @@ namespace Antmicro.Renode.Peripherals.DMA
         return new RPXXXXDmaRequest(request, ringSize == 0 ? 0 : 1 << ringSize, ringSelect.Value, transferCounter);
       }
 
-      private DoubleWordRegisterCollection CreateRegisters()
+      private void DefineRegisters()
       {
-        var registersMap = new Dictionary<long, DoubleWordRegister>();
-
-        registersMap[(long)Registers.READ_ADDR] = new DoubleWordRegister(this)
+        Registers.READ_ADDR.Define(this)
           .WithValueField(0, 32, valueProviderCallback: _ => readAddress,
               writeCallback: (_, value) => readAddress = (uint)value);
 
-        registersMap[(long)Registers.WRITE_ADDR] = new DoubleWordRegister(this)
+        Registers.WRITE_ADDR.Define(this)
           .WithValueField(0, 32, valueProviderCallback: _ => writeAddress,
               writeCallback: (_, value) => writeAddress = (uint)value);
 
-        registersMap[(long)Registers.TRANS_COUNT] = new DoubleWordRegister(this)
+        Registers.TRANS_COUNT.Define(this)
           .WithValueField(0, 32, valueProviderCallback: _ => transferCount,
               writeCallback: (_, value) =>
               {
@@ -532,7 +525,7 @@ namespace Antmicro.Renode.Peripherals.DMA
                 transferCounter = 0;
               });
 
-        registersMap[(long)Registers.CTRL] = new DoubleWordRegister(this)
+        Registers.CTRL.Define(this)
           .WithFlag(0, valueProviderCallback: _ => Enabled,
             writeCallback: (_, value) => Enabled = value, name: "EN")
           .WithFlag(1, out highPriority, name: "HIGH_PRIORITY")
@@ -557,8 +550,6 @@ namespace Antmicro.Renode.Peripherals.DMA
           .WithFlag(29, out writeError, FieldMode.Read | FieldMode.WriteOneToClear, name: "WRITE_ERROR")
           .WithFlag(30, out readError, FieldMode.Read | FieldMode.WriteOneToClear, name: "READ_ERROR")
           .WithFlag(31, out ahbError, FieldMode.Read | FieldMode.WriteOneToClear, name: "AHB_ERROR");
-
-        return new DoubleWordRegisterCollection(this, registersMap);
       }
 
       //public GPIO IRQ { get; private set; }
@@ -588,7 +579,6 @@ namespace Antmicro.Renode.Peripherals.DMA
       private IFlagRegisterField readError;
       private IFlagRegisterField ahbError;
       public bool InterruptRaised;
-      private DoubleWordRegisterCollection registers;
       private Dictionary<long, Registers> aliases;
       private RPDMA parent;
       private int channelNumber;
@@ -598,11 +588,9 @@ namespace Antmicro.Renode.Peripherals.DMA
     }
 
     private readonly Channel[] channels;
-    private IMachine machine;
     private RPDmaEngine engine;
     private int numberOfChannels;
     private bool[] channelFinished;
-    private DoubleWordRegisterCollection registers;
     private IFlagRegisterField sniffEnable;
     private byte sniffChannel;
     private enum CalculateType

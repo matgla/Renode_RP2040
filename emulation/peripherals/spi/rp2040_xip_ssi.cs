@@ -6,6 +6,9 @@ using Antmicro.Renode.Core;
 using Antmicro.Renode.Core.Structure.Registers;
 using Antmicro.Renode.Utilities.Collections;
 using Antmicro.Renode.Logging;
+using IronPython.Modules;
+using Antmicro.Renode.PlatformDescription.Syntax;
+using System.Xml.Serialization;
 
 namespace Antmicro.Renode.Peripherals.SPI
 {
@@ -25,7 +28,20 @@ namespace Antmicro.Renode.Peripherals.SPI
       machine.GetSystemBus(this).Register(this, new BusMultiRegistration(address + xorAliasOffset, aliasSize, "XOR"));
       machine.GetSystemBus(this).Register(this, new BusMultiRegistration(address + setAliasOffset, aliasSize, "SET"));
       machine.GetSystemBus(this).Register(this, new BusMultiRegistration(address + clearAliasOffset, aliasSize, "CLEAR"));
+      DmaTransmitDreq = new GPIO();
+      DmaStreamDreq = new GPIO();
+      dreqThread = machine.ObtainManagedThread(ProcessDreq, 1);
+      dreqThread.Stop(); 
+      dreqThread.Frequency = 1000000; // just for now, maybe I should connect that to real clock frequency
+      rxDmaEnabled = false;
+      txDmaEnabled = false; 
       DefineRegisters();
+    }
+
+    void ProcessDreq()
+    {
+      DmaTransmitDreq.Toggle();
+      DmaStreamDreq.Toggle();
     }
 
     [ConnectionRegion("XOR")]
@@ -126,6 +142,10 @@ namespace Antmicro.Renode.Peripherals.SPI
         .WithValueField(0, 16, name: "NDF")
         .WithReservedBits(16, 16);
 
+      Registers.SSIENR.Define(registers)
+        .WithFlag(0, out ssiEnabled, name: "ENABLED")
+        .WithReservedBits(1, 31);
+
       Registers.MWCR.Define(registers)
         .WithTaggedFlag("MWMOD", 0)
         .WithTaggedFlag("MDD", 1)
@@ -133,7 +153,7 @@ namespace Antmicro.Renode.Peripherals.SPI
         .WithReservedBits(3, 29);
 
       Registers.SER.Define(registers)
-        .WithTaggedFlag("CS", 0)
+        .WithFlag(0, out slaveEnabled, name: "CS")
         .WithReservedBits(1, 31);
 
       Registers.BAUDR.Define(registers)
@@ -219,8 +239,23 @@ namespace Antmicro.Renode.Peripherals.SPI
         .WithReservedBits(1, 31);
 
       Registers.DMACR.Define(registers)
-        .WithTaggedFlag("RDMAE", 0)
-        .WithTaggedFlag("TDMAE", 1)
+        .WithFlag(0, valueProviderCallback: _ => rxDmaEnabled, 
+          writeCallback: (_, value) => {
+            rxDmaEnabled = value;
+          }, name: "RDMAE")
+        .WithFlag(1, valueProviderCallback: _ => txDmaEnabled, 
+          writeCallback: (_, value) => {
+            if (value && !txDmaEnabled)
+            {
+              txDmaEnabled = false;
+              dreqThread.Start();
+            }
+            if (!value && txDmaEnabled)
+            {
+              txDmaEnabled = true;
+              dreqThread.Stop();
+            }
+          }, name: "TDMAE")
         .WithReservedBits(2, 30);
 
       Registers.DMATDLR.Define(registers)
@@ -278,6 +313,17 @@ namespace Antmicro.Renode.Peripherals.SPI
     private uint ssi_comp_version = 0x3430412a;
 
     private CircularBuffer<UInt32> receiveBuffer;
+
+    private IFlagRegisterField ssiEnabled;
+    private IFlagRegisterField slaveEnabled;
+
+    // I don't really have SSI simulation, so I can stub it with just timer right now
+    private IManagedThread dreqThread;
+    private bool rxDmaEnabled;
+    private bool txDmaEnabled;
+    public GPIO DmaTransmitDreq { get; }
+    public GPIO DmaStreamDreq { get; }
+
 
     private enum Registers
     {

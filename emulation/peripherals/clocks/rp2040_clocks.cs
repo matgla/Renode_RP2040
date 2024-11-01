@@ -12,15 +12,16 @@ using Antmicro.Renode.Core;
 using Antmicro.Renode.Logging;
 using Antmicro.Renode.Core.Structure.Registers;
 using Antmicro.Renode.Peripherals.IRQControllers;
-using Antmicro.Renode.Peripherals;
+using Antmicro.Renode.Peripherals.GPIOPort;
 
 namespace Antmicro.Renode.Peripherals.Miscellaneous
 {
     public class RP2040Clocks : RP2040PeripheralBase, IKnownSize
     {
-        public RP2040Clocks(Machine machine, RP2040XOSC xosc, RP2040ROSC rosc, RP2040PLL pll, RP2040PLL pllusb, NVIC nvic0, NVIC nvic1, ulong address) : base(machine, address)
+        public RP2040Clocks(Machine machine, RP2040XOSC xosc, RP2040ROSC rosc, RP2040PLL pll, RP2040PLL pllusb, NVIC nvic0, NVIC nvic1, ulong address, RP2040GPIO gpio) : base(machine, address)
         {
             IRQ = new GPIO();
+            gpio.SubscribeOnFunctionChange(UpdateGpioMapping);
             refClockSource = RefClockSource.ROSCClkSrcPh;
             refClockAuxSource = RefClockAuxSource.ClkSrcPllUsb;
             sysClockAuxSource = SysClockAuxSource.ClkSrcPllSys;
@@ -50,6 +51,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             this.nvic = new NVIC[2];
             this.nvic[0] = nvic0;
             this.nvic[1] = nvic1;
+            this.gpio = gpio;
 
             this.pll.RegisterClient(OnPllChanged);
             this.pllusb.RegisterClient(OnPllChanged);
@@ -82,7 +84,44 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             AdcClockFrequency = 0;
             RtcClockFrequency = 0;
 
+            gpout = new GPOUTControl[numberOfGPOUTs];
+            gpoutPins = new int[numberOfGPOUTs];
+            for (int i = 0; i < numberOfGPOUTs; ++i)
+            {
+                gpout[i] = new GPOUTControl();
+                gpout[i].dividerIntegral = 1;
+                gpoutPins[i] = -1;
+            }
+
             UpdateAllClocks();
+        }
+
+        private void UpdateGpioMapping(int id, RP2040GPIO.GpioFunction function)
+        {
+            this.Log(LogLevel.Info, "Update of GPIO mapping for pin: " + id + " function: " + function);
+            switch (function)
+            {
+                case RP2040GPIO.GpioFunction.CLOCK_GPOUT0:
+                    {
+                        gpoutPins[0] = id;
+                        break;
+                    }
+                case RP2040GPIO.GpioFunction.CLOCK_GPOUT1:
+                    {
+                        gpoutPins[1] = id;
+                        break;
+                    }
+                case RP2040GPIO.GpioFunction.CLOCK_GPOUT2:
+                    {
+                        gpoutPins[2] = id;
+                        break;
+                    }
+                case RP2040GPIO.GpioFunction.CLOCK_GPOUT3:
+                    {
+                        gpoutPins[3] = id;
+                        break;
+                    }
+            }
         }
 
         public void OnSystemClockChange(Action<long> action)
@@ -119,11 +158,21 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
         {
             UpdateRefClock();
             UpdateSysClock();
+            ReconfigureAllGpout();
+        }
+
+        private void ReconfigureAllGpout()
+        {
+            for (int i = 0; i < numberOfGPOUTs; ++i)
+            {
+                ReconfigureGpout(i);
+            }
         }
 
         private void OnPllChanged()
         {
             UpdateAllClocks();
+            ReconfigureAllGpout();
         }
 
         private ulong GetReferenceClockSourceFrequency()
@@ -169,6 +218,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             {
                 UpdateSysClock();
             }
+            ReconfigureAllGpout();
         }
 
         private ulong GetSystemClockSourceFrequency()
@@ -234,8 +284,6 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                         machine.ClockSource.ExchangeClockEntryWith(c.Handler, oldEntry => oldEntry.With(frequency: SystemClockFrequency));
                     }
                 }
-
-
 
                 foreach (var a in onSysClockChange)
                 {
@@ -309,6 +357,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                     }
                 }
             }
+            ReconfigureAllGpout();
         }
 
         private ulong GetPeripheralSourceFrequency()
@@ -347,6 +396,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                     a(PeripheralClockFrequency);
                 }
             }
+            ReconfigureAllGpout();
         }
 
         private ulong GetUsbClockSourceFrequency()
@@ -381,6 +431,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             {
                 a(UsbClockFrequency);
             }
+            ReconfigureAllGpout();
         }
 
         private ulong GetRtcClockSourceFrequency()
@@ -415,6 +466,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             {
                 a(RtcClockFrequency);
             }
+            ReconfigureAllGpout();
         }
 
         private ulong GetAdcClockSourceFrequency()
@@ -449,97 +501,161 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             {
                 a(AdcClockFrequency);
             }
+            ReconfigureAllGpout();
         }
 
+        private ulong GetFrequencyForAuxSource(GPOUTControl.AuxSource source)
+        {
+            switch (source)
+            {
+                case GPOUTControl.AuxSource.ClkSrcPllSys: return pll.CalculateOutputFrequency(xosc.Frequency);
+                case GPOUTControl.AuxSource.ClkSrcGPin0: 
+                case GPOUTControl.AuxSource.ClkSrcGPin1: 
+                {
+                    this.Log(LogLevel.Error, "GPIN input is not supported");
+                    return 0;
+                }
+                case GPOUTControl.AuxSource.ClkSrcPllUsb: return pllusb.CalculateOutputFrequency(xosc.Frequency);
+                case GPOUTControl.AuxSource.RoscClkSrc: return rosc.Frequency;
+                case GPOUTControl.AuxSource.XoscClkSrc: return xosc.Frequency;
+                case GPOUTControl.AuxSource.ClkSys: return SystemClockFrequency;
+                case GPOUTControl.AuxSource.ClkUsb: return UsbClockFrequency;
+                case GPOUTControl.AuxSource.ClkAdc: return AdcClockFrequency;
+                case GPOUTControl.AuxSource.ClkRtc: return RtcClockFrequency;
+                case GPOUTControl.AuxSource.ClkRef: return ReferenceClockFrequency;
+            }
+            return 0;
+        }
+        private void ReconfigureGpout(int id)
+        {
+            if (!gpout[id].kill)
+            {
+                // if enabled then kill 
+                if (gpout[id].thread != null && gpout[id].enable == false)
+                    return;
+            }
+            if (!gpout[id].enable)
+            {
+                return;
+            }
+            this.Log(LogLevel.Info, "Configuring GPOUT" + id + " for source " + gpout[id].auxSource);
+            if (gpout[id].thread == null)
+            {
+                gpout[id].thread = machine.ObtainManagedThread(() => GpoutStep(id), 1, name: "GPOUT" + id);
+            }
+            gpout[id].thread.Stop();
+            if (gpout[id].auxSource == GPOUTControl.AuxSource.ClkSrcGPin0 || gpout[id].auxSource == GPOUTControl.AuxSource.ClkSrcGPin1)
+            {
+                this.Log(LogLevel.Info, "Setting GPOUT" + id + " to input pin propagation");
+                // register for gpio callback
+                return;
+            }
+            ulong divider = (ulong)gpout[id].dividerIntegral;
+            if (divider == 0)
+            {
+                divider = 1 << 16;
+            }
+            ulong frequency = GetFrequencyForAuxSource(gpout[id].auxSource) / divider;
+            this.Log(LogLevel.Info, "Setting GPOUT" + id + " frequency: " + frequency);
+            gpout[id].thread.Frequency = (uint)frequency << 1;
+            gpout[id].thread.Start();
+        }
+
+        private void GpoutStep(int id)
+        {
+            if (gpoutPins[id] != -1)
+            {
+                this.gpio.TogglePin(gpoutPins[id]);
+            }
+        }
         private void DefineRegisters()
         {
-            Registers.CLK_GPOUT0_CTRL.Define(this)
-                .WithReservedBits(0, 5)
-                .WithValueField(5, 4, name: "AUXSRC")
-                .WithReservedBits(9, 1)
-                .WithTaggedFlag("KILL", 10)
-                .WithTaggedFlag("ENABLE", 11)
-                .WithTaggedFlag("DC50", 12)
-                .WithReservedBits(13, 3)
-                .WithValueField(16, 2, name: "PHASE")
-                .WithReservedBits(18, 2)
-                .WithTaggedFlag("NUDGE", 20)
-                .WithReservedBits(21, 11);
+            int registerCounter = 0;
+            Registers[] controlRegs = { Registers.CLK_GPOUT0_CTRL, Registers.CLK_GPOUT1_CTRL, Registers.CLK_GPOUT2_CTRL, Registers.CLK_GPOUT3_CTRL };
+            foreach (var r in controlRegs)
+            {
+                int id = registerCounter;
+                r.Define(this)
+                    .WithReservedBits(0, 5)
+                    .WithValueField(5, 4, valueProviderCallback: (_) =>
+                    {
+                        return (ulong)gpout[id].auxSource;
+                    }, writeCallback: (_, value) =>
+                    {
+                        gpout[id].auxSource = (GPOUTControl.AuxSource)value;
+                        ReconfigureGpout(id);
+                    }, name: "AUXSRC")
+                    .WithReservedBits(9, 1)
+                    .WithFlag(10, valueProviderCallback: _ => gpout[id].kill,
+                        writeCallback: (_, value) =>
+                        {
+                            gpout[id].kill = value;
+                            ReconfigureGpout(id);
+                        }, name: "KILL")
+                    .WithFlag(11, valueProviderCallback: _ => gpout[id].enable,
+                        writeCallback: (_, value) =>
+                        {
+                            gpout[id].enable = value;
+                            ReconfigureGpout(id);
+                        }, name: "ENABLE")
+                    .WithFlag(12, valueProviderCallback: _ => gpout[id].dc50,
+                        writeCallback: (_, value) => gpout[id].dc50 = value,
+                        name: "DC50")
+                    .WithReservedBits(13, 3)
+                    .WithValueField(16, 2, valueProviderCallback: _ => gpout[id].phase,
+                        writeCallback: (_, value) => gpout[id].phase = (byte)value,
+                        name: "PHASE")
+                    .WithReservedBits(18, 2)
+                    .WithFlag(20, valueProviderCallback: _ => gpout[id].nudge,
+                        writeCallback: (_, value) => gpout[id].nudge = value,
+                        name: "NUDGE");
 
-            Registers.CLK_GPOUT0_DIV.Define(this)
-                .WithValueField(0, 8, name: "FRAC")
-                .WithValueField(8, 24, name: "INT");
+                registerCounter++;
+            }
+
+            registerCounter = 0;
+            Registers[] dividerRegs = { Registers.CLK_GPOUT0_DIV, Registers.CLK_GPOUT1_DIV, Registers.CLK_GPOUT2_DIV, Registers.CLK_GPOUT3_DIV };
+            foreach (var r in dividerRegs)
+            {
+                int id = registerCounter;
+                r.Define(this)
+                    .WithValueField(0, 8,
+                        valueProviderCallback: (_) => (ulong)gpout[id].dividerFrac,
+                        writeCallback: (_, value) =>
+                        {
+                            gpout[id].dividerFrac = (int)value;
+                            ReconfigureGpout(id);
+                        }, name: "DIV_FRAC")
+                    .WithValueField(8, 24,
+                        valueProviderCallback: (_) => (ulong)gpout[id].dividerIntegral,
+                        writeCallback: (_, value) =>
+                        {
+                            gpout[id].dividerIntegral = (int)value;
+                            ReconfigureGpout(id);
+                        }, name: "DIV_INT");
+
+                registerCounter++;
+            }
 
             Registers.CLK_GPOUT0_SELECTED.Define(this)
                 .WithValueField(0, 32, FieldMode.Read,
-                    valueProviderCallback: _ => 1,
-                    name: "SELECTED");
-
-            Registers.CLK_GPOUT1_CTRL.Define(this)
-                .WithReservedBits(0, 5)
-                .WithValueField(5, 4, name: "AUXSRC")
-                .WithReservedBits(9, 1)
-                .WithTaggedFlag("KILL", 10)
-                .WithTaggedFlag("ENABLE", 11)
-                .WithTaggedFlag("DC50", 12)
-                .WithReservedBits(13, 3)
-                .WithValueField(16, 2, name: "PHASE")
-                .WithReservedBits(18, 2)
-                .WithTaggedFlag("NUDGE", 20)
-                .WithReservedBits(21, 11);
-
-            Registers.CLK_GPOUT1_DIV.Define(this)
-                .WithValueField(0, 8, name: "FRAC")
-                .WithValueField(8, 24, name: "INT");
+                     valueProviderCallback: _ => 1,
+                     name: "SELECTED");
 
             Registers.CLK_GPOUT1_SELECTED.Define(this)
                 .WithValueField(0, 32, FieldMode.Read,
-                    valueProviderCallback: _ => 1,
-                 name: "SELECTED");
-
-            Registers.CLK_GPOUT2_CTRL.Define(this)
-                .WithReservedBits(0, 5)
-                .WithValueField(5, 4, name: "AUXSRC")
-                .WithReservedBits(9, 1)
-                .WithTaggedFlag("KILL", 10)
-                .WithTaggedFlag("ENABLE", 11)
-                .WithTaggedFlag("DC50", 12)
-                .WithReservedBits(13, 3)
-                .WithValueField(16, 2, name: "PHASE")
-                .WithReservedBits(18, 2)
-                .WithTaggedFlag("NUDGE", 20)
-                .WithReservedBits(21, 11);
-
-            Registers.CLK_GPOUT2_DIV.Define(this)
-                .WithValueField(0, 8, name: "FRAC")
-                .WithValueField(8, 24, name: "INT");
+                     valueProviderCallback: _ => 1,
+                     name: "SELECTED");
 
             Registers.CLK_GPOUT2_SELECTED.Define(this)
                 .WithValueField(0, 32, FieldMode.Read,
-                    valueProviderCallback: _ => 1,
-                    name: "SELECTED");
-
-            Registers.CLK_GPOUT3_CTRL.Define(this)
-                .WithReservedBits(0, 5)
-                .WithValueField(5, 4, name: "AUXSRC")
-                .WithReservedBits(9, 1)
-                .WithTaggedFlag("KILL", 10)
-                .WithTaggedFlag("ENABLE", 11)
-                .WithTaggedFlag("DC50", 12)
-                .WithReservedBits(13, 3)
-                .WithValueField(16, 2, name: "PHASE")
-                .WithReservedBits(18, 2)
-                .WithTaggedFlag("NUDGE", 20)
-                .WithReservedBits(21, 11);
-
-            Registers.CLK_GPOUT3_DIV.Define(this)
-                .WithValueField(0, 8, name: "FRAC")
-                .WithValueField(8, 24, name: "INT");
+                     valueProviderCallback: _ => 1,
+                     name: "SELECTED");
 
             Registers.CLK_GPOUT3_SELECTED.Define(this)
                 .WithValueField(0, 32, FieldMode.Read,
-                    valueProviderCallback: _ => 1,
-                    name: "SELECTED");
+                     valueProviderCallback: _ => 1,
+                     name: "SELECTED");
 
             Registers.CLK_REF_CTRL.Define(this)
                 .WithValueField(0, 2, valueProviderCallback: _ => (ulong)refClockSource,
@@ -803,7 +919,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                         resused = value;
                         if (resusIrqEnabled || value)
                         {
-                            IRQ.Set(resused); 
+                            IRQ.Set(resused);
                         }
                     }, name: "CLK_SYS_RESUS_CTRL_FORCE")
                 .WithReservedBits(13, 3)
@@ -1208,5 +1324,35 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
         private bool resusForced;
 
         private NVIC[] nvic;
+        private const int numberOfGPOUTs = 4;
+        private struct GPOUTControl
+        {
+            public bool nudge;
+            public byte phase;
+            public bool dc50;
+            public bool enable;
+            public bool kill;
+            public enum AuxSource
+            {
+                ClkSrcPllSys = 0,
+                ClkSrcGPin0 = 1,
+                ClkSrcGPin1 = 2,
+                ClkSrcPllUsb = 3,
+                RoscClkSrc = 4,
+                XoscClkSrc = 5,
+                ClkSys = 6,
+                ClkUsb = 7,
+                ClkAdc = 8,
+                ClkRtc = 9,
+                ClkRef = 10
+            };
+            public AuxSource auxSource;
+            public int dividerIntegral;
+            public int dividerFrac;
+            public IManagedThread thread;
+        }
+        GPOUTControl[] gpout;
+        private RP2040GPIO gpio;
+        private int[] gpoutPins;
     }
 }

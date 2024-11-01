@@ -1,0 +1,4 @@
+$global.TEST_FILE=$ORIGIN/../../pico-examples/build/blink_simple/blink_simple.elf
+
+include $ORIGIN/../prepare.resc
+showAnalyzer sysbus.uart0

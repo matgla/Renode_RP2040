@@ -173,7 +173,7 @@ namespace Antmicro.Renode.Peripherals.CPU
 
         private void UpdateClocks(long systemClockFrequency)
         {
-            uint newPerformance = (uint)(systemClockFrequency);
+            uint newPerformance = (uint)(systemClockFrequency / 1000000);
             if (newPerformance == 0)
             {
                 newPerformance = 1;

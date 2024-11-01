@@ -784,8 +784,17 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
             WritePin(number, value, GetFunction(number));
         }
 
+        public void TogglePin(int number)
+        {
+            WritePin(number, !State[number], GetFunction(number));
+        }
+
         public void WritePin(int number, bool value, GpioFunction peri)
         {
+            if (State[number] == value)
+            {
+                return;
+            }
             this.Log(LogLevel.Noisy, "Setting GPIO" + number + " to: " + value + ", time: " + machine.ElapsedVirtualTime.TimeElapsed + ", from: " + peri);
             if (!IsPinOutput(number))
             {

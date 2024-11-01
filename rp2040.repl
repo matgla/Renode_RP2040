@@ -4,6 +4,11 @@ bootrom0: Memory.MappedMemory @ sysbus 0x00000000
 flash0: Memory.MappedMemory @ sysbus 0x10000000
     size: 0x200000
 
+flash0_al1: Memory.MemoryAlias @ sysbus 0x13000000
+    address: 0x10000000
+    size: 0x200000
+
+
 sram0: Memory.MappedMemory @ sysbus 0x20000000
     size: 0x42000
 
@@ -38,7 +43,7 @@ nvic1: IRQControllers.NVIC @ sysbus new Bus.BusPointRegistration {
     -> cpu1@0
 
 uart0: UART.RP2040Uart @ sysbus 0x40034000 
-    address: 0x4003400
+    address: 0x40034000
 
 uart0:
     IRQ ->nvic0@20
@@ -98,7 +103,8 @@ clocks: Miscellaneous.RP2040Clocks @ sysbus 0x40008000 {
     pllusb: pll_usb;
     nvic0: nvic0;
     nvic1: nvic1;
-    address: 0x40008000
+    address: 0x40008000;
+    gpio: gpio
 }
 
 clocks:
@@ -151,6 +157,9 @@ rosc: Miscellaneous.RP2040ROSC @ sysbus 0x40060000 {
 
 xip_ssi: SPI.RP2040XIPSSI @ sysbus 0x18000000
     address: 0x18000000
+    DmaTransmitDreq -> dma@38
+    DmaStreamDreq -> dma@39
+
 
 pads: GPIOPort.RP2040Pads @ sysbus 0x4001c000 {
     gpio: gpio;

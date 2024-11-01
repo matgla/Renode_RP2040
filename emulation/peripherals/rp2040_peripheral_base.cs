@@ -10,6 +10,7 @@
 using Antmicro.Renode.Core;
 using Antmicro.Renode.Peripherals.Bus;
 using IronPython.Modules;
+using Antmicro.Renode.Logging;
 
 namespace Antmicro.Renode.Peripherals
 {
