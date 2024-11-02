@@ -3,3 +3,5 @@ $global.TEST_FILE=$ORIGIN/../../../pico-examples/build/flash/ssi_dma/flash_ssi_d
 include $ORIGIN/../../prepare.resc
 showAnalyzer sysbus.uart0
 
+logLevel -1
+

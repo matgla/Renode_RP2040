@@ -23,6 +23,8 @@ using Antmicro.Renode.Peripherals.SPI.NORFlash;
 using Antmicro.Renode.Core.Structure.Registers;
 using System;
 
+using Range = Antmicro.Renode.Core.Range;
+
 namespace Antmicro.Renode.Peripherals.SPI
 {
 
@@ -64,8 +66,7 @@ namespace Antmicro.Renode.Peripherals.SPI
                     }
                     break;
                 case DecodedOperation.OperationState.HandleCommand:
-                    HandleCommand(data);
-                    break;
+                    return HandleCommand(data);
 
             }
             return 0;
@@ -136,6 +137,10 @@ namespace Antmicro.Renode.Peripherals.SPI
                 case Command.FastRead:
                 case Command.FastReadDualIO:
                 case Command.FastReadDualOutput:
+                    currentOperation.Operation = DecodedOperation.OperationType.ReadFast;
+                    currentOperation.State = DecodedOperation.OperationState.AccumulateCommandAddressBytes;
+                    currentOperation.AddressLength = 3;
+                    break;
                 case Command.FastReadQuadIO:
                 case Command.FastReadQuadOutput:
                     currentOperation.Operation = DecodedOperation.OperationType.ReadFast;
@@ -303,8 +308,6 @@ namespace Antmicro.Renode.Peripherals.SPI
             }
         }
 
-
-
         public void Reset()
         {
             currentOperation = default;
@@ -371,6 +374,7 @@ namespace Antmicro.Renode.Peripherals.SPI
 
         private readonly ByteRegister statusRegister;
         private readonly IFlagRegisterField writeEnable;
+        private bool continuousReadMode;
         protected Range? lockedRange;
 
         private const byte manufacturerId = 0xEF;

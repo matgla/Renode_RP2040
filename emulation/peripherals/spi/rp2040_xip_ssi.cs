@@ -32,7 +32,7 @@ namespace Antmicro.Renode.Peripherals.SPI
     public const ulong xorAliasOffset = 0x1000;
     public const ulong setAliasOffset = 0x2000;
     public const ulong clearAliasOffset = 0x3000;
-    public RP2040XIPSSI(IMachine machine, ulong address) : base(machine)
+    public RP2040XIPSSI(IMachine machine, ulong address, IGPIOReceiver chipSelect) : base(machine)
     {
       registers = new DoubleWordRegisterCollection(this);
       receiveBuffer = new CircularBuffer<UInt32>(36);
@@ -46,6 +46,7 @@ namespace Antmicro.Renode.Peripherals.SPI
       dreqThread.Frequency = 1000000; // just for now, maybe I should connect that to real clock frequency
       rxDmaEnabled = false;
       txDmaEnabled = false;
+      this.chipSelect = chipSelect;
       DefineRegisters();
     }
 
@@ -131,7 +132,6 @@ namespace Antmicro.Renode.Peripherals.SPI
         var peripheral = RegisteredPeripheral;
         if (peripheral != null)
         {
-          this.Log(LogLevel.Error, "Writing to peripheral: " + dataFrameSize.Value + ", 32: " + dataFrameSize32.Value + ", NDF: " + numberOfDataFrames.Value + ", CFS: " + controlFrameSize.Value + ", XIP_CMD: " + xipCmd.Value + ", INST_L: " + instructionLength.Value + ", address: " + addressLength.Value);
           uint nextData = 0;
           uint dataSize = (uint)dataFrameSize.Value;
           if (dataSize == 0)
@@ -143,7 +143,6 @@ namespace Antmicro.Renode.Peripherals.SPI
           {
             int offset = (int)dataSize + 1 - 8 - i * 8;
             byte c = (byte)(data >> offset);
-            this.Log(LogLevel.Error, "Offset: " + offset + ", data offset: " + " byte: " + c.ToString("x"));
             byte readed = peripheral.Transmit(c);
             nextData |= (uint)readed << offset;
           }
@@ -174,7 +173,9 @@ namespace Antmicro.Renode.Peripherals.SPI
         .WithReservedBits(16, 16);
 
       Registers.SSIENR.Define(registers)
-        .WithFlag(0, out ssiEnabled, name: "ENABLED")
+        .WithFlag(0, out ssiEnabled, writeCallback: (_, value) => {
+            chipSelect.OnGPIO(0, true);  
+        }, name: "ENABLED")
         .WithReservedBits(1, 31);
 
       Registers.MWCR.Define(registers)
@@ -364,6 +365,7 @@ namespace Antmicro.Renode.Peripherals.SPI
     private IValueRegisterField xipCmd;
     private IValueRegisterField instructionLength;
     private IValueRegisterField addressLength;
+    private IGPIOReceiver chipSelect;
 
     private enum Registers
     {
