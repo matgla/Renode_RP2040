@@ -121,8 +121,18 @@ namespace Antmicro.Renode.Peripherals.SPI
             currentOperation.Operation = DecodedOperation.OperationType.None;
             currentOperation.State = DecodedOperation.OperationState.HandleCommand;
             currentOperation.DummyBytesRemaining = GetDummyBytes((Command)operation);
-            this.Log(LogLevel.Debug, "DB: " + currentOperation.DummyBytesRemaining);
 
+            if (continuousReadMode.HasValue && continuousReadMode.Value)
+            {
+                currentOperation.DummyBytesRemaining = originalCommandDummyBytes; 
+                currentOperation.Operation = DecodedOperation.OperationType.ReadFast;
+                currentOperation.State = DecodedOperation.OperationState.AccumulateCommandAddressBytes;
+                currentOperation.AddressLength = 3;
+                // determine if still in continuous mode after address completion
+                continuousReadMode = false;
+                HandleCommand(operation);
+                return;
+            }
             switch ((Command)operation)
             {
                 case Command.JEDECId:
@@ -135,17 +145,18 @@ namespace Antmicro.Renode.Peripherals.SPI
                     break;
                 case Command.ReadData:
                 case Command.FastRead:
-                case Command.FastReadDualIO:
                 case Command.FastReadDualOutput:
+                case Command.FastReadQuadOutput:
                     currentOperation.Operation = DecodedOperation.OperationType.ReadFast;
                     currentOperation.State = DecodedOperation.OperationState.AccumulateCommandAddressBytes;
                     currentOperation.AddressLength = 3;
                     break;
                 case Command.FastReadQuadIO:
-                case Command.FastReadQuadOutput:
+                case Command.FastReadDualIO:
                     currentOperation.Operation = DecodedOperation.OperationType.ReadFast;
                     currentOperation.State = DecodedOperation.OperationState.AccumulateCommandAddressBytes;
                     currentOperation.AddressLength = 3;
+                    continuousReadMode = false;
                     break;
                 case Command.PageProgram:
                     currentOperation.Operation = DecodedOperation.OperationType.Program;
@@ -269,6 +280,20 @@ namespace Antmicro.Renode.Peripherals.SPI
             if (currentOperation.DummyBytesRemaining > 0)
             {
                 currentOperation.DummyBytesRemaining--;
+                if (continuousReadMode.HasValue && continuousReadMode.Value == false)
+                {
+                    if (((data >> 4) & 0x3) == 0b10)
+                    {
+                        this.Log(LogLevel.Noisy, "Continuous read mode enabled");
+                        originalCommandDummyBytes = currentOperation.DummyBytesRemaining + 1;
+                        continuousReadMode = true;
+                        return 0; 
+                    }
+                    else 
+                    {
+                        continuousReadMode = null;
+                    }
+                }
                 this.Log(LogLevel.Noisy, "Consuming dummy bytes in 0x{0:x}, left: {1}", currentOperation.Operation, currentOperation.DummyBytesRemaining);
                 return 0;
             }
@@ -312,6 +337,8 @@ namespace Antmicro.Renode.Peripherals.SPI
         {
             currentOperation = default;
             writeEnable.Value = false;
+            continuousReadMode = null;
+            originalCommandDummyBytes = 0;
         }
         public MappedMemory UnderlyingMemory => underlyingMemory;
 
@@ -374,7 +401,8 @@ namespace Antmicro.Renode.Peripherals.SPI
 
         private readonly ByteRegister statusRegister;
         private readonly IFlagRegisterField writeEnable;
-        private bool continuousReadMode;
+        private bool? continuousReadMode;
+        private int originalCommandDummyBytes;
         protected Range? lockedRange;
 
         private const byte manufacturerId = 0xEF;

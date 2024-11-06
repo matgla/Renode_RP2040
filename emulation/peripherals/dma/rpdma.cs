@@ -504,6 +504,7 @@ namespace Antmicro.Renode.Peripherals.DMA
           transferCounter = 0;
         }
         var request = new Request(readAddress, writeAddress, size, transferType, transferType, incrementRead.Value, incrementWrite.Value);
+        this.Log(LogLevel.Error, "Reading from: {0:X}, writing to: {1:X}, paced: {2}, tc: {3}", readAddress, writeAddress, paced, transferCounter); 
         return new RPXXXXDmaRequest(request, ringSize == 0 ? 0 : 1 << ringSize, ringSelect.Value, transferCounter);
       }
 

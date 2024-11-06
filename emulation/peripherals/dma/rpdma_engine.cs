@@ -156,6 +156,7 @@ namespace Antmicro.Renode.Peripherals.DMA
             default:
               throw new ArgumentOutOfRangeException($"Requested read transfer size: {request.request.ReadTransferType} is not supported by DmaEngine");
           }
+          Logger.Log(LogLevel.Error, "BUF: " + string.Join(",", buffer));
           transferred += readLengthInBytes;
           if (request.request.IncrementReadAddress)
           {
@@ -262,6 +263,7 @@ namespace Antmicro.Renode.Peripherals.DMA
                 // write just what left till full ring
                 size = (ulong)request.ringSize - chunkStartOffset % (ulong)request.ringSize;
               }
+              Logger.Log(LogLevel.Error, "Writing to: {0:X}", writeAddress + writeOffset, string.Join(",", chunk));
               sysbus.WriteBytes(chunk, writeAddress + writeOffset, (long)size, false, context: context);
               chunkStartOffset += size;
             }
@@ -351,6 +353,7 @@ namespace Antmicro.Renode.Peripherals.DMA
     private int WriteToMemory(ulong destinationAddress, byte[] buffer, CPU.ICPU context, int ringSize)
     {
       int size = buffer.Length;
+      Logger.Log(LogLevel.Error, "Ring size: {0}, dst: {1:X}", ringSize, destinationAddress);
       if (ringSize == 0)
       {
         sysbus.WriteBytes(buffer, destinationAddress, context: context);

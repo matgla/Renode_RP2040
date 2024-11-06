@@ -20,10 +20,18 @@ using System.Xml.Serialization;
 using Antmicro.Renode.UI;
 using System.Runtime.InteropServices;
 using Microsoft.Scripting.Interpreter;
+using System.Linq;
+using Dynamitey;
+using Microsoft.Scripting.Utils;
+using Antmicro.Renode.Peripherals.Miscellaneous.S32K3XX_FlexIOModel;
+using Antmicro.Renode.UserInterface;
+using Antmicro.Renode.PlatformDescription;
+using System.Data.Common;
+using Antmicro.Renode.Utilities.Packets;
 
 namespace Antmicro.Renode.Peripherals.SPI
 {
-  // Slave mode is not yet supported
+  // Slave mode is not yet supported, XIP mode is not implemented since underlaying memory is mapped
   public class RP2040XIPSSI : NullRegistrationPointPeripheralContainer<ISPIPeripheral>, IDoubleWordPeripheral, IKnownSize
   {
     public long Size { get { return 0x1000; } }
@@ -35,7 +43,8 @@ namespace Antmicro.Renode.Peripherals.SPI
     public RP2040XIPSSI(IMachine machine, ulong address, IGPIOReceiver chipSelect) : base(machine)
     {
       registers = new DoubleWordRegisterCollection(this);
-      receiveBuffer = new CircularBuffer<UInt32>(36);
+      receiveBuffer = new CircularBuffer<UInt32>(16);
+      transmitBuffer = new CircularBuffer<UInt32>(16);
       machine.GetSystemBus(this).Register(this, new BusMultiRegistration(address + xorAliasOffset, aliasSize, "XOR"));
       machine.GetSystemBus(this).Register(this, new BusMultiRegistration(address + setAliasOffset, aliasSize, "SET"));
       machine.GetSystemBus(this).Register(this, new BusMultiRegistration(address + clearAliasOffset, aliasSize, "CLEAR"));
@@ -44,6 +53,8 @@ namespace Antmicro.Renode.Peripherals.SPI
       dreqThread = machine.ObtainManagedThread(ProcessDreq, 1);
       dreqThread.Stop();
       dreqThread.Frequency = 1000000; // just for now, maybe I should connect that to real clock frequency
+      clockingThread = machine.ObtainManagedThread(TransferClock, 1);
+      clockingThread.Frequency = 10000000;
       rxDmaEnabled = false;
       txDmaEnabled = false;
       this.chipSelect = chipSelect;
@@ -53,7 +64,6 @@ namespace Antmicro.Renode.Peripherals.SPI
     void ProcessDreq()
     {
       DmaTransmitDreq.Toggle();
-      DmaStreamDreq.Toggle();
     }
 
     [ConnectionRegion("XOR")]
@@ -104,6 +114,9 @@ namespace Antmicro.Renode.Peripherals.SPI
 
     public override void Reset()
     {
+      bytesToTransfer = 0;
+      ssiEnabled = false;
+      commandBytesTransferred = 0;
     }
 
     private ulong PeripheralDataRead()
@@ -112,6 +125,7 @@ namespace Antmicro.Renode.Peripherals.SPI
       {
         if (receiveBuffer.TryDequeue(out var value))
         {
+          this.Log(LogLevel.Error, "Deq: " + value);
           return value;
         }
         return 0;
@@ -125,29 +139,173 @@ namespace Antmicro.Renode.Peripherals.SPI
       // transmit XIP command 
       peripheral.Transmit((byte)xipCmd.Value);
     }
+
+    private enum State
+    {
+      Wait,
+      Instruction,
+      Address,
+      WaitCycles,
+      Data
+    };
+
+    private State state;
+
+
     private void PeripheralDataWrite(ulong data)
     {
-      lock (receiveBuffer)
+      this.Log(LogLevel.Error, "TMOD: {0}, data: {1:x}", tmod.Value, data);
+      if (transmitBuffer.Count < 16)
       {
-        var peripheral = RegisteredPeripheral;
-        if (peripheral != null)
-        {
-          uint nextData = 0;
-          uint dataSize = (uint)dataFrameSize.Value;
-          if (dataSize == 0)
-          {
-            dataSize = (uint)dataFrameSize32.Value;
-          }
+        transmitBuffer.Enqueue((uint)data);
+      }
+    }
 
-          for (int i = 0; i < Math.Ceiling((double)dataSize / 8); ++i)
+    void PushToReceiveFifo(uint data)
+    {
+      if (receiveBuffer.Count < 16)
+      {
+        receiveBuffer.Enqueue(data);
+      }
+      if (rxDmaEnabled)
+      {
+        DmaStreamDreq.Toggle();
+      }
+    }
+
+    uint WriteToDevice(uint data, int bits)
+    {
+      uint received = 0;
+      for (int i = 0; i < bits; i += 8)
+      {
+        int offset = bits - 8 - i;
+        received |= (uint)RegisteredPeripheral.Transmit((byte)(data >> offset)) << i;
+      }
+      return received;
+    }
+    void ProcessReceive()
+    {
+      switch (state)
+      {
+        case State.Instruction:
           {
-            int offset = (int)dataSize + 1 - 8 - i * 8;
-            byte c = (byte)(data >> offset);
-            byte readed = peripheral.Transmit(c);
-            nextData |= (uint)readed << offset;
+            if (!transmitBuffer.TryDequeue(out var data))
+            {
+              clockingThread.Stop();
+              return;
+            }
+
+            this.Log(LogLevel.Noisy, "Sending command from FIFO: {0:X}", data);
+
+            if (instructionLength.Value == 0)
+            {
+              // this is XIP special mode with appending instruction after address, taking from 32-bit address 
+              // for XIP operations addressing is limited to 32 bits
+              int bytes = (int)Math.Ceiling((double)addressLength.Value / 2);
+              
+              this.Log(LogLevel.Noisy, "Sending continuation code: {0}", bytes); 
+              // first byte goes at end 
+              WriteToDevice(data, bytes); 
+              cyclesToWait = (int)Math.Ceiling((double)waitCycles.Value / 8);
+              if (cyclesToWait > 0)
+              {
+                state = State.WaitCycles;
+              }
+              else 
+              {
+                state = State.Data;
+                framesToTransfer = (int)numberOfDataFrames.Value + 1;
+              }
+              return;
+            }
+            int bits = 1 << (int)(1 + instructionLength.Value);
+            this.Log(LogLevel.Noisy, "Writing instruction with size: " + bits + ", instru: " + instructionLength.Value); 
+            // this is just instruction, no address bytes yet 
+            WriteToDevice(data, bits); 
+            state = State.Address;
+            addressBytes = (int)Math.Ceiling((double)addressLength.Value / 2);
+            return;
           }
-          receiveBuffer.Enqueue(nextData);
+        case State.Address:
+          {
+            if (!transmitBuffer.TryDequeue(out var data))
+            {
+              this.Log(LogLevel.Error, "Requested address transmission, but there is no data in FIFO");
+              return;
+            }
+
+            this.Log(LogLevel.Noisy, "Transmitting address bytes: {0:X}, size: {1}", data, addressBytes);
+            WriteToDevice(data, addressBytes * 8); 
+            if (waitCycles.Value != 0)
+            {
+              state = State.WaitCycles;
+              cyclesToWait = (int)Math.Ceiling((double)waitCycles.Value / 8);
+              this.Log(LogLevel.Noisy, "Wait cycles are necessary, waiting for: {0}", cyclesToWait);
+              return;
+            }
+            state = State.Data;
+            framesToTransfer = (int)numberOfDataFrames.Value + 1;
+            this.Log(LogLevel.Noisy, "Data frames to transfer: {0}", framesToTransfer);
+            return;
+          }
+        case State.WaitCycles:
+        {
+          for (int i = 0; i < cyclesToWait; ++i)
+          {
+            RegisteredPeripheral.Transmit(0x00);
+          }
+          state = State.Data;
+          framesToTransfer = (int)numberOfDataFrames.Value + 1;
+          return;
         }
+        case State.Data:
+        {
+          this.Log(LogLevel.Noisy, "Transmiting data frames left: " + framesToTransfer);
+          int dataSize = (int)Math.Ceiling((double)dataFrameSize32.Value / 8);
+          // if tmod is read only
+          PushToReceiveFifo(WriteToDevice(0, (int)dataFrameSize32.Value + 1));
+          if (--framesToTransfer <= 0)
+          {
+            clockingThread.Stop();
+          }
+          return;
+        }
+      }
+    }
+
+    void ProcessTransmit()
+    {
+      if (!transmitBuffer.TryDequeue(out var data))
+      {
+        return;
+      }
+      uint received = 0;
+      busy.Value = true;
+      for (int i = 0; i < (int)Math.Ceiling((double)dataFrameSize32.Value/8); ++i)
+      {
+        received |= RegisteredPeripheral.Transmit((byte)(data >> (i * 8)));
+      }
+
+      this.Log(LogLevel.Error, "TR: " + data + ", rcs: " + receiveBuffer.Count);
+      PushToReceiveFifo(received); 
+      busy.Value = false;
+    }
+
+    // This is designed to transfer up to 4 bits per clock to reduce overhead 
+    // It may be not 100% clock accurate with real HW, but should be good enough
+    private void TransferClock()
+    {
+      if (tmod.Value == 0)
+      {
+        ProcessTransmit();
+      }
+      else if (tmod.Value == 1)
+      {
+
+      }
+      else if (tmod.Value == 3)
+      {
+        ProcessReceive();
       }
     }
 
@@ -158,7 +316,7 @@ namespace Antmicro.Renode.Peripherals.SPI
         .WithValueField(4, 2, name: "FRF")
         .WithTaggedFlag("SCPH", 6)
         .WithTaggedFlag("SCPOL", 7)
-        .WithValueField(8, 2, name: "TMOD")
+        .WithValueField(8, 2, out tmod, name: "TMOD")
         .WithTaggedFlag("SLV_OE", 10)
         .WithTaggedFlag("SRL", 11)
         .WithValueField(12, 4, out controlFrameSize, name: "CFS")
@@ -173,9 +331,32 @@ namespace Antmicro.Renode.Peripherals.SPI
         .WithReservedBits(16, 16);
 
       Registers.SSIENR.Define(registers)
-        .WithFlag(0, out ssiEnabled, writeCallback: (_, value) => {
-            chipSelect.OnGPIO(0, true);  
-        }, name: "ENABLED")
+        .WithFlag(0, writeCallback: (_, value) =>
+        {
+          if (!value)
+          {
+            commandBytesTransferred = 0;
+          }
+
+          if (ssiEnabled != value)
+          {
+            receiveBuffer.Clear();
+            transmitBuffer.Clear();
+            chipSelect.OnGPIO(0, value);
+            if (value)
+            {
+              state = State.Instruction;
+              this.Log(LogLevel.Noisy, "Enabling clocking thread, transmission started");
+              clockingThread.Start();
+            }
+            else
+            {
+              this.Log(LogLevel.Noisy, "Disabling clocking thread, transmission finished");
+              clockingThread.Stop();
+            }
+          }
+          ssiEnabled = value;
+        }, valueProviderCallback: _ => ssiEnabled, name: "ENABLED")
         .WithReservedBits(1, 31);
 
       Registers.MWCR.Define(registers)
@@ -185,7 +366,14 @@ namespace Antmicro.Renode.Peripherals.SPI
         .WithReservedBits(3, 29);
 
       Registers.SER.Define(registers)
-        .WithFlag(0, out slaveEnabled, name: "CS")
+        .WithFlag(0, out slaveEnabled, writeCallback: (_, value) =>
+        {
+          if (value)
+          {
+            commandBytesTransferred = 0;
+          }
+          chipSelect.OnGPIO(0, value);
+        }, name: "CS")
         .WithReservedBits(1, 31);
 
       Registers.BAUDR.Define(registers)
@@ -193,31 +381,30 @@ namespace Antmicro.Renode.Peripherals.SPI
         .WithReservedBits(16, 16);
 
       Registers.TXFTLR.Define(registers)
-        .WithValueField(0, 8, name: "TFT")
+        .WithValueField(0, 8, out transmitFifoThreshold, name: "TFT")
         .WithReservedBits(8, 24);
 
       Registers.RXFTLR.Define(registers)
-        .WithValueField(0, 8, valueProviderCallback: _ => (ulong)receiveBuffer.Count,
-            name: "RFT")
+        .WithValueField(0, 8, out receiveFifoThreshold, name: "RFT")
         .WithReservedBits(8, 24);
 
       Registers.TXFLR.Define(registers)
-        .WithValueField(0, 8, valueProviderCallback: _ => 0, name: "TXFTL")
+        .WithValueField(0, 8, valueProviderCallback: _ => (byte)transmitBuffer.Count, name: "TXFTL")
         .WithReservedBits(8, 24);
 
       Registers.RXFLR.Define(registers)
-        .WithValueField(0, 8, valueProviderCallback: _ => 1, name: "RXFTL")
+        .WithValueField(0, 8, valueProviderCallback: _ => (byte)receiveBuffer.Count, name: "RXFTL")
         .WithReservedBits(8, 24);
 
       Registers.SR.Define(registers)
-        .WithTaggedFlag("BUSY", 0)
-        .WithFlag(1, FieldMode.Read, valueProviderCallback: _ => true,
+        .WithFlag(0, out busy, name: "BUSY")
+        .WithFlag(1, FieldMode.Read, valueProviderCallback: _ => transmitBuffer.Count < 16,
             name: "TFNF")
-        .WithFlag(2, FieldMode.Read, valueProviderCallback: _ => true,
+        .WithFlag(2, FieldMode.Read, valueProviderCallback: _ => transmitBuffer.Count == 0,
             name: "TFE")
-        .WithFlag(3, FieldMode.Read, valueProviderCallback: _ => true,
+        .WithFlag(3, FieldMode.Read, valueProviderCallback: _ => receiveBuffer.Count > 0,
             name: "RFNE")
-        .WithFlag(4, FieldMode.Read, valueProviderCallback: _ => false,
+        .WithFlag(4, FieldMode.Read, valueProviderCallback: _ => receiveBuffer.Count == 16,
             name: "RFF")
         .WithTaggedFlag("TXE", 5)
         .WithTaggedFlag("DCOL", 6)
@@ -334,7 +521,7 @@ namespace Antmicro.Renode.Peripherals.SPI
         .WithReservedBits(6, 2)
         .WithValueField(8, 2, out instructionLength, name: "INST_L")
         .WithReservedBits(10, 1)
-        .WithValueField(11, 5, name: "WAIT_CYCLES")
+        .WithValueField(11, 5, out waitCycles, name: "WAIT_CYCLES")
         .WithTaggedFlag("SPI_DDR_EN", 16)
         .WithTaggedFlag("INST_DDR_EN", 17)
         .WithTaggedFlag("SPI_RXDS_EN", 18)
@@ -347,12 +534,14 @@ namespace Antmicro.Renode.Peripherals.SPI
     private uint ssi_comp_version = 0x3430412a;
 
     private CircularBuffer<UInt32> receiveBuffer;
+    private CircularBuffer<UInt32> transmitBuffer;
 
-    private IFlagRegisterField ssiEnabled;
+    private bool ssiEnabled;
     private IFlagRegisterField slaveEnabled;
 
     // I don't really have SSI simulation, so I can stub it with just timer right now
     private IManagedThread dreqThread;
+    private IManagedThread clockingThread;
     private bool rxDmaEnabled;
     private bool txDmaEnabled;
     public GPIO DmaTransmitDreq { get; }
@@ -365,8 +554,17 @@ namespace Antmicro.Renode.Peripherals.SPI
     private IValueRegisterField xipCmd;
     private IValueRegisterField instructionLength;
     private IValueRegisterField addressLength;
+    private IValueRegisterField tmod;
+    private IValueRegisterField waitCycles;
+    private IValueRegisterField transmitFifoThreshold;
+    private IValueRegisterField receiveFifoThreshold;
     private IGPIOReceiver chipSelect;
-
+    private IFlagRegisterField busy;
+    private int bytesToTransfer;
+    private int addressBytes;
+    private int commandBytesTransferred;
+    private int cyclesToWait;
+    private int framesToTransfer;
     private enum Registers
     {
       CTRLR0 = 0x0,
