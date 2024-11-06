@@ -19,7 +19,7 @@ using Antmicro.Renode.Utilities.Packets;
 namespace Antmicro.Renode.Peripherals.DMA
 {
 
-  public struct RPXXXXDmaRequest 
+  public struct RPXXXXDmaRequest
   {
     public RPXXXXDmaRequest(Request request, int ringSize, bool ringWrite, int offset)
       : this()
@@ -156,7 +156,6 @@ namespace Antmicro.Renode.Peripherals.DMA
             default:
               throw new ArgumentOutOfRangeException($"Requested read transfer size: {request.request.ReadTransferType} is not supported by DmaEngine");
           }
-          Logger.Log(LogLevel.Error, "BUF: " + string.Join(",", buffer));
           transferred += readLengthInBytes;
           if (request.request.IncrementReadAddress)
           {
@@ -202,7 +201,8 @@ namespace Antmicro.Renode.Peripherals.DMA
           case ChecksumRequest.Type.XORReduction:
             {
               UInt32 calculated = checksum.Value.init;
-              foreach(var b in buffer) {
+              foreach (var b in buffer)
+              {
                 calculated ^= b;
               }
               uint bitCount = 0;
@@ -210,16 +210,17 @@ namespace Antmicro.Renode.Peripherals.DMA
               {
                 bitCount += calculated & 1;
                 calculated >>= 1;
-              } 
+              }
               responseWithCrc.crc = Convert.ToUInt32(bitCount % 2 == 1);
               break;
             }
           case ChecksumRequest.Type.Sum:
             {
               uint sum = 0;
-              foreach (var b in buffer) {
+              foreach (var b in buffer)
+              {
                 sum += b;
-              } 
+              }
               responseWithCrc.crc = sum;
               break;
             }
@@ -257,22 +258,21 @@ namespace Antmicro.Renode.Peripherals.DMA
             while (chunkStartOffset < (ulong)request.request.Size)
             {
               var writeAddress = destinationAddress + chunkStartOffset;
-              ulong size = (ulong)chunk.Length; 
+              ulong size = (ulong)chunk.Length;
               if (request.ringSize != 0 && request.ringWrite == true && chunkStartOffset % (ulong)request.ringSize != 0)
               {
                 // write just what left till full ring
                 size = (ulong)request.ringSize - chunkStartOffset % (ulong)request.ringSize;
               }
-              Logger.Log(LogLevel.Error, "Writing to: {0:X}", writeAddress + writeOffset, string.Join(",", chunk));
               sysbus.WriteBytes(chunk, writeAddress + writeOffset, (long)size, false, context: context);
               chunkStartOffset += size;
             }
           }
-          if (request.ringSize != 0 && request.ringWrite == true) 
+          if (request.ringSize != 0 && request.ringWrite == true)
           {
             response.WriteAddress += (ulong)request.request.Size % (ulong)request.ringSize;
           }
-          else 
+          else
           {
             response.WriteAddress += (ulong)request.request.Size;
           }
@@ -342,18 +342,17 @@ namespace Antmicro.Renode.Peripherals.DMA
       int transferred = 0;
       while (transferred < size)
       {
-        int chunkSize = size - transferred > ringSize ? ringSize : size - transferred; 
+        int chunkSize = size - transferred > ringSize ? ringSize : size - transferred;
         var chunk = new byte[chunkSize];
         sysbus.ReadBytes(sourceAddress, chunkSize, chunk, 0, context: context);
-        Array.Copy(chunk, 0, buffer, transferred, chunkSize); 
+        Array.Copy(chunk, 0, buffer, transferred, chunkSize);
         transferred += chunkSize;
       }
-      return size % ringSize; 
+      return size % ringSize;
     }
     private int WriteToMemory(ulong destinationAddress, byte[] buffer, CPU.ICPU context, int ringSize)
     {
       int size = buffer.Length;
-      Logger.Log(LogLevel.Error, "Ring size: {0}, dst: {1:X}", ringSize, destinationAddress);
       if (ringSize == 0)
       {
         sysbus.WriteBytes(buffer, destinationAddress, context: context);
@@ -363,13 +362,13 @@ namespace Antmicro.Renode.Peripherals.DMA
       int transferred = 0;
       while (transferred < size)
       {
-        int chunkSize = size - transferred > ringSize ? ringSize : size - transferred; 
+        int chunkSize = size - transferred > ringSize ? ringSize : size - transferred;
         var chunk = new byte[chunkSize];
-        Array.Copy(buffer, transferred, chunk, 0, chunkSize); 
+        Array.Copy(buffer, transferred, chunk, 0, chunkSize);
         sysbus.WriteBytes(chunk, destinationAddress, context: context);
         transferred += chunkSize;
       }
-      return size % ringSize; 
+      return size % ringSize;
     }
 
 

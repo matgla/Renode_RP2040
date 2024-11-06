@@ -105,10 +105,10 @@ namespace Antmicro.Renode.Peripherals.SPI
                 case Command.FastRead: return 1;
                 case Command.ReadSFDPRegister: return 1;
                 case Command.ReadSecurityRegister: return 1;
-                case Command.FastReadDualOutput: return 2;
+                case Command.FastReadDualOutput: return 1;
                 case Command.FastReadDualIO: return 1;
                 case Command.ManufacturerIdDualId: return 1;
-                case Command.FastReadQuadOutput: return 4;
+                case Command.FastReadQuadOutput: return 2;
                 case Command.ManufacturerIdQuadIO: return 3;
                 case Command.FastReadQuadIO: return 3;
                 case Command.SetBurstWithWrap: return 3;
@@ -124,13 +124,13 @@ namespace Antmicro.Renode.Peripherals.SPI
 
             if (continuousReadMode.HasValue && continuousReadMode.Value)
             {
-                currentOperation.DummyBytesRemaining = originalCommandDummyBytes; 
+                currentOperation.DummyBytesRemaining = originalCommandDummyBytes;
                 currentOperation.Operation = DecodedOperation.OperationType.ReadFast;
                 currentOperation.State = DecodedOperation.OperationState.AccumulateCommandAddressBytes;
                 currentOperation.AddressLength = 3;
                 // determine if still in continuous mode after address completion
                 continuousReadMode = false;
-                HandleCommand(operation);
+                currentOperation.TryAccumulateAddress(operation);
                 return;
             }
             switch ((Command)operation)
@@ -287,9 +287,9 @@ namespace Antmicro.Renode.Peripherals.SPI
                         this.Log(LogLevel.Noisy, "Continuous read mode enabled");
                         originalCommandDummyBytes = currentOperation.DummyBytesRemaining + 1;
                         continuousReadMode = true;
-                        return 0; 
+                        return 0;
                     }
-                    else 
+                    else
                     {
                         continuousReadMode = null;
                     }

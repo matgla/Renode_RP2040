@@ -20,14 +20,13 @@ namespace Antmicro.Renode.Peripherals.Memory
 
         public uint ReadDoubleWord(long offset)
         {
-            uint data = machine.SystemBus.ReadDoubleWord((ulong)offset);
-            this.Log(LogLevel.Error, "Reading from: " + offset + ", data: " + data);
+            uint data = machine.SystemBus.ReadDoubleWord(address + (ulong)offset);
             return data;
         }
 
         public virtual void WriteDoubleWord(long offset, uint value)
         {
-            machine.SystemBus.WriteDoubleWord(address, value);
+            machine.SystemBus.WriteDoubleWord(address + (ulong)offset, value);
         }
 
         public virtual void Reset()
