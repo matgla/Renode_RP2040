@@ -1,0 +1,29 @@
+From fba6b0ba1e65890e113b208695660c3858051fd3 Mon Sep 17 00:00:00 2001
+From: Mateusz Stadnik <matgla@live.com>
+Date: Thu, 7 Nov 2024 06:04:08 +0100
+Subject: [PATCH] Removed GPOUT frequency to reduce simulation time
+
+---
+ clocks/hello_gpout/hello_gpout.c | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/clocks/hello_gpout/hello_gpout.c b/clocks/hello_gpout/hello_gpout.c
+index 0840b85..c876534 100644
+--- a/clocks/hello_gpout/hello_gpout.c
++++ b/clocks/hello_gpout/hello_gpout.c
+@@ -14,9 +14,9 @@ int main() {
+     printf("Hello gpout\n");
+ 
+     // Output clk_sys / 10 to gpio 21, etc...
+-    clock_gpio_init(21, CLOCKS_CLK_GPOUT0_CTRL_AUXSRC_VALUE_CLK_SYS, 10);
+-    clock_gpio_init(23, CLOCKS_CLK_GPOUT1_CTRL_AUXSRC_VALUE_CLK_USB, 10);
+-    clock_gpio_init(24, CLOCKS_CLK_GPOUT2_CTRL_AUXSRC_VALUE_CLK_ADC, 10);
++    clock_gpio_init(21, CLOCKS_CLK_GPOUT0_CTRL_AUXSRC_VALUE_CLK_SYS, 1000);
++    clock_gpio_init(23, CLOCKS_CLK_GPOUT1_CTRL_AUXSRC_VALUE_CLK_USB, 1000);
++    clock_gpio_init(24, CLOCKS_CLK_GPOUT2_CTRL_AUXSRC_VALUE_CLK_ADC, 1000);
+ #if PICO_RP2040
+     clock_gpio_init(25, CLOCKS_CLK_GPOUT3_CTRL_AUXSRC_VALUE_CLK_RTC, 10);
+ #else
+-- 
+2.44.0
+
