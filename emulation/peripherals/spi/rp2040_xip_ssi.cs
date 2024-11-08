@@ -89,6 +89,7 @@ namespace Antmicro.Renode.Peripherals.SPI
       clockingThread.Stop();
       dreqThread.Stop();
       uint frequency = CalculateClockFrequency(clocks.SystemClockFrequency);
+      this.Log(LogLevel.Debug, "Changed SSI frequency to: {0}", frequency);
       if (frequency == 0)
       {
         clockingThread.Frequency = 1;
@@ -101,6 +102,7 @@ namespace Antmicro.Renode.Peripherals.SPI
       }
       if (ssiEnabled)
       {
+        this.Log(LogLevel.Noisy, "Re-enable clocking thread, txDma: {0}", txDmaEnabled);
         clockingThread.Start();
         if (txDmaEnabled)
         {
@@ -245,7 +247,6 @@ namespace Antmicro.Renode.Peripherals.SPI
           {
             if (!transmitBuffer.TryDequeue(out var data))
             {
-              clockingThread.Stop();
               return;
             }
 
@@ -434,15 +435,7 @@ namespace Antmicro.Renode.Peripherals.SPI
       Registers.BAUDR.Define(registers)
         .WithValueField(0, 16, out clockDivider, writeCallback: (_, value) =>
         {
-          if (clockDivider.Value == 0)
-          {
-            dreqThread.Stop();
-            clockingThread.Stop();
-          }
-          else
-          {
-            RecalculateFrequencies();
-          }
+          RecalculateFrequencies();
         }, name: "SCKDV")
         .WithReservedBits(16, 16);
 
