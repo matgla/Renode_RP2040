@@ -14,13 +14,13 @@ There is predefined Raspberry Pico board description in: 'boards/raspberry_pico.
 |    Peripheral   |  Supported    | Known Limitations  |
 |       :---:     |     :---:     |       :---:        |
 |    **SIO**      |      $${\color{yellow}✓}$$       | Partially supported (multicore, dividers), limitations to be filled when known                 |
-| **IRQ**  | $${\color{yellow}✓}}$$ | Propagation from some peripherals is implemented |
-| **DMA**  | $${\color{green}✓}}$$  | DMA implemented with ringing and control blocks support |
+| **IRQ**  | $${\color{yellow}✓}$$ | Propagation from some peripherals is implemented |
+| **DMA**  | $${\color{green}✓}$$  | DMA implemented with ringing and control blocks support |
 | **Clocks** | $${\color{yellow}✓}$$ | Clocks are mostly just stubs, but with tree propagation, but virtual time is always correct | 
 | **GPIO** | $${\color{yellow}✓}$$ | Pins manipulation implemented, limitations not yet known except when some pins changed PIO may needs to be manually reevaluated due to CPU emulation (it's not step by step). Look for RP2040_SPI (PL022) peripheral as an example |
 | **XOSC** |  $${\color{green}✓}$$  | |
 | **ROSC** | $${\color{green}✓}$$  | |
-| **PLL** | $${\color{green}✓}}$$  | |
+| **PLL** | $${\color{green}✓}$$  | |
 | **SysConfig** | $${\color{red}✗}$$  | |
 | **SysInfo** | $${\color{red}✗}$$  | | 
 | **PIO** |  $${\color{yellow}✓}$$  | Manual reevaluation may be neccessary to synchronize PIO together with actions on MCU. IRQ and DMA not yet supported |
