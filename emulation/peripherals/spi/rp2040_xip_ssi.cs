@@ -197,6 +197,10 @@ namespace Antmicro.Renode.Peripherals.SPI
       if (transmitBuffer.Count < 16)
       {
         transmitBuffer.Enqueue((uint)data);
+        if (ssiEnabled)
+        {
+          clockingThread.Start();
+        }
       }
     }
 
@@ -247,6 +251,7 @@ namespace Antmicro.Renode.Peripherals.SPI
           {
             if (!transmitBuffer.TryDequeue(out var data))
             {
+              clockingThread.Stop();
               return;
             }
 
