@@ -12,8 +12,15 @@ Run successfully 'ssi_dma' example
 
     Create Terminal Tester      sysbus.uart0
 
-    Wait For Line On Uart       Starting DMA     timeout=1
+    Wait For Line On Uart       Starting DMA     timeout=5
+    Wait For Line On Uart       DMA finished     timeout=5
     # Transfer speed in simulation is not accurate
-    Wait For Line On Uart       Transfer speed:  timeout=1
-    Wait For Line On Uart       Starting DMA     timeout=1
+    ${l}  Wait For Next Line On Uart        timeout=1
+    @{words}=  Split String    ${l.line}
+    Should Be Equal As Strings  ${words}[0]   Transfer
+    Should Be Equal As Strings  ${words}[1]   speed:
+    Should Be True		${words}[2]>50	
+	Should Be True		${words}[2]<70	
+    Should Be Equal As Strings   ${words}[3]  MB/s
+
     Wait For Line On Uart       Data check ok    timeout=1

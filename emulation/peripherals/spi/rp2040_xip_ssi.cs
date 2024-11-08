@@ -16,6 +16,8 @@ using Antmicro.Renode.Utilities.Collections;
 using Antmicro.Renode.Logging;
 using Microsoft.Scripting.Utils;
 using Antmicro.Renode.Peripherals.DMA;
+using Antmicro.Renode.Peripherals.Miscellaneous;
+using Xwt;
 
 namespace Antmicro.Renode.Peripherals.SPI
 {
@@ -28,7 +30,37 @@ namespace Antmicro.Renode.Peripherals.SPI
     public const ulong xorAliasOffset = 0x1000;
     public const ulong setAliasOffset = 0x2000;
     public const ulong clearAliasOffset = 0x3000;
-    public RP2040XIPSSI(IMachine machine, ulong address, IGPIOReceiver chipSelect) : base(machine)
+    ulong GetBitWidth()
+    {
+      // standard SPI 
+      if (frameFormat.Value == 0)
+      {
+        return 1;
+      }
+      else if (frameFormat.Value == 1)
+      {
+        return 2;
+      }
+      else
+      {
+        return 4;
+      }
+    }
+
+    private uint CalculateClockFrequency(ulong systemClockFrequency)
+    {
+      if (clockDivider.Value == 0)
+      {
+        return 0;
+      }
+
+      // half of frequency due to SSI logic according to datasheet
+      // divider may reduce it further 
+      // SSI transfer is in (1/2/4 - bit per clock) and simulation logic in bytes
+      return (uint)(systemClockFrequency / 2 / clockDivider.Value / (8 / GetBitWidth()));
+    }
+
+    public RP2040XIPSSI(IMachine machine, ulong address, IGPIOReceiver chipSelect, RP2040Clocks clocks) : base(machine)
     {
       registers = new DoubleWordRegisterCollection(this);
       receiveBuffer = new CircularBuffer<UInt32>(16);
@@ -39,14 +71,42 @@ namespace Antmicro.Renode.Peripherals.SPI
       DmaTransmitDreq = new GPIO();
       DmaStreamDreq = new GPIO();
       dreqThread = machine.ObtainManagedThread(ProcessDreq, 1);
-      dreqThread.Stop();
-      dreqThread.Frequency = 1000000; // just for now, maybe I should connect that to real clock frequency
       clockingThread = machine.ObtainManagedThread(TransferClock, 1);
-      clockingThread.Frequency = 10000000;
+      dreqThread.Stop();
+      clockingThread.Stop();
+      this.clocks = clocks;
       rxDmaEnabled = false;
       txDmaEnabled = false;
       this.chipSelect = chipSelect;
       DefineRegisters();
+
+      this.clocks.OnSystemClockChange(_ => { RecalculateFrequencies(); });
+      RecalculateFrequencies();
+    }
+
+    private void RecalculateFrequencies()
+    {
+      clockingThread.Stop();
+      dreqThread.Stop();
+      uint frequency = CalculateClockFrequency(clocks.SystemClockFrequency);
+      if (frequency == 0)
+      {
+        clockingThread.Frequency = 1;
+        dreqThread.Frequency = 1;
+      }
+      else
+      {
+        clockingThread.Frequency = frequency;
+        dreqThread.Frequency = frequency;
+      }
+      if (ssiEnabled)
+      {
+        clockingThread.Start();
+        if (txDmaEnabled)
+        {
+          dreqThread.Start();
+        }
+      }
     }
 
     void ProcessDreq()
@@ -338,7 +398,7 @@ namespace Antmicro.Renode.Peripherals.SPI
             receiveBuffer.Clear();
             transmitBuffer.Clear();
             chipSelect.OnGPIO(0, value);
-            if (value)
+            if (value && clockDivider.Value != 0)
             {
               state = State.Instruction;
               this.Log(LogLevel.Noisy, "Enabling clocking thread, transmission started");
@@ -372,7 +432,18 @@ namespace Antmicro.Renode.Peripherals.SPI
         .WithReservedBits(1, 31);
 
       Registers.BAUDR.Define(registers)
-        .WithValueField(0, 16, name: "SCKDV")
+        .WithValueField(0, 16, out clockDivider, writeCallback: (_, value) =>
+        {
+          if (clockDivider.Value == 0)
+          {
+            dreqThread.Stop();
+            clockingThread.Stop();
+          }
+          else
+          {
+            RecalculateFrequencies();
+          }
+        }, name: "SCKDV")
         .WithReservedBits(16, 16);
 
       Registers.TXFTLR.Define(registers)
@@ -406,13 +477,13 @@ namespace Antmicro.Renode.Peripherals.SPI
         .WithReservedBits(7, 25);
 
       Registers.IMR.Define(registers)
-              .WithTaggedFlag("TXEIM", 0)
-              .WithTaggedFlag("TXOIM", 1)
-              .WithTaggedFlag("RXUIM", 2)
-              .WithTaggedFlag("RXOIM", 3)
-              .WithTaggedFlag("RXFIM", 4)
-              .WithTaggedFlag("MSTIM", 5)
-              .WithReservedBits(6, 26);
+        .WithTaggedFlag("TXEIM", 0)
+        .WithTaggedFlag("TXOIM", 1)
+        .WithTaggedFlag("RXUIM", 2)
+        .WithTaggedFlag("RXOIM", 3)
+        .WithTaggedFlag("RXFIM", 4)
+        .WithTaggedFlag("MSTIM", 5)
+        .WithReservedBits(6, 26);
 
       Registers.ISR.Define(registers)
         .WithTaggedFlag("TXEIS", 0)
@@ -463,12 +534,15 @@ namespace Antmicro.Renode.Peripherals.SPI
           {
             if (value && !txDmaEnabled)
             {
-              txDmaEnabled = false;
-              dreqThread.Start();
+              txDmaEnabled = true;
+              if (clockDivider.Value != 0)
+              {
+                dreqThread.Start();
+              }
             }
             if (!value && txDmaEnabled)
             {
-              txDmaEnabled = true;
+              txDmaEnabled = false;
               dreqThread.Stop();
             }
           }, name: "TDMAE")
@@ -555,6 +629,7 @@ namespace Antmicro.Renode.Peripherals.SPI
     private IValueRegisterField receiveFifoThreshold;
     private IValueRegisterField frameFormat;
     private IValueRegisterField transferType;
+    private IValueRegisterField clockDivider;
     private IGPIOReceiver chipSelect;
     private IFlagRegisterField busy;
     private int bytesToTransfer;
@@ -562,6 +637,8 @@ namespace Antmicro.Renode.Peripherals.SPI
     private int commandBytesTransferred;
     private int cyclesToWait;
     private int framesToTransfer;
+
+    private RP2040Clocks clocks;
     private enum Registers
     {
       CTRLR0 = 0x0,

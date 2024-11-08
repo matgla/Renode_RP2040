@@ -24,6 +24,7 @@ using Antmicro.Renode.Core.Structure.Registers;
 using System;
 
 using Range = Antmicro.Renode.Core.Range;
+using System.Collections.Generic;
 
 namespace Antmicro.Renode.Peripherals.SPI
 {
@@ -45,6 +46,92 @@ namespace Antmicro.Renode.Peripherals.SPI
             Reset();
         }
 
+        public void EraseBytesInRange(Range range)
+        {
+            var sector = new byte[range.Size];
+            for (ulong i = 0; i < range.Size; ++i)
+            {
+                sector[i] = EmptyByte;
+            }
+            underlyingMemory.WriteBytes((long)range.StartAddress, sector);
+        }
+
+        private void EraseChip()
+        {
+            if (!writeEnable.Value)
+            {
+                this.Log(LogLevel.Error, "Write disabled, can't erase chip");
+                return;
+            }
+            if(lockedRange.HasValue)
+            {
+                this.Log(LogLevel.Error, "Can't erase chip with locked sectors");
+                return;
+            }
+            underlyingMemory.ZeroAll();
+        }
+
+        public void EraseSector(int sectorSize)
+        {
+            var position = currentOperation.ExecutionAddress - currentOperation.ExecutionAddress % sectorSize;
+            var sector = new Range((uint)position, (uint)sectorSize);
+            this.Log(LogLevel.Noisy, "Erasing sector at address: 0x{0:X}, with size: {1}", position, sectorSize);
+            List<Range> sectorsToErase = new List<Range>() { sector }; 
+            if (lockedRange.HasValue)
+            {
+                sectorsToErase = sector.Subtract(lockedRange.Value);
+            }
+            foreach (var s in sectorsToErase)
+            {
+                EraseBytesInRange(s);
+            }
+        }
+
+        public void HandleCommandWithoutData()
+        {
+            switch (currentOperation.Operation)
+            {
+                case DecodedOperation.OperationType.Erase:
+                {
+                    if (!writeEnable.Value)
+                    {
+                        this.Log(LogLevel.Error, "Cannot erase, writing is locked!");
+                        return;
+                    }
+
+                    switch (currentOperation.EraseSize)
+                    {
+                        case DecodedOperation.OperationEraseSize.Subsector4K:
+                        {
+                            EraseSector(4.KB());
+                            break;
+                        }
+                        case DecodedOperation.OperationEraseSize.Subsector32K:
+                        {
+                            EraseSector(32.KB());
+                            break;
+                        }
+                        case DecodedOperation.OperationEraseSize.Sector:
+                        {
+                            EraseSector(64.KB());
+                            break;
+                        }
+                        case DecodedOperation.OperationEraseSize.Die:
+                        {
+                            EraseChip();
+                            break;
+                        }
+                        default:
+                        {
+                            this.Log(LogLevel.Error, "Unknown erase operation");
+                            break;
+                        }
+                    }
+                    break;
+                }
+            }
+        }
+
         public virtual byte Transmit(byte data)
         {
             this.Log(LogLevel.Noisy, "Transmitting data 0x{0:X}, current state: {1}", data, currentOperation.State);
@@ -63,11 +150,11 @@ namespace Antmicro.Renode.Peripherals.SPI
                     if (currentOperation.TryAccumulateAddress(data))
                     {
                         currentOperation.State = DecodedOperation.OperationState.HandleNoDataCommand;
+                        HandleCommandWithoutData();
                     }
                     break;
                 case DecodedOperation.OperationState.HandleCommand:
                     return HandleCommand(data);
-
             }
             return 0;
         }
@@ -223,16 +310,6 @@ namespace Antmicro.Renode.Peripherals.SPI
             this.Log(LogLevel.Noisy, "Decoded operation: {0}, write enabled: {1}", currentOperation.Operation, writeEnable.Value);
         }
 
-        private void EraseChip()
-        {
-            this.Log(LogLevel.Noisy, "Whole chip erasing");
-            if (lockedRange.HasValue)
-            {
-                this.Log(LogLevel.Error, "Chip erase blocked due to locked range");
-                return;
-            }
-            underlyingMemory.ZeroAll();
-        }
         protected virtual byte ReadFromMemory()
         {
             var position = currentOperation.ExecutionAddress + currentOperation.CommandBytesHandled;
@@ -407,6 +484,7 @@ namespace Antmicro.Renode.Peripherals.SPI
 
         private const byte manufacturerId = 0xEF;
         private const byte memoryType = 0x28;
+        private const byte EmptyByte = 0xff;
     }
 
 }

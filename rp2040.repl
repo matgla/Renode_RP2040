@@ -170,6 +170,7 @@ xip_flash: SPI.W25QXX @ xip_ssi {
 
 xip_ssi: SPI.RP2040XIPSSI @ sysbus 0x18000000
     address: 0x18000000
+    clocks: clocks
     chipSelect: xip_flash
     DmaTransmitDreq -> dma@38
     DmaStreamDreq -> dma@39
