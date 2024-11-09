@@ -61,6 +61,11 @@ extern "C"
     piosim::PioSimulator::close(id);
   }
 
+  void pio_reset_ex(int id)
+  {
+    piosim::PioSimulator::reset(id);
+  }
+
   uint32_t pio_execute_ex(int id, uint32_t number_of_instructions)
   {
     return piosim::PioSimulator::get(id).execute(number_of_instructions);

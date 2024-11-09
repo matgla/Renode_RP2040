@@ -70,7 +70,6 @@ namespace Antmicro.Renode.Peripherals.DMA
       XIP_SSITX = 38,
       XIP_SSIRX = 39
     };
-    private int numberOfDREQ;
     public RPDMA(int numberOfChannels, IMachine machine, ulong address) : base(machine, address)
     {
       this.channels = new Channel[numberOfChannels];
@@ -93,9 +92,20 @@ namespace Antmicro.Renode.Peripherals.DMA
     }
     public override void Reset()
     {
-      channelFinished = Enumerable.Repeat<bool>(true, numberOfChannels).ToArray();
-      sniffData = 0;
       base.Reset();
+      channelFinished = Enumerable.Repeat(true, numberOfChannels).ToArray();
+      sniffData = 0;
+      sniffEnable.Value = false;
+      sniffChannel = 0;
+      sniffCalcType.Value = CalculateType.Crc32;
+      sniffOutInversed.Value = false;
+      sniffByteSwap.Value = false;
+      sniffOutReversed.Value = false;
+      sniffData = 0;
+      for (int i = 0; i < channels.Length; ++i)
+      {
+        channels[i].Reset();
+      }
     }
 
     public void Trigger(int channelNumber)
@@ -290,13 +300,13 @@ namespace Antmicro.Renode.Peripherals.DMA
       public Channel(RPDMA parent, int channelNumber) : base(parent.machine)
       {
         aliases = new Dictionary<long, Registers>();
-        Reset();
         this.parent = parent;
         this.channelNumber = channelNumber;
         this.chainTo = channelNumber;
-        //IRQ = new GPIO();
         DefineAliases();
         DefineRegisters();
+
+        Reset();
       }
 
       public static long Size { get { return 0x40; } }
@@ -324,9 +334,25 @@ namespace Antmicro.Renode.Peripherals.DMA
 
       public override void Reset()
       {
-        parent = null;
-        channelNumber = 0;
+        base.Reset();
+        Enabled = false;
+        readAddress = 0;
+        writeAddress = 0;
+        transferCount = 0;
+        highPriority.Value = false;
+        dataSize.Value = DataSize.Byte;
+        incrementRead.Value = false;
+        incrementWrite.Value = false;
+        ringSize = 0;
+        ringSelect.Value = false;
         chainTo = 0;
+        transferRequestSignal = 0;
+        irqQuiet.Value = false;
+        byteSwap.Value = false;
+        sniffEnable.Value = false;
+        writeError.Value = false;
+        readError.Value = false;
+        ahbError.Value = false;
         InterruptRaised = false;
         transferCounter = 0;
       }
@@ -588,6 +614,7 @@ namespace Antmicro.Renode.Peripherals.DMA
     }
 
     private readonly Channel[] channels;
+    private int numberOfDREQ;
     private RPDmaEngine engine;
     private int numberOfChannels;
     private bool[] channelFinished;

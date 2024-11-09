@@ -25,38 +25,27 @@ namespace Antmicro.Renode.Peripherals.SPI
     {
       this.id = id;
       this.gpio = gpio;
-      this.txPins = new List<int>();
-      this.rxPins = new List<int>();
-      this.clockPins = new List<int>();
-      this.csPins = new List<int>();
+      this.clocks = clocks;
+      txPins = new List<int>();
+      rxPins = new List<int>();
+      clockPins = new List<int>();
+      csPins = new List<int>();
 
       rxBuffer = new CircularBuffer<ushort>(8);
       txBuffer = new CircularBuffer<ushort>(8);
 
       registers = new DoubleWordRegisterCollection(this);
       DefineRegisters();
-      dataSize = 0;
-      frameFormat = 0;
-      clockPolarity = false;
-      clockPhase = false;
-      clockRate = 0;
-      loopbackMode = false;
-      synchronousSerialPort = false;
-      masterSlaveSelect = false;
-      slaveModeDisabled = false;
-      running = false;
-      clockPrescaleDivisor = 2;
+
       periFrequency = clocks.PeripheralClockFrequency;
-      steps = 0;
-      this._executionThread = machine.ObtainManagedThread(Step, 1);
+      _executionThread = machine.ObtainManagedThread(Step, 1);
       this.clocks = clocks;
-      RecalculateClockRate();
       this.gpio.SubscribeOnFunctionChange(OnGpioFunctionSelect);
       clocks.OnPeripheralChange(UpdateFrequency);
-      transmitCounter = 16;
       machine.GetSystemBus(this).Register(this, new BusMultiRegistration(address + xorAliasOffset, aliasSize, "XOR"));
       machine.GetSystemBus(this).Register(this, new BusMultiRegistration(address + setAliasOffset, aliasSize, "SET"));
       machine.GetSystemBus(this).Register(this, new BusMultiRegistration(address + clearAliasOffset, aliasSize, "CLEAR"));
+      Reset();
     }
 
 
@@ -271,6 +260,49 @@ namespace Antmicro.Renode.Peripherals.SPI
 
     public override void Reset()
     {
+      // for (int i = 0; i < IRQs.Length; ++i)
+      // {
+      //   IRQs[i].Unset();
+      // }
+
+      for (int i = 0; i < txPins.Count; ++i)
+      {
+        txPins[i] = 0;
+      }
+      for (int i = 0; i < rxPins.Count; ++i)
+      {
+        rxPins[i] = 0;
+      }
+      for (int i = 0; i < clockPins.Count; ++i)
+      {
+        clockPins[i] = 0;
+      }
+      for (int i = 0; i < csPins.Count; ++i)
+      {
+        csPins[i] = 0;
+      }
+
+      rxBuffer.Clear();
+      txBuffer.Clear();
+
+      _executionThread.Stop();
+
+      dataSize = 0;
+      frameFormat = 0;
+      clockPolarity = false;
+      clockPhase = false;
+      clockRate = 0;
+      loopbackMode = false;
+      synchronousSerialPort = false;
+      masterSlaveSelect = false;
+      slaveModeDisabled = false;
+      running = false;
+      clockPrescaleDivisor = 2;
+      steps = 0;
+      transmitCounter = 16;
+      transmitData = 0;
+      receiveData = 0;
+      UpdateFrequency(clocks.PeripheralClockFrequency);
     }
 
     private void DefineRegisters()

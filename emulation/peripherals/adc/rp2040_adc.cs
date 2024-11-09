@@ -28,7 +28,6 @@ namespace Antmicro.Renode.Peripherals.Analog
   {
     public RP2040ADC(IMachine machine, RP2040Clocks clocks, RP2040Pads pads, ulong address) : base(machine, address)
     {
-      this.clocks = clocks;
       this.fifo = new CircularBuffer<ushort>(fifoSize);
       this.sampleProvider = new SensorSamplesFifo<ScalarSample>[channelsCount];
       this.resdStream = new RESDStream<VoltageSample>[channelsCount];
@@ -44,8 +43,8 @@ namespace Antmicro.Renode.Peripherals.Analog
       this.samplingThread.Stop();
       this.pads = pads;
       this.DMARequest = new GPIO();
-      Reset();
       DefineRegisters();
+      Reset();
     }
 
     public void FeedVoltageSampleToChannel(int channel, string path)
@@ -131,6 +130,7 @@ namespace Antmicro.Renode.Peripherals.Analog
       state = State.Waiting;
       time = 0;
       enabled = false;
+      ready = false;
       temperatureSensorEnabled = false;
       trigger = Trigger.Nothing;
       error = false;
@@ -245,8 +245,8 @@ namespace Antmicro.Renode.Peripherals.Analog
 
       if (channel == 4)
       {
-        double voltage = -0.001721 * (onboardTemperature - 27) + 0.706; 
-        return !temperatureSensorEnabled ? (ushort)0 : (ushort)Math.Round(((double)voltage/ this.pads.PadsVoltage * ((1 << 12))));
+        double voltage = -0.001721 * (onboardTemperature - 27) + 0.706;
+        return !temperatureSensorEnabled ? (ushort)0 : (ushort)Math.Round(((double)voltage / this.pads.PadsVoltage * ((1 << 12))));
       }
 
       double sample = 0;
@@ -256,7 +256,7 @@ namespace Antmicro.Renode.Peripherals.Analog
         {
           sample = (double)sampleProvider[channel].Sample.Value;
         }
-        else 
+        else
         {
           sample = (double)defaultSample[channel].Value;
         }
@@ -533,7 +533,6 @@ namespace Antmicro.Renode.Peripherals.Analog
     public GPIO IRQ;
     public GPIO DMARequest { get; }
 
-    private RP2040Clocks clocks;
 
     private bool dreqEnabled;
     private bool enabled;

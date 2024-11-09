@@ -31,6 +31,7 @@ namespace Antmicro.Renode.Peripherals.Timers
             this.clocks = clocks;
             scratch = new uint[8];
             forced = false;
+            rebootedByTimer = false;
             DefineRegisters();
             Reset();
             clocks.OnRefClockChange(UpdateTimerFrequency);
@@ -83,6 +84,7 @@ namespace Antmicro.Renode.Peripherals.Timers
                     if (value)
                     {
                         forced = true;
+                        rebootedByTimer = false;
                         Reboot();
                     }
                 });
@@ -92,7 +94,7 @@ namespace Antmicro.Renode.Peripherals.Timers
                 .WithReservedBits(24, 8);
 
             Registers.REASON.Define(this)
-                .WithFlag(0, FieldMode.Read, valueProviderCallback: _ => !forced, name: "TIMER")
+                .WithFlag(0, FieldMode.Read, valueProviderCallback: _ => rebootedByTimer, name: "TIMER")
                 .WithFlag(1, FieldMode.Read, valueProviderCallback: _ => forced, name: "FORCE")
                 .WithReservedBits(2, 30);
 
@@ -127,16 +129,12 @@ namespace Antmicro.Renode.Peripherals.Timers
         private void TimeoutReboot()
         {
             this.Log(LogLevel.Info, "Watchdog fired!");
+            rebootedByTimer = true;
             forced = false;
             Reboot();
         }
         private void Reboot()
         {
-            if (pauseJtag.Value)
-            {
-                this.Log(LogLevel.Info, "Watchdog prevented: jtag");
-                return;
-            }
             var cpus = machine.SystemBus.GetCPUs().OfType<ICpuSupportingGdb>();
             foreach (var cpu in cpus)
             {
@@ -152,7 +150,19 @@ namespace Antmicro.Renode.Peripherals.Timers
                 }
             }
             this.Log(LogLevel.Info, "Machine reboot scheduled");
-            machine.LocalTimeSource.ExecuteInNearestSyncedState(_ => machine.Reset());
+            machine.LocalTimeSource.ExecuteInNearestSyncedState(_ =>
+            {
+                var periphs = machine.SystemBus.GetRegisteredPeripherals();
+                foreach (var peri in periphs)
+                {
+                    if (peri.Peripheral.GetName().Contains("sram0"))
+                    {
+                        this.Log(LogLevel.Info, "Clearing SRAM for reboot");
+                        ((Memory.MappedMemory)peri.Peripheral).ZeroAll();
+                    }
+                }
+                machine.Reset();
+            });
         }
 
         private LimitTimer timer;
@@ -165,6 +175,7 @@ namespace Antmicro.Renode.Peripherals.Timers
 
         private IValueRegisterField cycles;
         private bool forced;
+        private bool rebootedByTimer;
         private uint[] scratch;
 
         private enum Registers

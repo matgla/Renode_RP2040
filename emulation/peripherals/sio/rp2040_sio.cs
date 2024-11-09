@@ -131,10 +131,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             Core0IRQ = new GPIO();
             Core1IRQ = new GPIO();
             coreSynchronization = new object();
-            for (int i = 0; i < 32; ++i)
-            {
-                spinlocks[i] = 0;
-            }
+
             for (int i = 0; i < 2; ++i)
             {
                 divider[i] = new Divider();
@@ -150,8 +147,29 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             this.gpio = gpio;
             this.gpioQspi = gpioQspi;
             DefineRegisters();
+            Reset();
         }
 
+        public override void Reset()
+        {
+            base.Reset();
+
+            for (int i = 0; i < spinlocks.Length; ++i)
+            {
+                spinlocks[i] = 0;
+            }
+
+            for (int i = 0; i < 2; ++i)
+            {
+                fifoStatus[i].Roe = false;
+                fifoStatus[i].Wof = false;
+                fifoStatus[i].Rdy = true;
+                fifoStatus[i].Vld = false;
+            }
+
+            Core0IRQ.Unset();
+            Core1IRQ.Unset();
+        }
         private int CurrentCpu()
         {
             var cpu = machine.SystemBus.GetCurrentCPU();

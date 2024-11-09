@@ -30,6 +30,15 @@ void PioSimulator::init(int id)
   self_[id] = std::unique_ptr<PioSimulator>(new PioSimulator());
 }
 
+void PioSimulator::reset(int id)
+{
+  if (self_[id] != nullptr)
+  {
+    self_[id].reset();
+    init(id);
+  }
+}
+
 void PioSimulator::close(int id)
 {
   if (!self_.contains(id))
@@ -227,7 +236,7 @@ uint32_t PioSimulator::execute(uint32_t steps)
 
     if (break_in_next)
     {
-      return steps;//i + 1;
+      return steps; // i + 1;
     }
   }
 

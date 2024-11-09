@@ -37,3 +37,4 @@
 - tests/pio/pio_blink/pio_blink.robot
 - tests/pio/differential_manchester/differential_manchester.robot
 - tests/pio/clocked_input/clocked_input.robot
+- tests/watchdog/hello_watchdog/hello_watchdog.robot

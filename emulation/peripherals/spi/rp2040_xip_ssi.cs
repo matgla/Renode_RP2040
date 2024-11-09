@@ -75,13 +75,11 @@ namespace Antmicro.Renode.Peripherals.SPI
       dreqThread.Stop();
       clockingThread.Stop();
       this.clocks = clocks;
-      rxDmaEnabled = false;
-      txDmaEnabled = false;
       this.chipSelect = chipSelect;
       DefineRegisters();
 
       this.clocks.OnSystemClockChange(_ => { RecalculateFrequencies(); });
-      RecalculateFrequencies();
+      Reset();
     }
 
     private void RecalculateFrequencies()
@@ -164,9 +162,42 @@ namespace Antmicro.Renode.Peripherals.SPI
 
     public override void Reset()
     {
+      receiveBuffer.Clear();
+      transmitBuffer.Clear();
+      DmaTransmitDreq.Unset();
+      DmaStreamDreq.Unset();
+      dreqThread.Stop();
+      clockingThread.Stop();
+      rxDmaEnabled = false;
+      txDmaEnabled = false;
+
       bytesToTransfer = 0;
       ssiEnabled = false;
       commandBytesTransferred = 0;
+
+      slaveEnabled.Value = false;
+      numberOfDataFrames.Value = 0;
+      dataFrameSize.Value = 0;
+      dataFrameSize32.Value = 0;
+      controlFrameSize.Value = 0;
+      xipCmd.Value = 0;
+      instructionLength.Value = 0;
+      addressLength.Value = 0;
+      tmod.Value = 0;
+      waitCycles.Value = 0;
+      transmitFifoThreshold.Value = 0;
+      receiveFifoThreshold.Value = 0;
+      frameFormat.Value = 0;
+      transferType.Value = 0;
+      clockDivider.Value = 0;
+      busy.Value = false;
+      bytesToTransfer = 0;
+      addressBytes = 0;
+      commandBytesTransferred = 0;
+      cyclesToWait = 0;
+      framesToTransfer = 0;
+
+      RecalculateFrequencies();
     }
 
     private ulong PeripheralDataRead()

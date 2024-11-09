@@ -16,5 +16,6 @@ extern "C"
   uint32_t pio_execute_ex(int id, uint32_t number_of_instructions);
   uint32_t pio_read_memory_ex(int id, uint32_t address);
   void pio_write_memory_ex(int id, uint32_t address, uint32_t value);
+  void pio_reset_ex(int id);
 
 } // extern "C"

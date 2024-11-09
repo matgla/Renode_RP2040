@@ -124,7 +124,7 @@ namespace Antmicro.Renode.Peripherals.CPU
             binder = new NativeBinder(this, libraryFile);
             machine.GetSystemBus(this).Register(this, new BusRangeRegistration(new Antmicro.Renode.Core.Range(address, (ulong)Size)));
             this.gpio = gpio;
-            this.gpioFunction = id == 0 ? GPIOPort.RP2040GPIO.GpioFunction.PIO0 : GPIOPort.RP2040GPIO.GpioFunction.PIO1;
+            gpioFunction = id == 0 ? GPIOPort.RP2040GPIO.GpioFunction.PIO0 : GPIOPort.RP2040GPIO.GpioFunction.PIO1;
             machine.GetSystemBus(this).Register(this, new BusMultiRegistration(address + xorAliasOffset, aliasSize, "XOR"));
             machine.GetSystemBus(this).Register(this, new BusMultiRegistration(address + setAliasOffset, aliasSize, "SET"));
             machine.GetSystemBus(this).Register(this, new BusMultiRegistration(address + clearAliasOffset, aliasSize, "CLEAR"));
@@ -195,7 +195,7 @@ namespace Antmicro.Renode.Peripherals.CPU
 
             instructionsExecutedThisRound = 0;
             totalExecutedInstructions = 0;
-
+            PioReset(pioId);
             // [Here goes an invocation resetting the external simulator (if needed)]
             // [This can be used to revert the internal state of the simulator to the initial form]
         }
@@ -345,6 +345,9 @@ namespace Antmicro.Renode.Peripherals.CPU
 
         [Import]
         private ActionInt32 PioInitialize;
+
+        [Import]
+        private ActionInt32 PioReset;
 
         [Import]
         private ActionInt32 PioDeinitialize;

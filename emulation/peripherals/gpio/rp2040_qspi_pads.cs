@@ -24,7 +24,7 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
         {
             this.gpio = gpio;
             this.registers = CreateRegisters();
-            InitializeDefaultStates();
+            Reset();
         }
 
         private void InitializeDefaultStates()
@@ -40,19 +40,19 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
             }
         }
 
-        public uint ReadDoubleWord(long offset)
+        public override uint ReadDoubleWord(long offset)
         {
             return registers.Read(offset);
         }
 
-        public void WriteDoubleWord(long offset, uint value)
+        public override void WriteDoubleWord(long offset, uint value)
         {
             registers.Write(offset, value);
         }
 
-        public void Reset()
+        public override void Reset()
         {
-            // TODO: implement
+            InitializeDefaultStates();
         }
 
         private DoubleWordRegisterCollection CreateRegisters()

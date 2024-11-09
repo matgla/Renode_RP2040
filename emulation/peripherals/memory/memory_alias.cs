@@ -9,8 +9,7 @@ namespace Antmicro.Renode.Peripherals.Memory
     {
         public long Size { get; }
 
-        private Machine machine;
-        private ulong address;
+
         public MemoryAlias(Machine machine, ulong address, long size)
         {
             this.machine = machine;
@@ -33,5 +32,8 @@ namespace Antmicro.Renode.Peripherals.Memory
         {
 
         }
+
+        private Machine machine;
+        private ulong address;
     }
 }

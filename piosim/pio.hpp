@@ -23,6 +23,7 @@ public:
   static PioSimulator &get(int id);
   static void init(int id);
   static void close(int id);
+  static void reset(int id);
 
   void write_memory(uint32_t address, uint32_t value);
   uint32_t read_memory(uint32_t address) const;

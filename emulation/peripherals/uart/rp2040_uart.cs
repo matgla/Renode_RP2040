@@ -32,7 +32,6 @@ namespace Antmicro.Renode.Peripherals.UART
 
             RegistersCollection = new DoubleWordRegisterCollection(this);
             dreqGenerator = machine.ObtainManagedThread(TriggerTxDreq, 1000);
-            dreqGeneratorEnabled = false;
             dreqGenerator.Stop();
 
             machine.GetSystemBus(this).Register(this, new BusMultiRegistration(address + xorAliasOffset, aliasSize, "XOR"));
@@ -107,20 +106,41 @@ namespace Antmicro.Renode.Peripherals.UART
         public override void Reset()
         {
             base.Reset();
-            lock (innerLock)
+            IRQ.Unset();
+            DMAReceiveRequest.Unset();
+            DMATransmitRequest.Unset();
+
+            for (int i = 0; i < InterruptsCount; ++i)
             {
-                RegistersCollection.Reset();
-
-                // receiveFifoSize and receiveInterruptTriggerPoint depend on register values.
-                UpdateReceiveFifoSize();
-                UpdateReceiveInterruptTriggerPoint();
-
-                System.Array.ForEach(interruptRawStatuses, status => status = false);
-                System.Array.ForEach(interruptMasks, mask => mask = false);
-                UpdateInterrupts();
-                dreqGenerator.Stop();
-                dreqGeneratorEnabled = false;
+                interruptRawStatuses[i] = false;
+                interruptMasks[i] = false;
             }
+            enableFifoBuffers.Value = false;
+            evenParitySelect.Value = false;
+            fractionalBaudRate = 0;
+            integerBaudRate = 1;
+            loopbackEnable.Value = false;
+            parityEnable.Value = false;
+            receiveEnable.Value = false;
+            receiveInterruptFifoLevelSelect.Value = 0;
+            stickParitySelect.Value = false;
+            transmitEnable.Value = false;
+            twoStopBitsSelect.Value = false;
+            uartEnable.Value = false;
+            dmaRxEnable.Value = false;
+            wordLength.Value = WordLength.FiveBits;
+            receiveFifoSize = 0;
+            receiveInterruptTriggerPoint = 0;
+            dreqGenerator.Stop();
+            dreqGeneratorEnabled = false;
+            // receiveFifoSize and receiveInterruptTriggerPoint depend on register values.
+            UpdateReceiveFifoSize();
+            UpdateReceiveInterruptTriggerPoint();
+
+            System.Array.ForEach(interruptRawStatuses, status => status = false);
+            System.Array.ForEach(interruptMasks, mask => mask = false);
+            UpdateInterrupts();
+            dreqGeneratorEnabled = false;
         }
 
         public void WriteDoubleWord(long offset, uint value)
@@ -539,7 +559,7 @@ namespace Antmicro.Renode.Peripherals.UART
 
         private enum WordLength
         {
-            FiveBits,
+            FiveBits = 0,
             SixBits,
             SevenBits,
             EightBits,

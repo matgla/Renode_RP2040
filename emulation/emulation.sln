@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.5.002.0
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Peripherals", "Peripherals2.csproj", "{00B16291-8927-435B-A86A-505415B32F5E}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Peripherals", "Peripherals.csproj", "{00B16291-8927-435B-A86A-505415B32F5E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

@@ -30,14 +30,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             usbClockAuxSource = UsbClockAuxSource.ClkPllUsb;
             adcClockAuxSource = AdcClockAuxSource.ClkPllUsb;
             rtcClockAuxSource = RtcClockAuxSource.ClkPllUsb;
-            periClockEnabled = false;
-            periClockKill = false;
-            usbClockEnabled = false;
-            usbClockKill = false;
-            adcClockEnabled = false;
-            adcClockKill = false;
-            rtcClockEnabled = false;
-            rtcClockKill = false;
+
             onSysClockChange = new List<Action<long>>();
             onRefClockChange = new List<Action<long>>();
             onPeriChange = new List<Action<long>>();
@@ -48,34 +41,53 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             this.rosc = rosc;
             this.pll = pll;
             this.pllusb = pllusb;
-            this.nvic = new NVIC[2];
-            this.nvic[0] = nvic0;
-            this.nvic[1] = nvic1;
+            nvic = new NVIC[2];
+            nvic[0] = nvic0;
+            nvic[1] = nvic1;
             this.gpio = gpio;
 
             this.pll.RegisterClient(OnPllChanged);
             this.pllusb.RegisterClient(OnPllChanged);
 
+
+            DefineRegisters();
+            gpout = new GPOUTControl[numberOfGPOUTs];
+            gpoutPins = new int[numberOfGPOUTs];
+            for (int i = 0; i < numberOfGPOUTs; ++i)
+            {
+                gpout[i] = new GPOUTControl();
+            }
+
+            Reset();
+        }
+
+        public override void Reset()
+        {
+            periClockEnabled = false;
+            periClockKill = false;
+            usbClockEnabled = false;
+            usbClockKill = false;
+            adcClockEnabled = false;
+            adcClockKill = false;
+            rtcClockEnabled = false;
+            rtcClockKill = false;
             frequencyCounterRefFreq = 0;
             frequencyCounterMinFreq = 0;
             frequencyCounterMaxFreq = 0x1fffffff;
             frequencyCounter = 0;
             frequencyCounterSource = 0;
 
-            this.sysDivInt = 1;
-            this.sysDivFrac = 0;
-            this.refDiv = 1;
-            this.usbDiv = 1;
-            this.adcDiv = 1;
-            this.rtcDivFrac = 0;
-            this.rtcDivInt = 1;
-
+            sysDivInt = 1;
+            sysDivFrac = 0;
+            refDiv = 1;
+            usbDiv = 1;
+            adcDiv = 1;
+            rtcDivFrac = 0;
+            rtcDivInt = 1;
             resused = false;
             resusIrqEnabled = false;
             resusIrqForced = false;
             resusForced = false;
-
-            DefineRegisters();
 
             SystemClockFrequency = 0;
             PeripheralClockFrequency = 0;
@@ -83,16 +95,14 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             UsbClockFrequency = 0;
             AdcClockFrequency = 0;
             RtcClockFrequency = 0;
+            timeout = 0;
+            resusEnable = false;
 
-            gpout = new GPOUTControl[numberOfGPOUTs];
-            gpoutPins = new int[numberOfGPOUTs];
             for (int i = 0; i < numberOfGPOUTs; ++i)
             {
-                gpout[i] = new GPOUTControl();
-                gpout[i].dividerIntegral = 1;
                 gpoutPins[i] = -1;
+                gpout[i].dividerIntegral = 1;
             }
-
             UpdateAllClocks();
         }
 
@@ -509,12 +519,12 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             switch (source)
             {
                 case GPOUTControl.AuxSource.ClkSrcPllSys: return pll.CalculateOutputFrequency(xosc.Frequency);
-                case GPOUTControl.AuxSource.ClkSrcGPin0: 
-                case GPOUTControl.AuxSource.ClkSrcGPin1: 
-                {
-                    this.Log(LogLevel.Error, "GPIN input is not supported");
-                    return 0;
-                }
+                case GPOUTControl.AuxSource.ClkSrcGPin0:
+                case GPOUTControl.AuxSource.ClkSrcGPin1:
+                    {
+                        this.Log(LogLevel.Error, "GPIN input is not supported");
+                        return 0;
+                    }
                 case GPOUTControl.AuxSource.ClkSrcPllUsb: return pllusb.CalculateOutputFrequency(xosc.Frequency);
                 case GPOUTControl.AuxSource.RoscClkSrc: return rosc.Frequency;
                 case GPOUTControl.AuxSource.XoscClkSrc: return xosc.Frequency;

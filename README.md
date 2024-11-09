@@ -35,7 +35,7 @@ There is predefined Raspberry Pico board description in: 'boards/raspberry_pico.
 | **ADC** | $${\color{yellow}✓}$$  | Implemented, but RESD files were not verified. Resets and IRQs to be checked and to be added in all cases. |
 | **SSI** | $${\color{yellow}✓}$$  | Implemented, XIP support/caches are stubbed. Resets/IRQs/DMA requests to be filled |
 | **XIP** | $${\color{yellow}✓}$$  | Partially implemented, bootrom correctly starts firmware |
-| **Resets** | $${\color{red}✗}$$  | States in almost all peripherals must be fixed after reset |
+| **Resets** | $${\color{green}✓}$$  | Device resetting works, added to support watchdog fully |
 
 
 
@@ -271,7 +271,7 @@ I am testing simulator code using official pico-examples and some custom made bu
 # Watchdog 
 | Example | Passed |
 | :---: | :---:    |
-| [hello_watchdog](https://github.com/raspberrypi/pico-examples/tree/master/watchdog/hello_watchdog) | $${\color{red}✗}$$ |
+| [hello_watchdog](https://github.com/raspberrypi/pico-examples/tree/master/watchdog/hello_watchdog) | $${\color{green}✓}$$ |
 
 # License 
 

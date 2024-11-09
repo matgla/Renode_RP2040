@@ -25,24 +25,35 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
             functionSelectCallbacks = new List<Action<int, GpioFunction>>();
             NumberOfPins = numberOfPins;
             registers = CreateRegisters();
-            Reset();
             functionSelect = new int[NumberOfPins];
             ReevaluatePioActions = new List<Action<uint>>();
-            pullDown = Enumerable.Repeat<bool>(true, NumberOfPins).ToArray();
+            pullDown = new bool[NumberOfPins];
             pullUp = new bool[NumberOfPins];
             outputEnableOverride = new OutputEnableOverride[NumberOfPins];
             forcedOutputDisableMap = new bool[NumberOfPins];
             outputOverride = new OutputOverride[NumberOfPins];
             peripheralDrive = new PeripheralDrive[NumberOfPins];
-            for (int i = 0; i < peripheralDrive.Length; ++i)
-            {
-                peripheralDrive[i] = PeripheralDrive.None;
-            }
             OperationDone = new GPIO();
 
             machine.GetSystemBus(this).Register(this, new BusMultiRegistration(address + xorAliasOffset, aliasSize, "XOR"));
             machine.GetSystemBus(this).Register(this, new BusMultiRegistration(address + setAliasOffset, aliasSize, "SET"));
             machine.GetSystemBus(this).Register(this, new BusMultiRegistration(address + clearAliasOffset, aliasSize, "CLEAR"));
+            Reset();
+        }
+
+        public override void Reset()
+        {
+            base.Reset();
+            for (int i = 0; i < NumberOfPins; ++i)
+            {
+                functionSelect[i] = 0;
+                pullDown[i] = true;
+                pullUp[i] = false;
+                outputEnableOverride[i] = OutputEnableOverride.Peripheral;
+                forcedOutputDisableMap[i] = false;
+                outputOverride[i] = OutputOverride.Peripheral;
+                peripheralDrive[i] = PeripheralDrive.None;
+            }
         }
 
         [ConnectionRegion("XOR")]
@@ -825,7 +836,7 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
 
         public long Size { get { return 0x1000; } }
 
-        public const ulong aliasSize = 0x1000; 
+        public const ulong aliasSize = 0x1000;
         public const ulong xorAliasOffset = 0x1000;
         public const ulong setAliasOffset = 0x2000;
         public const ulong clearAliasOffset = 0x3000;

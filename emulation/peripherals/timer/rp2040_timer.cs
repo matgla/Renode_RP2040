@@ -2,6 +2,7 @@ using Antmicro.Renode.Core;
 using Antmicro.Renode.Core.Structure.Registers;
 using System;
 using Antmicro.Renode.Time;
+using Antmicro.Renode.Peripherals.Miscellaneous;
 
 namespace Antmicro.Renode.Peripherals.Timers
 {
@@ -25,6 +26,15 @@ namespace Antmicro.Renode.Peripherals.Timers
                 Value = 0
             };
             Clock.LimitReached += OnCounterFired;
+        }
+
+        public void Reset()
+        {
+            Irq.Unset();
+            IrqEnabled = false;
+            Clock.Enabled = false;
+            Clock.Value = 0;
+            Clock.Limit = 0;
         }
 
         public void Enable(bool value)
@@ -74,25 +84,28 @@ namespace Antmicro.Renode.Peripherals.Timers
                 IRQs[i] = new GPIO();
             }
             alarms = new Alarm[4];
-            Reset();
-            DefineRegisters();
-        }
-        public GPIO[] IRQs { get; private set; }
-        public GPIO IRQ0 => IRQs[0];
-        public GPIO IRQ1 => IRQs[1];
-        public GPIO IRQ2 => IRQs[2];
-        public GPIO IRQ3 => IRQs[3];
-
-        private LimitTimer Clock;
-        public override void Reset()
-        {
-            Clock = new LimitTimer(machine.ClockSource, 1000000, this, "SystemClock", limit: 0xffffffffffffffff, direction: Direction.Ascending, eventEnabled: false, enabled: true, workMode: WorkMode.Periodic);
             for (int i = 0; i < alarms.Length; ++i)
             {
                 alarms[i] = new Alarm(this, machine, i)
                 {
                     Irq = IRQs[i]
                 };
+            }
+
+            Clock = new LimitTimer(machine.ClockSource, 1000000, this, "SystemClock", limit: 0xffffffffffffffff, direction: Direction.Ascending, eventEnabled: false, enabled: true, workMode: WorkMode.Periodic);
+            DefineRegisters();
+            Reset();
+        }
+
+        public override void Reset()
+        {
+            for (int i = 0; i < IRQs.Length; ++i)
+            {
+                IRQs[i].Unset();
+            }
+            for (int i = 0; i < alarms.Length; ++i)
+            {
+                alarms[i].Reset();
             }
         }
         public void DefineRegisters()
@@ -156,5 +169,12 @@ namespace Antmicro.Renode.Peripherals.Timers
                 }
             }
         }
+        public GPIO[] IRQs { get; private set; }
+        public GPIO IRQ0 => IRQs[0];
+        public GPIO IRQ1 => IRQs[1];
+        public GPIO IRQ2 => IRQs[2];
+        public GPIO IRQ3 => IRQs[3];
+
+        private LimitTimer Clock;
     }
 }
