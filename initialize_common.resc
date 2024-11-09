@@ -42,3 +42,5 @@ include $ORIGIN/emulation/peripherals/uart/rp2040_uart.cs
 include $ORIGIN/emulation/peripherals/dma/rpdma_engine.cs
 EnsureTypeIsLoaded "Antmicro.Renode.Peripherals.DMA.RPDmaEngine"
 include $ORIGIN/emulation/peripherals/dma/rpdma.cs
+
+include $ORIGIN/emulation/peripherals/watchdog/rp2040_watchdog.cs

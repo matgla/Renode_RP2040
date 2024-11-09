@@ -190,4 +190,9 @@ dma: DMA.RPDMA @ sysbus 0x50000000 {
     numberOfChannels: 12;
     address: 0x50000000
 }
+
+watchdog: Timers.RP2040Watchdog @ sysbus 0x40058000 {
+    address: 0x40058000;
+    clocks: clocks
+}
     
