@@ -73,7 +73,8 @@ namespace Antmicro.Renode.Peripherals.Timers
                 .WithFlag(25, out pauseDbg0, name: "PAUSE_DBG0")
                 .WithFlag(26, out pauseDbg1, name: "PAUSE_DBG1")
                 .WithReservedBits(27, 3)
-                .WithFlag(30, writeCallback: (_, value) => {
+                .WithFlag(30, writeCallback: (_, value) =>
+                {
                     timer.Enabled = value;
                     this.Log(LogLevel.Debug, "Watchdog enable: " + value);
                 }, valueProviderCallback: _ => timer.Enabled, name: "ENABLED")
@@ -111,10 +112,9 @@ namespace Antmicro.Renode.Peripherals.Timers
             }
 
             Registers.TICK.Define(this)
-                .WithValueField(0, 9, out cycles, 
-                    writeCallback: (_, value) => 
+                .WithValueField(0, 9, out cycles,
+                    writeCallback: (_, value) =>
                     {
-                        this.Log(LogLevel.Error, "Changed f: " + value);
                         UpdateTimerFrequency(clocks.ReferenceClockFrequency);
                     }, name: "CYCLES")
                 .WithFlag(9, out tickEnable, name: "ENABLE")

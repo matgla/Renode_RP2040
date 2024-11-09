@@ -30,11 +30,12 @@ There is predefined Raspberry Pico board description in: 'boards/raspberry_pico.
 | **I2C** |  $${\color{red}✗}$$  |  |
 | **PWM** |  $${\color{red}✗}$$  |  |
 | **Timers** | $${\color{yellow}✓}$$  | Alarms implemented, but not all registers |
-| **Watchdog** | $${\color{red}✗}$$  | |
+| **Watchdog** | $${\color{green}✓}$$  | fully implemented, but tick generator is stubbed with just LimitTimer |
 | **RTC** | $${\color{red}✗}$$  | |
-| **ADC** | $${\color{red}✗}$$  | |
-| **SSI** | $${\color{red}✗}$$  | |
+| **ADC** | $${\color{yellow}✓}$$  | Implemented, but RESD files were not verified. Resets and IRQs to be checked and to be added in all cases. |
+| **SSI** | $${\color{yellow}✓}$$  | Implemented, XIP support/caches are stubbed. Resets/IRQs/DMA requests to be filled |
 | **XIP** | $${\color{yellow}✓}$$  | Partially implemented, bootrom correctly starts firmware |
+| **Resets** | $${\color{red}✗}$$  | States in almost all peripherals must be fixed after reset |
 
 
 
@@ -121,7 +122,7 @@ I am testing simulator code using official pico-examples and some custom made bu
 | :---: | :---:    |
 | [detached_clk_peri](https://github.com/raspberrypi/pico-examples/tree/master/clocks/detached_clk_peri) | $${\color{green}✓}$$ |
 | [hello_48MHz](https://github.com/raspberrypi/pico-examples/tree/master/clocks/hello_48MHz) | $${\color{green}✓}$$ | 
-| [hello_gpout](https://github.com/raspberrypi/pico-examples/tree/master/clocks/hello_gpout) | $${\color{red}✗}$$ |
+| [hello_gpout](https://github.com/raspberrypi/pico-examples/tree/master/clocks/hello_gpout) | $${\color{green}✓}$$ |
 | [hello_resus](https://github.com/raspberrypi/pico-examples/tree/master/clocks/hello_resus) | $${\color{green}✓}$$ |
 
 ## Divider
@@ -142,9 +143,9 @@ I am testing simulator code using official pico-examples and some custom made bu
 | Example | Passed |
 | :---: | :---:    |
 | [cache_perfctr](https://github.com/raspberrypi/pico-examples/tree/master/flash/cache_perfctr) | $${\color{red}✗}$$ | 
-| [nuke](https://github.com/raspberrypi/pico-examples/tree/master/flash/nuke) | $${\color{red}✗}$$ |
-| [program](https://github.com/raspberrypi/pico-examples/tree/master/flash/program) | $${\color{red}✗}$$ |
-| [ssi_dma](https://github.com/raspberrypi/pico-examples/tree/master/flash/ssi_dma) | $${\color{red}✗}$$ |
+| [nuke](https://github.com/raspberrypi/pico-examples/tree/master/flash/nuke) | $${\color{green}✓}$$ |
+| [program](https://github.com/raspberrypi/pico-examples/tree/master/flash/program) | $${\color{green}✓}$$ |
+| [ssi_dma](https://github.com/raspberrypi/pico-examples/tree/master/flash/ssi_dma) | $${\color{green}✓}$$ |
 | [xip_stream](https://github.com/raspberrypi/pico-examples/tree/master/flash/xip_stream) | $${\color{red}✗}$$ |
 
 ## GPIO
@@ -187,10 +188,10 @@ I am testing simulator code using official pico-examples and some custom made bu
 ## Multicore
 | Example | Passed |
 | :---: | :---:    |
-| [hello_multicore](https://github.com/raspberrypi/pico-examples/tree/master/multicore/hello_multicore) | $${\color{red}✗}$$ |
-| [multicore_fifo_irqs](https://github.com/raspberrypi/pico-examples/tree/master/multicore/multicore_fifo_irqs) | $${\color{red}✗}$$ |
-| [multicore_runners](https://github.com/raspberrypi/pico-examples/tree/master/multicore/multicore_runner) | $${\color{red}✗}$$ |
-| [multicore_runner_queue](https://github.com/raspberrypi/pico-examples/tree/master/multicore/multicore_runner_queue) | $${\color{red}✗}$$ |
+| [hello_multicore](https://github.com/raspberrypi/pico-examples/tree/master/multicore/hello_multicore) | $${\color{green}✓}$$ |
+| [multicore_fifo_irqs](https://github.com/raspberrypi/pico-examples/tree/master/multicore/multicore_fifo_irqs) | $${\color{green}✓}$$ |
+| [multicore_runners](https://github.com/raspberrypi/pico-examples/tree/master/multicore/multicore_runner) | $${\color{green}✓}$$ |
+| [multicore_runner_queue](https://github.com/raspberrypi/pico-examples/tree/master/multicore/multicore_runner_queue) | $${\color{green}✓}$$ |
 
 ## PIO
 | Example | Passed |

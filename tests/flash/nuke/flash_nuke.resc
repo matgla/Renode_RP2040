@@ -7,3 +7,5 @@ showAnalyzer sysbus.uart0
 
 # this should be flashed through usboot with uf2 file someday
 sysbus.cpu0 VectorTableOffset 0x20000100
+
+logLevel -1

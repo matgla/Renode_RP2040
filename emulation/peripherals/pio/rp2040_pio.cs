@@ -191,7 +191,6 @@ namespace Antmicro.Renode.Peripherals.CPU
 
         public override void Reset()
         {
-            this.Log(LogLevel.Error, "Reset");
             base.Reset();
 
             instructionsExecutedThisRound = 0;
