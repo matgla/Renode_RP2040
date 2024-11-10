@@ -1,3 +1,11 @@
+/**
+ * rp2040_spi.cs
+ *
+ * Copyright (c) 2024 Mateusz Stadnik <matgla@live.com>
+ *
+ * Distributed under the terms of the MIT License.
+ */
+
 using Antmicro.Renode.Peripherals.Bus;
 using Antmicro.Renode.Core.Structure;
 using Antmicro.Renode.Core;
