@@ -1,5 +1,6 @@
 using Antmicro.Renode.Core;
 using Antmicro.Renode.Core.Structure;
+using Antmicro.Renode.Core.Structure.Registers;
 using Antmicro.Renode.Peripherals.Bus;
 
 
@@ -54,6 +55,8 @@ class RP2040I2C : SimpleContainer<II2CPeripheral>, II2CPeripheral, IDoubleWordPe
     {
         get { return 0x1000; }
     }
+
+    public DoubleWordRegisterCollection RegistersCollection
 
 
 
