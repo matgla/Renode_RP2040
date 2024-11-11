@@ -8,6 +8,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Antmicro.OptionsParser;
 using Antmicro.Renode.Core;
 using Antmicro.Renode.Core.Structure;
@@ -16,20 +17,24 @@ using Antmicro.Renode.Logging;
 using Antmicro.Renode.Peripherals.Bus;
 using Antmicro.Renode.Peripherals.GPIOPort;
 using Antmicro.Renode.Peripherals.Miscellaneous;
+using Antmicro.Renode.Utilities;
 using Antmicro.Renode.Utilities.Collections;
 using Lucene.Net.Search;
+using Mono.Cecil.Cil;
 
 
 namespace Antmicro.Renode.Peripherals.I2C
 {
 
+    // This peripheral supports both, fast c# interfaced read/writes from simulated I2C peripherals 
+    // And bit banged GPIO for PIO interworking
     class RP2040I2C : SimpleContainer<II2CPeripheral>, II2CPeripheral, IDoubleWordPeripheral, IProvidesRegisterCollection<DoubleWordRegisterCollection>, IKnownSize
     {
         public RP2040I2C(IMachine machine, RP2040Clocks clocks, ulong address, int id, RP2040GPIO gpio) : base(machine)
         {
             RegistersCollection = new DoubleWordRegisterCollection(this);
-            txFifo = new CircularBuffer<UInt16>(16);
-            rxFifo = new CircularBuffer<UInt16>(16);
+            txFifo = new CircularBuffer<DataEntry>(icTxBufferDepth);
+            rxFifo = new CircularBuffer<byte>(icRxBufferDepth);
             sclPins = new List<int>();
             sdaPins = new List<int>();
             this.clocks = clocks;
@@ -42,7 +47,9 @@ namespace Antmicro.Renode.Peripherals.I2C
             machine.GetSystemBus(this).Register(this, new BusMultiRegistration(address + xorAliasOffset, aliasSize, "XOR"));
             machine.GetSystemBus(this).Register(this, new BusMultiRegistration(address + setAliasOffset, aliasSize, "SET"));
             machine.GetSystemBus(this).Register(this, new BusMultiRegistration(address + clearAliasOffset, aliasSize, "CLEAR"));
- 
+
+            executionThread = machine.ObtainManagedThread(Step, 1, "I2C" + id + "_THREAD");
+
             Reset();
         }
 
@@ -53,6 +60,7 @@ namespace Antmicro.Renode.Peripherals.I2C
             sdaPins.Clear();
             sclPins.Clear();
             currentSlave = null;
+            state = State.Idle;
 
             masterMode.Value = true;
             speed.Value = 0x2;
@@ -68,15 +76,20 @@ namespace Antmicro.Renode.Peripherals.I2C
             gcOrStart.Value = false;
             special.Value = false;
             icSar.Value = 0x055;
-            dat.Value = 0x0;
-            cmd.Value = false;
-            stop.Value = false;
-            restart.Value = false;
-            firstDataByte.Value = false;
             icSsSclHcnt.Value = 0x0028;
             icSsSclLcnt.Value = 0x002f;
             icFsSclHcnt.Value = 0x0006;
             icFsSclLcnt.Value = 0x000d;
+
+            rxOver = false;
+            rxUnder = false;
+
+            enable.Value = false;
+
+            startDet.Value = false;
+            stopDet.Value = false;
+
+            UpdateFrequency();
         }
 
         public byte ReadByte(long offset)
@@ -184,19 +197,26 @@ namespace Antmicro.Renode.Peripherals.I2C
                 .WithReservedBits(10, 22);
 
             Registers.IC_DATA_CMD.Define(this)
-                .WithValueField(0, 8, out dat, 
-                    writeCallback: (_, value) => txFifo.Enqueue((UInt16)dat.Value),
-                    valueProviderCallback: _ => {
+                .WithValueField(0, 12,
+                    writeCallback: (_, value) =>
+                    {
+                        var entry = new DataEntry();
+                        entry.Data = (byte)(value & 0xff);
+                        entry.Command = (value & (1 << 8)) != 0;
+                        entry.Stop = (value & (1 << 9)) != 0;
+                        entry.Restart = (value & (1 << 10)) != 0;
+                        entry.FirstDataByte = (value & (1 << 11)) != 0;
+                        txFifo.Enqueue(entry);
+                    },
+                    valueProviderCallback: _ =>
+                    {
                         if (!rxFifo.TryDequeue(out var result))
                         {
+                            rxUnder = true;
                             return 0;
                         }
                         return result;
                     }, name: "DAT")
-                .WithFlag(8, out cmd, name: "CMD")
-                .WithFlag(9, out stop, name: "STOP")
-                .WithFlag(10, out restart, name: "RESTART")
-                .WithFlag(11, out firstDataByte, FieldMode.Read, name: "FIRST_DATA_BYTE")
                 .WithReservedBits(12, 20);
 
             Registers.IC_SS_SCL_HCNT.Define(this)
@@ -215,6 +235,75 @@ namespace Antmicro.Renode.Peripherals.I2C
                 .WithValueField(0, 16, out icFsSclLcnt, name: "IC_FS_SCL_LCNT")
                 .WithReservedBits(16, 16);
 
+            Registers.IC_RAW_INTR_STAT.Define(this)
+                .WithFlag(0, FieldMode.Read, valueProviderCallback: _ => rxUnder, name: "RX_UNDER")
+                .WithFlag(1, FieldMode.Read, valueProviderCallback: _ => rxOver, name: "RX_OVER")
+                .WithFlag(2, FieldMode.Read, valueProviderCallback: _ => rxFifo.Count == icRxBufferDepth, name: "RX_FULL")
+                .WithFlag(3, FieldMode.Read, valueProviderCallback: _ => false, name: "TX_OVER") // implement 
+                .WithFlag(4, FieldMode.Read, valueProviderCallback: _ => txFifo.Count == 0, name: "TX_EMPTY")
+                .WithFlag(9, out stopDet, FieldMode.Read, name: "STOP_DET")
+                .WithFlag(10, out startDet, FieldMode.Read, name: "START_DET");
+
+            Registers.IC_ENABLE.Define(this)
+                .WithFlag(0, out enable, writeCallback: (_, value) =>
+                {
+                    if (value)
+                    {
+                        executionThread.Start();
+                    }
+                    else
+                    {
+                        executionThread.Stop();
+                    }
+                }, name: "ENABLE");
+
+            Registers.IC_TXFLR.Define(this)
+                .WithValueField(0, 5, FieldMode.Read, valueProviderCallback: _ => (uint)txFifo.Count, name: "TXFLR")
+                .WithReservedBits(5, 27);
+            Registers.IC_RXFLR.Define(this)
+                .WithValueField(0, 5, FieldMode.Read, valueProviderCallback: _ => (uint)rxFifo.Count, name: "RXFLR")
+                .WithReservedBits(5, 27);
+
+            Registers.IC_CLR_TX_ABRT.Define(this)
+                .WithFlag(0, FieldMode.Read, valueProviderCallback: _ => false, name: "IC_CLR_TX_ABRT")
+                .WithReservedBits(1, 31);
+
+            Registers.IC_CLR_STOP_DET.Define(this)
+                .WithFlag(0, FieldMode.Read, valueProviderCallback: _ =>
+                {
+                    stopDet.Value = false;
+                    return false;
+                }, name: "CLR_STOP_DET")
+                .WithReservedBits(1, 31);
+
+            Registers.IC_TX_ABRT_SOURCE.Define(this)
+                .WithFlag(0, FieldMode.Read, valueProviderCallback: _ => false, name: "ABRT_7B_ADDR_NOACK")
+                .WithFlag(1, FieldMode.Read, valueProviderCallback: _ => false, name: "ABRT_10B_ADDR1_NOACK")
+                .WithFlag(2, FieldMode.Read, valueProviderCallback: _ => false, name: "ABRT_10B_ADDR2_NOACK")
+                .WithFlag(3, FieldMode.Read, valueProviderCallback: _ => false, name: "ABRT_TXDATA_NOACK")
+                .WithFlag(4, FieldMode.Read, valueProviderCallback: _ => false, name: "ABRT_GCALL_NOACK")
+                .WithFlag(5, FieldMode.Read, valueProviderCallback: _ => false, name: "ABRT_GCALL_READ")
+                .WithFlag(6, FieldMode.Read, valueProviderCallback: _ => false, name: "ABRT_HS_ACKDET")
+                .WithFlag(7, FieldMode.Read, valueProviderCallback: _ => false, name: "ABRT_SBYTE_ACKDET")
+                .WithFlag(8, FieldMode.Read, valueProviderCallback: _ => false, name: "ABRT_HS_NORSTRT")
+                .WithFlag(9, FieldMode.Read, valueProviderCallback: _ => false, name: "ABRT_SBYTE_NORSTRT")
+                .WithFlag(10, FieldMode.Read, valueProviderCallback: _ => false, name: "ABRT_10B_RD_NORSTRT")
+                .WithFlag(11, FieldMode.Read, valueProviderCallback: _ => false, name: "ABRT_MASTER_DIS")
+                .WithFlag(12, FieldMode.Read, valueProviderCallback: _ => false, name: "ABRT_LOST")
+                .WithFlag(13, FieldMode.Read, valueProviderCallback: _ => false, name: "ABRT_SLVFLUSH_TXFIFO")
+                .WithFlag(14, FieldMode.Read, valueProviderCallback: _ => false, name: "ABRT_SLVRD_ARBLOST")
+                .WithFlag(15, FieldMode.Read, valueProviderCallback: _ => false, name: "ABRT_SLVRD_INTX")
+                .WithFlag(16, FieldMode.Read, valueProviderCallback: _ => false, name: "ABRT_USER_ABRT")
+                .WithReservedBits(17, 6)
+                .WithValueField(23, 9, FieldMode.Read, valueProviderCallback: _ => 0, name: "TX_FLUSH_CNT");
+
+        }
+
+        private void UpdateFrequency()
+        {
+            uint frequency = 100000;
+            // this.Log(LogLevel.Debug, "Updating I2C frequency to: {0}", frequency);
+            executionThread.Frequency = frequency;
         }
 
         private void OnGpioFunctionSelect(int pin, RP2040GPIO.GpioFunction function)
@@ -224,21 +313,21 @@ namespace Antmicro.Renode.Peripherals.I2C
                 switch (function)
                 {
                     case RP2040GPIO.GpioFunction.I2C0_SCL:
-                    {
-                        sclPins.Add(pin);
-                        break;
-                    }
+                        {
+                            sclPins.Add(pin);
+                            break;
+                        }
                     case RP2040GPIO.GpioFunction.I2C0_SDA:
-                    {
-                        sdaPins.Add(pin);
-                        break;
-                    }
+                        {
+                            sdaPins.Add(pin);
+                            break;
+                        }
                     case RP2040GPIO.GpioFunction.NONE:
-                    {
-                        sclPins.Remove(pin);
-                        sdaPins.Remove(pin);
-                        break;
-                    }
+                        {
+                            sclPins.Remove(pin);
+                            sdaPins.Remove(pin);
+                            break;
+                        }
                 }
             }
             else if (id == 1)
@@ -246,32 +335,154 @@ namespace Antmicro.Renode.Peripherals.I2C
                 switch (function)
                 {
                     case RP2040GPIO.GpioFunction.I2C1_SCL:
-                    {
-                        sclPins.Add(pin);
-                        break;
-                    }
+                        {
+                            sclPins.Add(pin);
+                            break;
+                        }
                     case RP2040GPIO.GpioFunction.I2C1_SDA:
-                    {
-                        sdaPins.Add(pin);
-                        break;
-                    }
+                        {
+                            sdaPins.Add(pin);
+                            break;
+                        }
                     case RP2040GPIO.GpioFunction.NONE:
-                    {
-                        sclPins.Remove(pin);
-                        sdaPins.Remove(pin);
-                        break;
-                    }
+                        {
+                            sclPins.Remove(pin);
+                            sdaPins.Remove(pin);
+                            break;
+                        }
                 }
             }
-            else 
+            else
             {
-                this.Log(LogLevel.Error, "Unsupported I2C id: {0}", id);
+                // this.Log(LogLevel.Error, "Unsupported I2C id: {0}", id);
             }
         }
         private void StartTransfer()
         {
-            this.Log(LogLevel.Noisy, "I2C starting new transfer for: 0x{0:X}", icTar.Value);
+            // this.Log(LogLevel.Noisy, "I2C starting new transfer for: 0x{0:X}", icTar.Value);
+            startDet.Value = true;
+            state = State.AddressFrame;
         }
+
+        private void ProcessAddress()
+        {
+            if (currentSlave == null)
+            {
+                TryGetByAddress((int)icTar.Value, out currentSlave);
+                // this.Log(LogLevel.Noisy, "Got slave at address 0x{0:X} with name: {1}", icTar.Value, currentSlave.GetName());
+            }
+            state = State.Data;
+        }
+
+        // Get first element from fifo, then copy all until next one is stop command or end
+        private void ProcessDataReadWrite()
+        {
+            if (currentSlave != null)
+            {
+                List<byte> buffer = new List<byte>();
+                if (txFifo.Count == 0)
+                {
+                    // tx under
+                    return;
+                }
+
+                int index = 0;
+                foreach (var e in txFifo)
+                {
+                    ++index;
+                    buffer.Add(e.Data);
+                    if (e.Stop)
+                    {
+                        break;
+                    }
+                }
+
+
+
+                // if true then read
+                // this.Log(LogLevel.Error, "Writing to slave: 0x{0:X}, fifo size: {1}", icTar.Value, txFifo.Count);
+                while (txFifo.Count > 0)
+                {
+                    txFifo.TryDequeue(out var data);
+                    // this.Log(LogLevel.Error, "Writing: {0:X} command: {1}", data.Data, data.Command);
+                    if (data.Command == false)
+                    {
+                        write = true;
+                        buffer.Add(data.Data);
+                        //currentSlave.Write(new byte[1] { data.Data });
+                    }
+                    else
+                    {
+                        // write was fully enqueued, now next command is read
+                        if (write)
+                        {
+
+                        }
+                        var readed = currentSlave.Read(1);
+                        foreach (byte b in readed)
+                        {
+                            if (rxFifo.Count < icRxBufferDepth)
+                            {
+                                rxFifo.Enqueue(b);
+                                // this.Log(LogLevel.Error, "ENQ: {0:X}", b);
+                            }
+                            else
+                            {
+                                // this.Log(LogLevel.Error, "RX BUFFER FULL");
+                                rxOver = true;
+                            }
+                        }
+                    }
+
+                    if (data.Stop)
+                    {
+                        buffer.Clear();
+                        // this.Log(LogLevel.Error, "I2C stop requested");
+                        stopDet.Value = true;
+                        if (currentSlave != null)
+                        {
+                            currentSlave.FinishTransmission();
+                        }
+                        state = State.Idle;
+                        return;
+                    }
+                }
+            }
+            state = State.Idle;
+        }
+
+        // RP2040 must simulate I2C together with GPIO toggling, otherwise 
+        // I2C<->PIO interworking won't be possible
+        private void Step()
+        {
+            switch (state)
+            {
+                case State.Idle:
+                    {
+                        if (txFifo.Count != 0)
+                        {
+                            state = State.StartCondition;
+                        }
+                        return;
+                    }
+                case State.StartCondition:
+                    {
+                        StartTransfer();
+                        return;
+                    }
+                case State.AddressFrame:
+                    {
+                        ProcessAddress();
+                        return;
+                    }
+                case State.Data:
+                    {
+                        ProcessDataReadWrite();
+                        return;
+                    }
+            }
+        }
+
         private enum Registers : long
         {
             IC_CON = 0x00,
@@ -318,14 +529,31 @@ namespace Antmicro.Renode.Peripherals.I2C
             IC_COMP_TYPE = 0xfc
         }
 
+        private enum State
+        {
+            Idle,
+            StartCondition,
+            AddressFrame,
+            Ack,
+            Data
+        }
+
         private RP2040Clocks clocks;
         private RP2040GPIO gpio;
         private int id;
         private List<int> sclPins;
         private List<int> sdaPins;
 
-        private CircularBuffer<UInt16> txFifo;
-        private CircularBuffer<UInt16> rxFifo; 
+        private struct DataEntry
+        {
+            public byte Data;
+            public bool Command;
+            public bool Stop;
+            public bool Restart;
+            public bool FirstDataByte;
+        }
+        private CircularBuffer<DataEntry> txFifo;
+        private CircularBuffer<byte> rxFifo;
 
         private II2CPeripheral currentSlave;
 
@@ -346,22 +574,32 @@ namespace Antmicro.Renode.Peripherals.I2C
 
         private IValueRegisterField icSar;
 
-        private IValueRegisterField dat;
-        private IFlagRegisterField cmd;
-        private IFlagRegisterField stop;
-        private IFlagRegisterField restart;
-        private IFlagRegisterField firstDataByte;
-
         private IValueRegisterField icSsSclHcnt;
         private IValueRegisterField icSsSclLcnt;
         private IValueRegisterField icFsSclHcnt;
         private IValueRegisterField icFsSclLcnt;
 
+        private IFlagRegisterField enable;
+
+        private bool rxUnder;
+        private bool rxOver;
+        private IFlagRegisterField startDet;
+        private IFlagRegisterField stopDet;
+
+
+
         private const ulong aliasSize = 0x1000;
         private const ulong xorAliasOffset = 0x1000;
         private const ulong setAliasOffset = 0x2000;
         private const ulong clearAliasOffset = 0x3000;
- 
+
+        private const int icTxBufferDepth = 16;
+        private const int icRxBufferDepth = 16;
+
+
+        private IManagedThread executionThread;
+
+        private State state;
     };
 
 }

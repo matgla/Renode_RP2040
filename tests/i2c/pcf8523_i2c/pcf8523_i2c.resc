@@ -13,3 +13,5 @@ sysbus.cpu1 VectorTableOffset 0x00000000
 
 showAnalyzer sysbus.uart0
 
+machine StartGdbServer 3333 true sysbus.cpu0
+machine StartGdbServer 3333 true sysbus.cpu1
