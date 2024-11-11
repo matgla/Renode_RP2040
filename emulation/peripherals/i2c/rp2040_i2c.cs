@@ -6,12 +6,17 @@
  * Distributed under the terms of the MIT License.
  */
 
+using System;
+using System.Collections.Generic;
 using Antmicro.OptionsParser;
 using Antmicro.Renode.Core;
 using Antmicro.Renode.Core.Structure;
 using Antmicro.Renode.Core.Structure.Registers;
+using Antmicro.Renode.Logging;
 using Antmicro.Renode.Peripherals.Bus;
+using Antmicro.Renode.Peripherals.GPIOPort;
 using Antmicro.Renode.Peripherals.Miscellaneous;
+using Antmicro.Renode.Utilities.Collections;
 using Lucene.Net.Search;
 
 
@@ -20,15 +25,35 @@ namespace Antmicro.Renode.Peripherals.I2C
 
     class RP2040I2C : SimpleContainer<II2CPeripheral>, II2CPeripheral, IDoubleWordPeripheral, IProvidesRegisterCollection<DoubleWordRegisterCollection>, IKnownSize
     {
-        public RP2040I2C(IMachine machine, RP2040Clocks clocks) : base(machine)
+        public RP2040I2C(IMachine machine, RP2040Clocks clocks, ulong address, int id, RP2040GPIO gpio) : base(machine)
         {
             RegistersCollection = new DoubleWordRegisterCollection(this);
+            txFifo = new CircularBuffer<UInt16>(16);
+            rxFifo = new CircularBuffer<UInt16>(16);
+            sclPins = new List<int>();
+            sdaPins = new List<int>();
+            this.clocks = clocks;
+            this.gpio = gpio;
+            this.id = id;
+
+            gpio.SubscribeOnFunctionChange(OnGpioFunctionSelect);
             DefineRegisters();
+
+            machine.GetSystemBus(this).Register(this, new BusMultiRegistration(address + xorAliasOffset, aliasSize, "XOR"));
+            machine.GetSystemBus(this).Register(this, new BusMultiRegistration(address + setAliasOffset, aliasSize, "SET"));
+            machine.GetSystemBus(this).Register(this, new BusMultiRegistration(address + clearAliasOffset, aliasSize, "CLEAR"));
+ 
             Reset();
         }
 
         public override void Reset()
         {
+            txFifo.Clear();
+            rxFifo.Clear();
+            sdaPins.Clear();
+            sclPins.Clear();
+            currentSlave = null;
+
             masterMode.Value = true;
             speed.Value = 0x2;
             address10BitsSlave.Value = false;
@@ -159,7 +184,15 @@ namespace Antmicro.Renode.Peripherals.I2C
                 .WithReservedBits(10, 22);
 
             Registers.IC_DATA_CMD.Define(this)
-                .WithValueField(0, 8, out dat, name: "DAT")
+                .WithValueField(0, 8, out dat, 
+                    writeCallback: (_, value) => txFifo.Enqueue((UInt16)dat.Value),
+                    valueProviderCallback: _ => {
+                        if (!rxFifo.TryDequeue(out var result))
+                        {
+                            return 0;
+                        }
+                        return result;
+                    }, name: "DAT")
                 .WithFlag(8, out cmd, name: "CMD")
                 .WithFlag(9, out stop, name: "STOP")
                 .WithFlag(10, out restart, name: "RESTART")
@@ -182,11 +215,63 @@ namespace Antmicro.Renode.Peripherals.I2C
                 .WithValueField(0, 16, out icFsSclLcnt, name: "IC_FS_SCL_LCNT")
                 .WithReservedBits(16, 16);
 
-
-
-
         }
 
+        private void OnGpioFunctionSelect(int pin, RP2040GPIO.GpioFunction function)
+        {
+            if (id == 0)
+            {
+                switch (function)
+                {
+                    case RP2040GPIO.GpioFunction.I2C0_SCL:
+                    {
+                        sclPins.Add(pin);
+                        break;
+                    }
+                    case RP2040GPIO.GpioFunction.I2C0_SDA:
+                    {
+                        sdaPins.Add(pin);
+                        break;
+                    }
+                    case RP2040GPIO.GpioFunction.NONE:
+                    {
+                        sclPins.Remove(pin);
+                        sdaPins.Remove(pin);
+                        break;
+                    }
+                }
+            }
+            else if (id == 1)
+            {
+                switch (function)
+                {
+                    case RP2040GPIO.GpioFunction.I2C1_SCL:
+                    {
+                        sclPins.Add(pin);
+                        break;
+                    }
+                    case RP2040GPIO.GpioFunction.I2C1_SDA:
+                    {
+                        sdaPins.Add(pin);
+                        break;
+                    }
+                    case RP2040GPIO.GpioFunction.NONE:
+                    {
+                        sclPins.Remove(pin);
+                        sdaPins.Remove(pin);
+                        break;
+                    }
+                }
+            }
+            else 
+            {
+                this.Log(LogLevel.Error, "Unsupported I2C id: {0}", id);
+            }
+        }
+        private void StartTransfer()
+        {
+            this.Log(LogLevel.Noisy, "I2C starting new transfer for: 0x{0:X}", icTar.Value);
+        }
         private enum Registers : long
         {
             IC_CON = 0x00,
@@ -233,6 +318,17 @@ namespace Antmicro.Renode.Peripherals.I2C
             IC_COMP_TYPE = 0xfc
         }
 
+        private RP2040Clocks clocks;
+        private RP2040GPIO gpio;
+        private int id;
+        private List<int> sclPins;
+        private List<int> sdaPins;
+
+        private CircularBuffer<UInt16> txFifo;
+        private CircularBuffer<UInt16> rxFifo; 
+
+        private II2CPeripheral currentSlave;
+
         private IFlagRegisterField masterMode;
         private IValueRegisterField speed;
         private IFlagRegisterField address10BitsSlave;
@@ -261,7 +357,11 @@ namespace Antmicro.Renode.Peripherals.I2C
         private IValueRegisterField icFsSclHcnt;
         private IValueRegisterField icFsSclLcnt;
 
-
+        private const ulong aliasSize = 0x1000;
+        private const ulong xorAliasOffset = 0x1000;
+        private const ulong setAliasOffset = 0x2000;
+        private const ulong clearAliasOffset = 0x3000;
+ 
     };
 
 }
