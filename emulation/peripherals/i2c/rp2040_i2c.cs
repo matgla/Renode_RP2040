@@ -245,13 +245,14 @@ namespace Antmicro.Renode.Peripherals.I2C
                 .WithFlag(1, FieldMode.Read, valueProviderCallback: _ => rxOver, name: "RX_OVER")
                 .WithFlag(2, FieldMode.Read, valueProviderCallback: _ => rxFifo.Count == icRxBufferDepth, name: "RX_FULL")
                 .WithFlag(3, FieldMode.Read, valueProviderCallback: _ => false, name: "TX_OVER") // implement 
-                .WithFlag(4, FieldMode.Read, valueProviderCallback: _ => {
+                .WithFlag(4, FieldMode.Read, valueProviderCallback: _ =>
+                {
                     bool result = txFifo.Count <= (int)icTxTl.Value;
                     if (txEmptyControl.Value)
                     {
                         result &= !transmissionOngoing;
-                    } 
-                    return result; 
+                    }
+                    return result;
                 }, name: "TX_EMPTY")
                 .WithFlag(9, out stopDet, FieldMode.Read, name: "STOP_DET")
                 .WithFlag(10, out startDet, FieldMode.Read, name: "START_DET");
@@ -310,7 +311,8 @@ namespace Antmicro.Renode.Peripherals.I2C
                 .WithValueField(23, 9, FieldMode.Read, valueProviderCallback: _ => 0, name: "TX_FLUSH_CNT");
 
             Registers.IC_TX_TL.Define(this)
-                .WithValueField(0, 8, out icTxTl, name: "IC_TX_TL", writeCallback: (_, value) => {
+                .WithValueField(0, 8, out icTxTl, name: "IC_TX_TL", writeCallback: (_, value) =>
+                {
                     if (value > icTxBufferDepth)
                     {
                         value = icTxBufferDepth - 1;
@@ -432,7 +434,7 @@ namespace Antmicro.Renode.Peripherals.I2C
                         currentSlave.Write(buffer.ToArray());
                         transmissionOngoing = false;
                     }
-                    else 
+                    else
                     {
                         var ret = currentSlave.Read(buffer.Count);
                         foreach (byte b in ret)

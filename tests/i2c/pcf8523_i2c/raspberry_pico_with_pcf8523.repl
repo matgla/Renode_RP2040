@@ -1,3 +1,4 @@
 using "../../../rp2040.repl"
 
 pcf8523: I2C.PCF8523 @ i2c0 0x68
+    gpoutEnabled: true
