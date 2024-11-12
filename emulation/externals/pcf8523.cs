@@ -288,18 +288,7 @@ namespace Antmicro.Renode.Peripherals.I2C
             hourAlarm = null;
             if ((hour & (1 << 7)) == 0)
             {
-                if (hourMode12)
-                {
-                    hourAlarm = (byte)(BcdToByte((byte)(hour & 0x1f)) - 1);
-                    if ((hour & (1 << 5)) != 0)
-                    {
-                        hourAlarm += 12;
-                    }
-                }
-                else 
-                {
-                    hourAlarm = BcdToByte((byte)(hour & 0x3f));
-                }
+                hour = GetHoursInBcd()
                 this.Log(LogLevel.Noisy, "Set alarm hour to: " + hourAlarm.GetValueOrDefault());
             }
             else 
