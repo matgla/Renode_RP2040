@@ -8,6 +8,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using Antmicro.OptionsParser;
 using Antmicro.Renode.Core;
@@ -20,6 +21,7 @@ using Antmicro.Renode.Peripherals.Miscellaneous;
 using Antmicro.Renode.Utilities;
 using Antmicro.Renode.Utilities.Collections;
 using Lucene.Net.Search;
+using Microsoft.Scripting.Runtime;
 using Mono.Cecil.Cil;
 
 
@@ -81,6 +83,7 @@ namespace Antmicro.Renode.Peripherals.I2C
             icFsSclHcnt.Value = 0x0006;
             icFsSclLcnt.Value = 0x000d;
 
+            icTxTl.Value = 0;
             rxOver = false;
             rxUnder = false;
 
@@ -88,6 +91,8 @@ namespace Antmicro.Renode.Peripherals.I2C
 
             startDet.Value = false;
             stopDet.Value = false;
+
+            transmissionOngoing = false;
 
             UpdateFrequency();
         }
@@ -240,7 +245,14 @@ namespace Antmicro.Renode.Peripherals.I2C
                 .WithFlag(1, FieldMode.Read, valueProviderCallback: _ => rxOver, name: "RX_OVER")
                 .WithFlag(2, FieldMode.Read, valueProviderCallback: _ => rxFifo.Count == icRxBufferDepth, name: "RX_FULL")
                 .WithFlag(3, FieldMode.Read, valueProviderCallback: _ => false, name: "TX_OVER") // implement 
-                .WithFlag(4, FieldMode.Read, valueProviderCallback: _ => txFifo.Count == 0, name: "TX_EMPTY")
+                .WithFlag(4, FieldMode.Read, valueProviderCallback: _ => {
+                    bool result = txFifo.Count <= (int)icTxTl.Value;
+                    if (txEmptyControl.Value)
+                    {
+                        result &= !transmissionOngoing;
+                    } 
+                    return result; 
+                }, name: "TX_EMPTY")
                 .WithFlag(9, out stopDet, FieldMode.Read, name: "STOP_DET")
                 .WithFlag(10, out startDet, FieldMode.Read, name: "START_DET");
 
@@ -297,6 +309,14 @@ namespace Antmicro.Renode.Peripherals.I2C
                 .WithReservedBits(17, 6)
                 .WithValueField(23, 9, FieldMode.Read, valueProviderCallback: _ => 0, name: "TX_FLUSH_CNT");
 
+            Registers.IC_TX_TL.Define(this)
+                .WithValueField(0, 8, out icTxTl, name: "IC_TX_TL", writeCallback: (_, value) => {
+                    if (value > icTxBufferDepth)
+                    {
+                        value = icTxBufferDepth - 1;
+                    }
+                })
+                .WithReservedBits(8, 24);
         }
 
         private void UpdateFrequency()
@@ -386,69 +406,52 @@ namespace Antmicro.Renode.Peripherals.I2C
                     return;
                 }
 
-                int index = 0;
-                foreach (var e in txFifo)
+                bool stop = false;
+                bool? write = null;
+                while (txFifo.TryDequeue(out var e))
                 {
-                    ++index;
+                    if (write == null)
+                    {
+                        write = e.Command == false;
+                    }
+
                     buffer.Add(e.Data);
                     if (e.Stop)
                     {
+                        stop = true;
+                        stopDet.Value = true;
                         break;
                     }
                 }
 
-
-
-                // if true then read
-                // this.Log(LogLevel.Error, "Writing to slave: 0x{0:X}, fifo size: {1}", icTar.Value, txFifo.Count);
-                while (txFifo.Count > 0)
+                if (write != null)
                 {
-                    txFifo.TryDequeue(out var data);
-                    // this.Log(LogLevel.Error, "Writing: {0:X} command: {1}", data.Data, data.Command);
-                    if (data.Command == false)
+                    if (write.Value)
                     {
-                        write = true;
-                        buffer.Add(data.Data);
-                        //currentSlave.Write(new byte[1] { data.Data });
+                        transmissionOngoing = true;
+                        currentSlave.Write(buffer.ToArray());
+                        transmissionOngoing = false;
                     }
-                    else
+                    else 
                     {
-                        // write was fully enqueued, now next command is read
-                        if (write)
+                        var ret = currentSlave.Read(buffer.Count);
+                        foreach (byte b in ret)
                         {
-
+                            rxFifo.Enqueue(b);
                         }
-                        var readed = currentSlave.Read(1);
-                        foreach (byte b in readed)
-                        {
-                            if (rxFifo.Count < icRxBufferDepth)
-                            {
-                                rxFifo.Enqueue(b);
-                                // this.Log(LogLevel.Error, "ENQ: {0:X}", b);
-                            }
-                            else
-                            {
-                                // this.Log(LogLevel.Error, "RX BUFFER FULL");
-                                rxOver = true;
-                            }
-                        }
-                    }
-
-                    if (data.Stop)
-                    {
-                        buffer.Clear();
-                        // this.Log(LogLevel.Error, "I2C stop requested");
-                        stopDet.Value = true;
-                        if (currentSlave != null)
-                        {
-                            currentSlave.FinishTransmission();
-                        }
-                        state = State.Idle;
-                        return;
                     }
                 }
+
+                if (stop)
+                {
+                    currentSlave.FinishTransmission();
+                }
+
+                if (txFifo.Count == 0)
+                {
+                    state = State.Idle;
+                }
             }
-            state = State.Idle;
         }
 
         // RP2040 must simulate I2C together with GPIO toggling, otherwise 
@@ -587,6 +590,9 @@ namespace Antmicro.Renode.Peripherals.I2C
         private IFlagRegisterField stopDet;
 
 
+        private IValueRegisterField icTxTl;
+
+        private bool transmissionOngoing;
 
         private const ulong aliasSize = 0x1000;
         private const ulong xorAliasOffset = 0x1000;
