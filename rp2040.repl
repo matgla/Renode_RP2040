@@ -114,7 +114,11 @@ gpio: GPIOPort.RP2040GPIO @ sysbus 0x40014000 {
     numberOfPins: 30;
     address: 0x40014000
 }
-    
+
+gpio:
+    IRQ -> nvic0@13
+
+
 gpio_qspi: GPIOPort.RP2040GPIO @ sysbus 0x40018000 {
     numberOfPins: 6;
     address: 0x40018000

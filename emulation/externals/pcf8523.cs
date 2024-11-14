@@ -18,9 +18,9 @@ using System.Threading;
 namespace Antmicro.Renode.Peripherals.I2C
 {
 
-    // dopimplementowac pulse mode down with pulsed mode 
-    // mode 1 = pulsed 
 
+    // TODO: cover with tests
+    //       add weekday setting
     public class PCF8523 : II2CPeripheral, IProvidesRegisterCollection<ByteRegisterCollection>
     {
         public PCF8523(IMachine machine, bool gpoutEnabled)
@@ -88,7 +88,9 @@ namespace Antmicro.Renode.Peripherals.I2C
         {
             Registers.Control1.Define(this)
                 .WithTaggedFlag("CIE", 0)
-                .WithFlag(1, out alarmInterruptEnable, name: "AIE")
+                .WithFlag(1, out alarmInterruptEnable, writeCallback: (_, value) => {
+                    this.Log(LogLevel.Error, "SETTING IRQ ALARM: " + value);
+                    }, name: "AIE")
                 .WithFlag(2, out secondInterruptEnable, name: "SIE")
                 .WithFlag(3, out hourMode12, name: "12_24")
                 .WithFlag(4, valueProviderCallback: _ => false, writeCallback: (_, value) =>
@@ -116,7 +118,7 @@ namespace Antmicro.Renode.Peripherals.I2C
                 .WithFlag(2, out watchdogTimerEnabled, name: "WTAIE")
                 .WithFlag(3, out alarmInterrupt, FieldMode.Read | FieldMode.WriteZeroToClear, writeCallback: (_, value) =>
                 {
-                    if (value)
+                    if (!value)
                     {
                         if (alarmInterruptEnable.Value)
                         {
@@ -130,7 +132,7 @@ namespace Antmicro.Renode.Peripherals.I2C
                 }, name: "SF")
                 .WithFlag(5, out countdownTimerBInterrupt, FieldMode.Read | FieldMode.WriteZeroToClear, writeCallback: (_, value) =>
                 {
-                    if (value)
+                    if (!value)
                     {
                         if (countdownTimerBInterruptEnabled.Value)
                         {
@@ -142,7 +144,7 @@ namespace Antmicro.Renode.Peripherals.I2C
                 }, name: "CTBF")
                 .WithFlag(6, out countdownTimerAInterrupt, FieldMode.Read | FieldMode.WriteZeroToClear, writeCallback: (_, value) =>
                 {
-                    if (value)
+                    if (!value)
                     {
                         if (countdownTimerAInterruptEnabled.Value)
                         {
@@ -153,7 +155,7 @@ namespace Antmicro.Renode.Peripherals.I2C
                 }, name: "CTAF")
                 .WithFlag(7, out watchdogTimerInterrupt, FieldMode.Read | FieldMode.WriteZeroToClear, writeCallback: (_, value) =>
                 {
-                    if (value)
+                    if (!value)
                     {
                         if (watchdogTimerEnabled.Value)
                         {
@@ -215,7 +217,7 @@ namespace Antmicro.Renode.Peripherals.I2C
             Registers.Years.Define(this)
                 .WithValueField(0, 8,
                     valueProviderCallback: _ => ByteToBcd(GetCurrentTime().Year - 1),
-                    writeCallback: (_, value) => UpdateYear(BcdToByte(value & 0xff) + 1),
+                    writeCallback: (_, value) => UpdateYear(BcdToByte(value & 0xff)),
                     name: "YEARS");
 
             Registers.MinuteAlarm.Define(this)
@@ -469,7 +471,7 @@ namespace Antmicro.Renode.Peripherals.I2C
 
         private byte BcdToByte(ulong data)
         {
-            return (byte)((data >> 4) * 10 | data & 0xf);
+            return (byte)((data >> 4) * 10 + (data & 0xf));
         }
 
         private byte BcdToByte(int data)
@@ -483,37 +485,44 @@ namespace Antmicro.Renode.Peripherals.I2C
         }
         private void UpdateSecond(byte second)
         {
-            ticks = (ulong)GetCurrentTime().With(second: Clamp(second, 0, 59)).Ticks;
+            this.Log(LogLevel.Debug, "Setting seconds: " + second);
+            ticks = GetCurrentTime().With(second: Clamp(second, 0, 59)).Ticks;
         }
 
         private void UpdateMinute(byte minute)
         {
-            ticks = (ulong)GetCurrentTime().With(minute: Clamp(minute, 0, 59)).Ticks;
+            this.Log(LogLevel.Debug, "Setting minute: " + minute);
+            ticks = GetCurrentTime().With(minute: Clamp(minute, 0, 59)).Ticks;
         }
 
         private void UpdateHour(byte hour)
         {
-            ticks = (ulong)GetCurrentTime().With(hour: Clamp(hour, 0, 23)).Ticks;
+            this.Log(LogLevel.Debug, "Setting hour to: " + hour);
+            ticks = GetCurrentTime().With(hour: Clamp(hour, 0, 23)).Ticks;
         }
 
         private void UpdateDay(byte day)
         {
-            ticks = (ulong)GetCurrentTime().With(day: Clamp(day, 1, 31)).Ticks;
+            this.Log(LogLevel.Debug, "Setting day to: " + day);
+            ticks = GetCurrentTime().With(day: Clamp(day, 1, 31)).Ticks;
         }
 
         private void UpdateMonth(byte month)
         {
-            ticks = (ulong)GetCurrentTime().With(month: Clamp(month, 1, 12)).Ticks;
+            this.Log(LogLevel.Debug, "Setting month to: " + month);
+            ticks = GetCurrentTime().With(month: Clamp(month, 1, 12)).Ticks;
         }
 
         private void UpdateYear(int year)
         {
-            ticks = (ulong)GetCurrentTime().With(year: Clamp((byte)year, 1, 100)).Ticks;
+            this.Log(LogLevel.Debug, "Setting year to: " + year);
+            ticks = GetCurrentTime().With(year: Clamp((byte)year, 1, 100)).Ticks;
         }
 
         private void ResetRegisters()
         {
             RegistersCollection.Reset();
+            ticks = DateTime.MinValue.Ticks;
             minuteAlarm = 0;
             weekdayAlarm = 0;
             dayAlarm = 0;
@@ -532,38 +541,43 @@ namespace Antmicro.Renode.Peripherals.I2C
 
         private DateTime GetCurrentTime()
         {
-            return new DateTime((long)ticks * TimeSpan.TicksPerSecond);
+            return new DateTime(ticks);
         }
 
         private void Tick()
         {
-            ticks++;
+            ticks += TimeSpan.TicksPerSecond;
             var now = GetCurrentTime();
             bool? triggerAlarm = null;
 
-            if (!minuteAlarmEnabled.Value)
+            if (now.Second == 0)
             {
-                triggerAlarm = now.Minute == minuteAlarm;
-            }
-            if (!hourAlarmEnabled.Value && triggerAlarm.GetValueOrDefault(false))
-            {
-                triggerAlarm = now.Hour == hourAlarm;
-            }
-            if (!dayAlarmEnabled.Value && triggerAlarm.GetValueOrDefault(false))
-            {
-                triggerAlarm = now.Day == dayAlarm;
-            }
-            if (!weekdayAlarmEnabled.Value && triggerAlarm.GetValueOrDefault(false))
-            {
-                triggerAlarm = (byte)now.DayOfWeek == weekdayAlarm;
-            }
-
-            if (triggerAlarm.GetValueOrDefault(false))
-            {
-                alarmInterrupt.Value = true;
-                if (alarmInterruptEnable.Value)
+                if (!minuteAlarmEnabled.Value)
                 {
-                    IRQ1.Set(false);
+                    triggerAlarm = now.Minute == minuteAlarm;
+                }
+                if (!hourAlarmEnabled.Value && triggerAlarm.GetValueOrDefault(false))
+                {
+                    triggerAlarm = now.Hour == hourAlarm;
+                }
+                if (!dayAlarmEnabled.Value && triggerAlarm.GetValueOrDefault(false))
+                {
+                    triggerAlarm = now.Day == dayAlarm;
+                }
+                if (!weekdayAlarmEnabled.Value && triggerAlarm.GetValueOrDefault(false))
+                {
+                    triggerAlarm = (byte)now.DayOfWeek == weekdayAlarm;
+                }
+
+                if (triggerAlarm.GetValueOrDefault(false))
+                {
+                    alarmInterrupt.Value = true;
+                    if (alarmInterruptEnable.Value)
+                    {
+                        this.Log(LogLevel.Debug, "Triggering alarm IRQ1");
+                        IRQ1.Set(true);
+                        IRQ1.Set(false);
+                    }
                 }
             }
 
@@ -753,7 +767,7 @@ namespace Antmicro.Renode.Peripherals.I2C
         private IManagedThread timer;
         private readonly bool gpoutEnabled;
         private IManagedThread gpoutClock;
-        private ulong ticks;
+        private long ticks;
 
         private LimitTimer timerA;
         private LimitTimer timerB;

@@ -13,6 +13,10 @@ using Antmicro.Renode.Core;
 using Antmicro.Renode.Logging;
 using Antmicro.Renode.Peripherals.Bus;
 using Antmicro.Renode.Core.Structure.Registers;
+using System.Runtime.Serialization;
+using Antmicro.Renode.Peripherals.Miscellaneous.S32K3XX_FlexIOModel;
+using Dynamitey.DynamicObjects;
+using Microsoft.Scripting.Interpreter;
 
 namespace Antmicro.Renode.Peripherals.GPIOPort
 {
@@ -34,6 +38,9 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
             outputOverride = new OutputOverride[NumberOfPins];
             peripheralDrive = new PeripheralDrive[NumberOfPins];
             OperationDone = new GPIO();
+            pinInterruptMap = new Interrupt[2, NumberOfPins];
+            Core0IRQ = new GPIO();
+            Core1IRQ = new GPIO();
 
             machine.GetSystemBus(this).Register(this, new BusMultiRegistration(address + xorAliasOffset, aliasSize, "XOR"));
             machine.GetSystemBus(this).Register(this, new BusMultiRegistration(address + setAliasOffset, aliasSize, "SET"));
@@ -54,6 +61,8 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
                 outputOverride[i] = OutputOverride.Peripheral;
                 peripheralDrive[i] = PeripheralDrive.None;
             }
+            Core0IRQ.Unset();
+            Core1IRQ.Unset();
         }
 
         [ConnectionRegion("XOR")]
@@ -380,8 +389,12 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
             // 8 pins per register
             for (int p = 0; p < numberOfIntRegisters; ++p)
             {
+                int regId = p;
                 registersMap[inte0p0 + p * 4] = new DoubleWordRegister(this)
-                    .WithValueField(0, 32, name: "INTE0" + p + "_PROC0");
+                    .WithValueField(0, 32, writeCallback: (_, value) => {
+                        for () 
+                        pinInterruptMap[regId * 8].
+                    }, name: "INTE0" + p + "_PROC0");
             }
 
 
@@ -807,12 +820,7 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
                 return;
             }
             this.Log(LogLevel.Noisy, "Setting GPIO" + number + " to: " + value + ", time: " + machine.ElapsedVirtualTime.TimeElapsed + ", from: " + peri);
-            if (!IsPinOutput(number))
-            {
-                this.Log(LogLevel.Warning, "Trying to set input pin: " + number + " to: " + value);
-                return;
-            }
-
+            
             if (peripheralDrive[number] != PeripheralDrive.None && GetFunction(number) != peri)
             {
                 this.Log(LogLevel.Error, "Driving GPIO from not selected peripheral, gpio configured with: " + GetFunction(number) + ". Request received from: " + peri);
@@ -822,6 +830,31 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
             {
                 value = !value;
             }
+
+            var irqType = GetInterruptTypeForPin(number); 
+            if (irqType != Interrupt.None)
+            {
+                switch (irqType)
+                {
+                    case Interrupt.EdgeHigh:
+                    {
+                        if (!State[number] && value)
+                        {
+                            SetInterruptForPin(number, true); 
+                        }
+                        break;
+                    }
+                    case Interrupt.EdgeLow:
+                    {
+                        if (State[number] && value)
+                        {
+                            SetInterruptForPin(number, true);
+                        }
+                        break;
+                    }
+                }
+            }
+
             State[number] = value;
             Connections[number].Set(value);
         }
@@ -848,6 +881,31 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
         // This is necessary to have synchronized PIO with System Clock
         public List<Action<uint>> ReevaluatePioActions { get; set; }
         public GPIO OperationDone { get; }
+        public GPIO Core0IRQ { get; private set; }
+        public GPIO Core1IRQ { get; private set; }
+
+        private enum Interrupt 
+        {
+            None = 0x00,
+            LevelLow = 0x01,
+            LevelHigh = 0x02,
+            EdgeLow = 0x04,
+            EdgeHigh = 0x08
+        };
+
+        private Interrupt GetEnabledInterruptsForPin(int pinNumber, int coreNumber)
+        {
+            return pinInterruptMap[coreNumber][pinNumber];
+        }
+
+        private void SetInterruptForPin(int number, bool value)
+        {
+            if (GetInterruptTypeForPin(number) != Interrupt.None)
+            {
+                IRQ.Set(value);
+                IRQ.Set(!value);
+            }
+        }
 
         private readonly DoubleWordRegisterCollection registers;
         private bool[] pullDown;
@@ -880,6 +938,7 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
             Inverse
         };
         private PeripheralDrive[] peripheralDrive;
+        private Interrupt[,] pinInterruptMap;
     }
 
 }
