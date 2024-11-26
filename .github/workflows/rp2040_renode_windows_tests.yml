@@ -19,4 +19,4 @@ jobs:
       - name: Checkout pico-examples 
         run: |
           git clone https://github.com/raspberrypi/pico-examples
-          ls -la
+          dir 
