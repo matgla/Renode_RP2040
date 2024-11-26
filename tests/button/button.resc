@@ -1,4 +1,4 @@
-$global.TEST_FILE=$ORIGIN/../../pico-examples/build/picoboard/button/picoboard_button.elf
+$global.TEST_FILE=$ORIGIN/../../pico-examples/build/button/button.elf
 
 $machine_name="pico_tests"
 path add $ORIGIN/..
