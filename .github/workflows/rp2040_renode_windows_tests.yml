@@ -43,4 +43,9 @@ jobs:
           mkdir build
           cd build
           PICO_SDK_FETCH_FROM_GIT=1 cmake .. -DCMAKE_BUILD_TYPE=Release
+          ls -la _deps/pico_sdk-src
+          ls -la _deps/pico_sdk-src/src
+          ls -la _deps/pico_sdk-src/src/boards
+          ls -la _deps/pico_sdk-src/src/boards/include
+          ls -la _deps/pico_sdk-src/src/boards/include/boards
           cmake --build .
