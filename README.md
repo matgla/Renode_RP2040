@@ -53,8 +53,8 @@ Renode executes more than 1 step at once on given CPU, so manual synchronization
 > [!IMPORTANT]
 > For Windows piosim.dll is delivered in piosim/redist directory
 > If you want to modify you have to setup msys environment with mingw-gcc and mingw-make.
-> Exactly the same as for Verilator modules: [CoSimulation Renode](https://renode.readthedocs.io/en/latest/tutorials/co-simulating-custom-hdl.html)
-> Otherwise expect segmentation faults or Renode crashing on reading file header
+> Exactly the same as for Verilator modules: [CoSimulation Renode](https://renode.readthedocs.io/en/latest/tutorials/co-simulating-custom-hdl.html).
+> Otherwise expect segmentation faults or Renode crashing on reading file header.
 
 
 # How to use Raspberry Pico simulation
