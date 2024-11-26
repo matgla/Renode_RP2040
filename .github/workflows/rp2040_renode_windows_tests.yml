@@ -18,8 +18,14 @@ jobs:
             cmake
             mingw-w64-x86_64-arm-none-eabi-gcc
             mingw-w64-x86_64-make
+            mingw-w64-x86_64-gcc
             git
       - uses: actions/checkout@v2
+      - name: Create GIT Identity
+        shell: cmd 
+        run: | 
+          git config --global user.email "you@example.com" 
+          git config --global user.name "Your Name"
       - name: Print Environment
         run: |
           echo github.event.action: ${{ github.event.action }}
