@@ -3,8 +3,8 @@
 set directory=pico-examples
 if not exist pico-examples (
     git clone https://github.com/raspberrypi/pico-examples.git
-    git checkout 7e77a0c381863be0c49086567e7f1934d78ac591
     cd pico-examples
+    git checkout 7e77a0c381863be0c49086567e7f1934d78ac591
     git clone https://github.com/raspberrypi/pico-sdk.git
     cd pico-sdk 
     git submodule update --init

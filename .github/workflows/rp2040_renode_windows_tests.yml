@@ -31,6 +31,7 @@ jobs:
       - name: Install dependencies
         working-directory: ${{github.workspace}}/pico-examples
         run: choco install .github/workflows/choco_packages.config
+      
       - name: Build Pico Examples 
         shell: pwsh
         run: |
@@ -39,3 +40,8 @@ jobs:
           cd build
           cmake .. -G Ninja -DPICO_SDK_PATH=../pico-sdk -DCMAKE_BUILD_TYPE=Release
           cmake --build .
+
+      - uses: antmicro/renode-test-action@v4
+        with:
+          renode-revision: '1.15.3'
+          tests-to-run: 'tests/**/*.robot'
