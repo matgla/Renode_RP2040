@@ -43,5 +43,5 @@ jobs:
 
       - uses: antmicro/renode-test-action@v4
         with:
-          renode-revision: '1.15.3'
+          renode-revision: 'v1.15.3'
           tests-to-run: 'tests/**/*.robot'
