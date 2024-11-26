@@ -11,41 +11,31 @@ jobs:
     name: "Renode Windows"
     runs-on: windows-2022
     steps:
-      - uses: msys2/setup-msys2@v2
-        with:
-          update: true
-          install: >-
-            cmake
-            python3
-            python3-pip
-            mingw-w64-x86_64-arm-none-eabi-gcc
-            mingw-w64-x86_64-make
-            mingw-w64-x86_64-gcc
-            make
-            git
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
+      
       - name: Create GIT Identity
         shell: cmd 
         run: | 
           git config --global user.email "you@example.com" 
           git config --global user.name "Your Name"
+      
       - name: Print Environment
         run: |
           echo github.event.action: ${{ github.event.action }}
           echo github.event_name: ${{ github.event_name }}
+      
       - name: Checkout pico-examples 
         run: |
           ./fetch_pico_examples.bat
+      
+      - name: Install dependencies
+        working-directory: ${{github.workspace}}/pico-examples
+        run: choco install .github/workflows/choco_packages.config
       - name: Build Pico Examples 
-        shell: msys2 {0}
+        shell: pwsh
         run: |
           cd pico-examples 
           mkdir build
           cd build
-          PICO_SDK_FETCH_FROM_GIT=1 cmake .. -DCMAKE_BUILD_TYPE=Release
-          ls -la _deps/pico_sdk-src
-          ls -la _deps/pico_sdk-src/src
-          ls -la _deps/pico_sdk-src/src/boards
-          ls -la _deps/pico_sdk-src/src/boards/include
-          ls -la _deps/pico_sdk-src/src/boards/include/boards
+          cmake .. -G Ninja -DPICO_SDK_PATH=../pico-sdk -DCMAKE_BUILD_TYPE=Release
           cmake --build .
