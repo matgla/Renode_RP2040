@@ -30,7 +30,7 @@ jobs:
       
       - name: Install dependencies
         working-directory: ${{github.workspace}}/pico-examples
-        run: choco install .github/workflows/choco_packages.config
+        run: choco install --force .github/workflows/choco_packages.config
       
       - name: Build Pico Examples 
         shell: pwsh
