@@ -14,10 +14,10 @@ jobs:
       - uses: msys2/setup-msys2@v2
         with:
           update: true
-            install: >-
-              cmake
-              mingw-w64-x86_64-arm-none-eabi-gcc
-              git
+          install: >-
+            cmake
+            mingw-w64-x86_64-arm-none-eabi-gcc
+            git
       - uses: actions/checkout@v2
       - name: Print Environment
         run: |
