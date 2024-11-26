@@ -127,7 +127,10 @@ namespace Antmicro.Renode.Peripherals.CPU
         public RP2040PIOCPU(string cpuType, IMachine machine, ulong address, GPIOPort.RP2040GPIO gpio, uint id, RP2040Clocks clocks, Endianess endianness = Endianess.LittleEndian, CpuBitness bitness = CpuBitness.Bits32)
             : base(id + 100, cpuType, machine, endianness, bitness)
         {
-            //CompilePioSim();
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                CompilePioSim();
+            }
             pioId = (int)id;
             string libraryFile = GetPioSimLibraryPath();
             binder = new NativeBinder(this, libraryFile);

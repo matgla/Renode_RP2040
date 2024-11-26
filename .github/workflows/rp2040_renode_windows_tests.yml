@@ -40,10 +40,6 @@ jobs:
           wget https://github.com/renode/renode/releases/download/v1.15.3/renode_1.15.3.zip 
           Expand-Archive '.\renode_1.15.3.zip' -DestinationPath .
 
-      - name: Install Renode-Test
-        shell: pwsh
-        run: |
-          pip3 install -r renode_1.15.3/tests/requirements.txt
       - name: Build Pico Examples 
         shell: pwsh
         run: |
@@ -55,4 +51,5 @@ jobs:
       - name: Execute Tests 
         shell: pwsh
         run: |
+          pip3 install -r renode_1.15.3/tests/requirements.txt
           renode_1.15.3/bin/renode-test.bat -t tests/tests.yaml
