@@ -16,9 +16,12 @@ jobs:
           update: true
           install: >-
             cmake
+            python3
+            python3-pip
             mingw-w64-x86_64-arm-none-eabi-gcc
             mingw-w64-x86_64-make
             mingw-w64-x86_64-gcc
+            make
             git
       - uses: actions/checkout@v2
       - name: Create GIT Identity
