@@ -1054,7 +1054,6 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
 
         public override void OnGPIO(int number, bool value)
         {
-            base.OnGPIO(number, value);
             WritePin(number, value, GetFunction(number));
         }
 
