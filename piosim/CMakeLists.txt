@@ -12,9 +12,9 @@ project (piosim C CXX)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED)
-set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 
 if(CMAKE_HOST_WIN32)
+  set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
   add_link_options("-static")
 endif()
 
@@ -31,7 +31,6 @@ endif ()
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 add_library(piosim SHARED)
-
 
 target_sources(piosim
   PUBLIC
@@ -52,8 +51,6 @@ target_include_directories(piosim
   PUBLIC 
     ${PROJECT_SOURCE_DIR}
 )
-
-target_link_options(piosim PRIVATE -static)
 
 if (ENABLE_TESTS)
   add_subdirectory(tests)
