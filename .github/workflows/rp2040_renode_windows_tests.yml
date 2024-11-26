@@ -31,7 +31,17 @@ jobs:
       - name: Install dependencies
         working-directory: ${{github.workspace}}/pico-examples
         run: choco install --force .github/workflows/choco_packages.config
-      
+
+      - name: Download Renode
+        shell: pwsh
+        run: | 
+          wget https://github.com/renode/renode/releases/download/v1.15.3/renode_1.15.3.zip 
+          Expand-Archive '.\renode_1.15.3.zip' -DestinationPath .
+
+      - name: Install Renode-Test
+        shell: pwsh
+        run: |
+          pip3 install -r renode_1.15.3/tests/requirements.txt
       - name: Build Pico Examples 
         shell: pwsh
         run: |
@@ -40,8 +50,7 @@ jobs:
           cd build
           cmake .. -G Ninja -DPICO_SDK_PATH=../pico-sdk -DCMAKE_BUILD_TYPE=Release
           cmake --build .
-
-      - uses: antmicro/renode-test-action@v4
-        with:
-          renode-revision: 'v1.15.3'
-          tests-to-run: 'tests/**/*.robot'
+      - name: Execute Tests 
+        shell: pwsh
+        run: |
+          renode_1.15.3/bin/renode-test.bat -t tests/tests.yaml

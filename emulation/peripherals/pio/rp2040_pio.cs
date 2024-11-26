@@ -130,9 +130,7 @@ namespace Antmicro.Renode.Peripherals.CPU
             //CompilePioSim();
             pioId = (int)id;
             string libraryFile = GetPioSimLibraryPath();
-            this.Log(LogLevel.Error, "Binding");
             binder = new NativeBinder(this, libraryFile);
-            this.Log(LogLevel.Error, "BINDDED");
             machine.GetSystemBus(this).Register(this, new BusRangeRegistration(new Antmicro.Renode.Core.Range(address, (ulong)Size)));
             this.gpio = gpio;
             gpioFunction = id == 0 ? GPIOPort.RP2040GPIO.GpioFunction.PIO0 : GPIOPort.RP2040GPIO.GpioFunction.PIO1;

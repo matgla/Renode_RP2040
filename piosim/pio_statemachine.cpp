@@ -32,7 +32,7 @@ inline uint32_t FORCE_INLINE rotate_left(uint32_t data,
                                                            uint32_t pin_count)
 {
   pin_base %= 32;
-  const uint32_t mask = ((1ul << pin_count) - 1) << pin_base;
+  const uint32_t mask = ((1ULL << pin_count) - 1) << pin_base;
   return (std::rotl(data, pin_base) & mask);
 }
 
@@ -41,7 +41,7 @@ inline uint32_t FORCE_INLINE rotate_right(uint32_t data,
                                                             uint32_t pin_count)
 {
   pin_base %= 32;
-  const uint32_t mask = (1ul << pin_count) - 1;
+  const uint32_t mask = (1ULL << pin_count) - 1;
   return (std::rotr(data, pin_base) & mask);
 }
 
@@ -195,7 +195,7 @@ void FORCE_INLINE PioStatemachine::process_sideset(uint16_t data)
       const uint32_t sideset_bits = exec_control_register_.side_en
                                       ? pin_control_register_.sideset_count - 1
                                       : pin_control_register_.sideset_count;
-      const uint32_t sideset_mask = (1u << pin_control_register_.sideset_count) - 1;
+      const uint32_t sideset_mask = (1ULL << pin_control_register_.sideset_count) - 1;
       const uint32_t sideset = (data >> delay_bits) & sideset_mask;
       const uint32_t gpio_bitset =
         rotate_left(sideset, pin_control_register_.sideset_base,
@@ -523,11 +523,10 @@ inline uint32_t FORCE_INLINE PioStatemachine::read_osr(
   uint32_t bits)
 {
   uint32_t data = 0;
-  const uint32_t mask = static_cast<uint32_t>((1ul << bits) - 1);
-
+  const uint32_t mask = static_cast<uint32_t>((1ULL << bits) - 1);
   if (shift_control_register_.out_shiftdir == 0)
   {
-    data = (osr_ >> (32 - bits)) & mask;
+    data = (osr_ >> (32U - bits)) & mask;
     osr_ <<= bits;
   }
   else
@@ -565,13 +564,12 @@ bool PioStatemachine::process_out(uint16_t data)
   }
 
   uint32_t osr_data = read_osr(bit_count);
-
   switch (source)
   {
   case 0: {
     const uint32_t pins = rotate_left(osr_data, pin_control_register_.out_base,
                                       pin_control_register_.out_count);
-    const uint32_t mask = rotate_left((1u << pin_control_register_.out_count) - 1,
+    const uint32_t mask = rotate_left((1ULL << pin_control_register_.out_count) - 1,
                                       pin_control_register_.out_base, 32);
     renode_gpio_set_pin_bitset(pins, mask);
     break;
@@ -590,7 +588,7 @@ bool PioStatemachine::process_out(uint16_t data)
   case 4: {
     const uint32_t pins = rotate_left(osr_data, pin_control_register_.out_base,
                                       pin_control_register_.out_count);
-    const uint32_t mask = rotate_left((1u << pin_control_register_.out_count) - 1,
+    const uint32_t mask = rotate_left((1ULL << pin_control_register_.out_count) - 1,
                                       pin_control_register_.out_base, 32);
 
     renode_gpio_set_pindir_bitset(pins, mask);
@@ -680,7 +678,7 @@ bool PioStatemachine::process_mov(uint16_t immediateData)
   switch (destination)
   {
   case 0: {
-    const uint32_t mask = rotate_left((1u << pin_control_register_.out_count),
+    const uint32_t mask = rotate_left((1ULL << pin_control_register_.out_count),
                                       pin_control_register_.out_base, 32);
     const uint32_t state = rotate_left(data, pin_control_register_.out_base,
                                        pin_control_register_.out_count);
@@ -771,7 +769,7 @@ bool PioStatemachine::process_set(uint16_t immediateData)
   switch (destination)
   {
   case 0: {
-    const uint32_t mask = rotate_left((1u << pin_control_register_.set_count) - 1,
+    const uint32_t mask = rotate_left((1ULL << pin_control_register_.set_count) - 1,
                                       pin_control_register_.set_base, 32);
     const uint32_t state = rotate_left(data, pin_control_register_.set_base,
                                        pin_control_register_.set_count);
@@ -788,7 +786,7 @@ bool PioStatemachine::process_set(uint16_t immediateData)
     break;
   }
   case 4: {
-    const uint32_t mask = rotate_left((1u << pin_control_register_.set_count) - 1,
+    const uint32_t mask = rotate_left((1ULL << pin_control_register_.set_count) - 1,
                                       pin_control_register_.set_base, 32);
     const uint32_t state = rotate_left(data, pin_control_register_.set_base,
                                        pin_control_register_.set_count);
@@ -807,6 +805,7 @@ bool PioStatemachine::step()
   {
     return true;
   }
+
 
   if (++dividerCounter_ < clock_divider_)
   {
