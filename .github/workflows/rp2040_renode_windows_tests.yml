@@ -30,7 +30,9 @@ jobs:
       
       - name: Install dependencies
         working-directory: ${{github.workspace}}/pico-examples
-        run: choco install --force .github/workflows/choco_packages.config
+        run: |
+          choco install wget
+          choco install --force .github/workflows/choco_packages.config
 
       - name: Download Renode
         shell: pwsh
