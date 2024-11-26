@@ -31,7 +31,9 @@ namespace Antmicro.Renode.Peripherals.CPU
             string libraryName = "";
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                libraryName = "libpiosim.dll";
+                // for windows there is delivered compiled version of piosim
+                // environment to compile that is quite hard to setup correctly
+                libraryName = "../redist/libpiosim.dll";
             }
             else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
             {
@@ -87,7 +89,14 @@ namespace Antmicro.Renode.Peripherals.CPU
 
             Process configure = new Process();
             configure.StartInfo.FileName = cmake_command;
-            configure.StartInfo.Arguments = ".. -DCMAKE_BUILD_TYPE=Release";
+            configure.StartInfo.Arguments = ".. -DCMAKE_BUILD_TYPE=Debug";
+
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                configure.StartInfo.Arguments += "  -DCMAKE_SH=CMAKE_SH-NOTFOUND";
+            }
+ 
+
             configure.StartInfo.CreateNoWindow = false;
             configure.StartInfo.UseShellExecute = false;
             configure.StartInfo.WorkingDirectory = buildPath;
@@ -102,7 +111,7 @@ namespace Antmicro.Renode.Peripherals.CPU
             Directory.CreateDirectory(buildPath);
             Process build = new Process();
             build.StartInfo.FileName = cmake_command;
-            build.StartInfo.Arguments = "--build .";
+            build.StartInfo.Arguments = "--build . --config Debug";
             build.StartInfo.CreateNoWindow = false;
             build.StartInfo.UseShellExecute = true;
             build.StartInfo.WorkingDirectory = buildPath;
@@ -118,10 +127,12 @@ namespace Antmicro.Renode.Peripherals.CPU
         public RP2040PIOCPU(string cpuType, IMachine machine, ulong address, GPIOPort.RP2040GPIO gpio, uint id, RP2040Clocks clocks, Endianess endianness = Endianess.LittleEndian, CpuBitness bitness = CpuBitness.Bits32)
             : base(id + 100, cpuType, machine, endianness, bitness)
         {
-            CompilePioSim();
+            //CompilePioSim();
             pioId = (int)id;
             string libraryFile = GetPioSimLibraryPath();
+            this.Log(LogLevel.Error, "Binding");
             binder = new NativeBinder(this, libraryFile);
+            this.Log(LogLevel.Error, "BINDDED");
             machine.GetSystemBus(this).Register(this, new BusRangeRegistration(new Antmicro.Renode.Core.Range(address, (ulong)Size)));
             this.gpio = gpio;
             gpioFunction = id == 0 ? GPIOPort.RP2040GPIO.GpioFunction.PIO0 : GPIOPort.RP2040GPIO.GpioFunction.PIO1;
@@ -220,7 +231,6 @@ namespace Antmicro.Renode.Peripherals.CPU
         {
             lock (this)
             {
-
                 PioDeinitialize(pioId);
 
                 base.Dispose();
@@ -352,7 +362,6 @@ namespace Antmicro.Renode.Peripherals.CPU
         [Import]
         private ActionInt32 PioDeinitialize;
 
-
         [Import]
         private FuncUInt32Int32UInt32 PioExecute;
 
@@ -361,8 +370,6 @@ namespace Antmicro.Renode.Peripherals.CPU
 
         [Import]
         private FuncUInt32Int32UInt32 PioReadMemory;
-
-
     }
 }
 

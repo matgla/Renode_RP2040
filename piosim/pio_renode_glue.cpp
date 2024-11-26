@@ -106,3 +106,4 @@ uint32_t renode_gpio_get_pin_bitmap()
 {
   return gpio_get_pin_bitmap();
 }
+

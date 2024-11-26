@@ -45,9 +45,17 @@ PIO is implemented as external simulator written in C++: `piosim` directory. Dec
 Due to that PIO is modelled as additional CPU. 
 Renode executes more than 1 step at once on given CPU, so manual synchronization is necessary in some cases, like interworking between SPI and PIO. 
 
-`piosim` requires `cmake` and `C++` compiler available on machine. 
+> [!IMPORTANT]
+> This is true only for non Windows machines
+> `piosim` requires `cmake` and `C++` compiler available on machine. 
+> It is compiled by renode simulation automatically, no manual steps are necessary. 
 
-It is compiled by renode simulation automatically, no manual steps are necessary. 
+> [!IMPORTANT]
+> For Windows piosim.dll is delivered in piosim/redist directory
+> If you want to modify you have to setup msys environment with mingw-gcc and mingw-make.
+> Exactly the same as for Verilator modules: [CoSimulation Renode](https://renode.readthedocs.io/en/latest/tutorials/co-simulating-custom-hdl.html)
+> Otherwise expect segmentation faults or Renode crashing on reading file header
+
 
 # How to use Raspberry Pico simulation
 
@@ -56,7 +64,7 @@ To use Raspberry Pico simulation clone Renode_RP2040 repository, then add path t
 Example use:
 ```
 (monitor) path add @repos/Renode_RP2040 
-(monitor) include @repos/Renode_RP2040/board/initialize_raspberry_pico.resc 
+(monitor) include @repos/Renode_RP2040/boards/initialize_raspberry_pico.resc 
 (raspberry_pico) sysbus LoadELF @repos/Renode_RP2040/pico-examples/build/hello_world/serial/
 hello_serial.elf
 (raspberry_pico) showAnalyzer sysbus.uart0

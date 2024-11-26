@@ -38,6 +38,18 @@ namespace Antmicro.Renode.Peripherals.UART
             machine.GetSystemBus(this).Register(this, new BusMultiRegistration(address + setAliasOffset, aliasSize, "SET"));
             machine.GetSystemBus(this).Register(this, new BusMultiRegistration(address + clearAliasOffset, aliasSize, "CLEAR"));
 
+            peripheralID = new uint[4]; 
+            peripheralID[0] = 0x11;
+            peripheralID[1] = 0x10;
+            peripheralID[2] = 0x34;
+            peripheralID[3] = 0x0;
+
+            primeCellID = new uint[4];
+            primeCellID[0] = 0x0D; 
+            primeCellID[1] = 0xF0; 
+            primeCellID[2] = 0x05; 
+            primeCellID[3] = 0xB1;
+
             DefineRegisters();
 
             Reset();
@@ -506,8 +518,8 @@ namespace Antmicro.Renode.Peripherals.UART
         private readonly uint hardwareFifoSize;
         private readonly bool[] interruptMasks;
         private readonly bool[] interruptRawStatuses;
-        private readonly uint[] peripheralID = { 0x11, 0x10, 0x34, 0x0 };
-        private readonly uint[] primeCellID = { 0x0D, 0xF0, 0x05, 0xB1 };
+        private readonly uint[] peripheralID;
+        private readonly uint[] primeCellID;
         private readonly uint uartClockFrequency;
 
         private uint receiveFifoSize;

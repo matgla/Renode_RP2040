@@ -18,10 +18,16 @@
 namespace piosim
 {
 
+#ifdef _MSC_VER
+#define FORCE_INLINE __forceinline 
+#else 
+#define FORCE_INLINE __attribute__((always_inline))
+#endif
+
 namespace
 {
 
-inline uint32_t __attribute__((always_inline)) rotate_left(uint32_t data,
+inline uint32_t FORCE_INLINE rotate_left(uint32_t data,
                                                            uint32_t pin_base,
                                                            uint32_t pin_count)
 {
@@ -30,7 +36,7 @@ inline uint32_t __attribute__((always_inline)) rotate_left(uint32_t data,
   return (std::rotl(data, pin_base) & mask);
 }
 
-inline uint32_t __attribute__((always_inline)) rotate_right(uint32_t data,
+inline uint32_t FORCE_INLINE rotate_right(uint32_t data,
                                                             uint32_t pin_base,
                                                             uint32_t pin_count)
 {
@@ -39,7 +45,7 @@ inline uint32_t __attribute__((always_inline)) rotate_right(uint32_t data,
   return (std::rotr(data, pin_base) & mask);
 }
 
-inline uint32_t __attribute__((always_inline)) bitreverse(uint32_t data)
+inline uint32_t FORCE_INLINE bitreverse(uint32_t data)
 {
   uint32_t o = 0;
   for (int i = 0; i < 32; ++i)
@@ -112,7 +118,7 @@ PioStatemachine::~PioStatemachine()
 {
 }
 
-void __attribute__((always_inline)) PioStatemachine::log(
+void FORCE_INLINE PioStatemachine::log(
   LogLevel level, const std::string_view &message) const
 {
   renode_log(level, std::format("SM{}: {}", id_, message));
@@ -145,7 +151,7 @@ void PioStatemachine::clock_divider_restart()
 {
 }
 
-bool __attribute__((always_inline)) PioStatemachine::process_delay()
+bool FORCE_INLINE PioStatemachine::process_delay()
 {
   return stalled_ == true ? true : ++delay_counter_ > delay_;
 }
@@ -162,7 +168,7 @@ void PioStatemachine::schedule_delay(uint16_t data)
   }
 }
 
-void __attribute__((always_inline)) PioStatemachine::increment_program_counter()
+void FORCE_INLINE PioStatemachine::increment_program_counter()
 {
   if (!enabled_)
   {
@@ -178,7 +184,7 @@ void __attribute__((always_inline)) PioStatemachine::increment_program_counter()
   }
 }
 
-void __attribute__((always_inline)) PioStatemachine::process_sideset(uint16_t data)
+void FORCE_INLINE PioStatemachine::process_sideset(uint16_t data)
 {
   const int delay_bits = (5 - pin_control_register_.sideset_count);
 
@@ -246,7 +252,7 @@ inline bool PioStatemachine::jump_condition(uint8_t condition)
   }
 }
 
-bool __attribute__((always_inline)) PioStatemachine::process_jump(uint16_t data)
+bool FORCE_INLINE PioStatemachine::process_jump(uint16_t data)
 {
   const uint8_t condition = static_cast<uint8_t>((data >> 5) & 0x7);
   const uint8_t address = static_cast<uint8_t>(data & 0x1f);
@@ -378,13 +384,13 @@ bool PioStatemachine::process_push(uint16_t data)
   return true;
 }
 
-void __attribute__((always_inline)) PioStatemachine::load_osr(uint32_t value)
+void FORCE_INLINE PioStatemachine::load_osr(uint32_t value)
 {
   osr_ = value;
   osr_counter_ = 0;
 }
 
-bool __attribute__((always_inline)) PioStatemachine::load_osr()
+bool FORCE_INLINE PioStatemachine::load_osr()
 {
   if (!tx_.empty())
   {
@@ -437,7 +443,7 @@ bool PioStatemachine::process_pushpull(uint16_t data)
   }
 }
 
-bool __attribute__((always_inline)) PioStatemachine::write_isr(uint32_t bits,
+bool FORCE_INLINE PioStatemachine::write_isr(uint32_t bits,
                                                                uint32_t data)
 {
   if (shift_control_register_.autopush &&
@@ -473,7 +479,7 @@ bool PioStatemachine::process_in(uint16_t data)
     bit_count = 32;
   }
 
-  uint isr_data = 0;
+  uint32_t isr_data = 0;
   switch (source)
   {
   case 0: {
@@ -513,7 +519,7 @@ bool PioStatemachine::process_in(uint16_t data)
   return true;
 }
 
-inline uint32_t __attribute__((always_inline)) PioStatemachine::read_osr(
+inline uint32_t FORCE_INLINE PioStatemachine::read_osr(
   uint32_t bits)
 {
   uint32_t data = 0;
@@ -591,7 +597,7 @@ bool PioStatemachine::process_out(uint16_t data)
     break;
   }
   case 5: {
-    program_counter_ = static_cast<uint16_t>(osr_data);
+    program_counter_ = static_cast<uint8_t>(osr_data);
     return true;
   }
   case 6: {
@@ -612,7 +618,7 @@ bool PioStatemachine::process_out(uint16_t data)
   return true;
 }
 
-uint32_t __attribute__((always_inline)) PioStatemachine::get_from_source(
+uint32_t FORCE_INLINE PioStatemachine::get_from_source(
   uint32_t source)
 {
   switch (source)
@@ -629,7 +635,7 @@ uint32_t __attribute__((always_inline)) PioStatemachine::get_from_source(
   case 4:
     return 0;
   case 5: {
-    uint data = 0;
+    uint32_t data = 0;
     if (!exec_control_register_.status_sel)
     {
       if (tx_.size() < exec_control_register_.status_n)
@@ -698,7 +704,7 @@ bool PioStatemachine::process_mov(uint16_t immediateData)
     return true;
   }
   case 5: {
-    program_counter_ = static_cast<uint16_t>(data);
+    program_counter_ = static_cast<uint8_t>(data);
     return true;
   }
   case 6: {
@@ -750,7 +756,7 @@ bool PioStatemachine::process_irq(uint16_t data)
     irqs_[id] = true;
     if (wait)
     {
-      wait_for_irq_ = id;
+      wait_for_irq_ = static_cast<uint8_t>(id);
     }
   }
 
@@ -818,7 +824,7 @@ bool PioStatemachine::step()
   return run_step();
 }
 
-bool __attribute__((always_inline)) PioStatemachine::run_step()
+bool FORCE_INLINE PioStatemachine::run_step()
 {
   const OpCode opcode = static_cast<OpCode>(current_instruction_ >> 13);
   const uint16_t delay_or_sideset = (current_instruction_ >> 8) & 0x1f;
@@ -1006,9 +1012,9 @@ void PioStatemachine::shift_control_register(uint32_t data)
   shift_control_register_.in_shiftdir = reg.reg.in_shiftdir;
   shift_control_register_.out_shiftdir = reg.reg.out_shiftdir;
   shift_control_register_.push_threshold =
-    reg.reg.push_threshold == 0 ? 32 : reg.reg.push_threshold;
+    reg.reg.push_threshold == 0 ? 32 : static_cast<uint8_t>(reg.reg.push_threshold);
   shift_control_register_.pull_threshold =
-    reg.reg.pull_threshold == 0 ? 32 : reg.reg.pull_threshold;
+    reg.reg.pull_threshold == 0 ? 32 : static_cast<uint8_t>(reg.reg.pull_threshold);
   shift_control_register_.fjoin_tx = reg.reg.fjoin_tx;
   shift_control_register_.fjoin_rx = reg.reg.fjoin_rx;
 

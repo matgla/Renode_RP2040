@@ -112,7 +112,7 @@ PioSimulator::PioSimulator()
       .read = nullptr,
       .write =
         [this, i](uint32_t data) {
-          program_[i] = data;
+          program_[i] = static_cast<uint16_t>(data);
         },
     };
   }
