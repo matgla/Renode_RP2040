@@ -21,9 +21,9 @@ jobs:
         shell: bash 
         run: |
           wget https://github.com/renode/renode/releases/download/v1.15.3/renode_1.15.3.dmg 
-          hidutil attach renode_1.15.3.dmg 
+          hdiutil attach renode_1.15.3.dmg 
           installer -package /Volumes/renode_1.15.3/renode_1.15.3.pkg -target /
-          hiduti detach /Volume/renode_1.15.3
+          hdiutil detach /Volume/renode_1.15.3
       - name: Install Dependencies
         shell: bash 
         run: |
