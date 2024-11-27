@@ -36,6 +36,8 @@ There is predefined Raspberry Pico board description in: 'boards/raspberry_pico.
 | **SSI** | $${\color{yellow}✓}$$  | Implemented, XIP support/caches are stubbed. Resets/IRQs/DMA requests to be filled |
 | **XIP** | $${\color{yellow}✓}$$  | Partially implemented, bootrom correctly starts firmware |
 | **Resets** | $${\color{green}✓}$$  | Device resetting works, added to support watchdog fully |
+| **PSM** | $${\color{yellow}✓}$$  | Just a stub, doesn't reset anything, but model states |
+
 
 
 
@@ -45,9 +47,17 @@ PIO is implemented as external simulator written in C++: `piosim` directory. Dec
 Due to that PIO is modelled as additional CPU. 
 Renode executes more than 1 step at once on given CPU, so manual synchronization is necessary in some cases, like interworking between SPI and PIO. 
 
-`piosim` requires `cmake` and `C++` compiler available on machine. 
+> [!IMPORTANT]
+> This is true only for non Windows machines
+> `piosim` requires `cmake` and `C++` compiler available on machine. 
+> It is compiled by renode simulation automatically, no manual steps are necessary. 
 
-It is compiled by renode simulation automatically, no manual steps are necessary. 
+> [!IMPORTANT]
+> For Windows piosim.dll is delivered in piosim/redist directory
+> If you want to modify you have to setup msys environment with mingw-gcc and mingw-make.
+> Exactly the same as for Verilator modules: [CoSimulation Renode](https://renode.readthedocs.io/en/latest/tutorials/co-simulating-custom-hdl.html).
+> Otherwise expect segmentation faults or Renode crashing on reading file header.
+
 
 # How to use Raspberry Pico simulation
 
@@ -56,7 +66,7 @@ To use Raspberry Pico simulation clone Renode_RP2040 repository, then add path t
 Example use:
 ```
 (monitor) path add @repos/Renode_RP2040 
-(monitor) include @repos/Renode_RP2040/board/initialize_raspberry_pico.resc 
+(monitor) include @repos/Renode_RP2040/boards/initialize_raspberry_pico.resc 
 (raspberry_pico) sysbus LoadELF @repos/Renode_RP2040/pico-examples/build/hello_world/serial/
 hello_serial.elf
 (raspberry_pico) showAnalyzer sysbus.uart0
@@ -71,13 +81,28 @@ You may use it inside your simulation scripts, look at `tests/prepare.resc` as a
 Raspberry Pico configuration may be extended to configure board connections. 
 As an example you can check `tests/pio/clocked_input/raspberry_pico_with_redirected_spi.repl`.
 
-You may also build your own board using pure RP2040 target. 
+Then you can include boards/initalize_custom_board.resc after setting $platform_file variable that points to your board.
 
-Example from [MSPC Board Simulation](https://github.com/matgla/mspc-south-bridge/) simulation directory: 
 ```
-path add @${RENODE_BOARD_DIR}
-$machine_name="mspc_north_bridge"
-include @initialize_rp2040.resc
+$platform_file=@my_board.repl
+include @boards/initialize_custom_board.resc
+```
+
+# Easy firmware execution 
+In the root of repository, there is the `run_firmware.resc` script that configures RP2040 with specified firmware in ELF file. 
+
+Just define your script or use renode console to use it.
+
+```
+$global.FIRMWARE=my_awesome_binary.elf
+include @run_firmware.resc
+```
+
+If you need to use your own board: 
+```
+$platform_file=@my_awesome_board.repl
+$global.FIRMWARE=my_awesome_binary.elf
+include @run_firmware.resc
 ```
 
 # Multi Node simulation. 

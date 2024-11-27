@@ -1,6 +1,12 @@
-$machine_name="pico_tests"
+$machine_name?="pico_tests"
+$board_initialization_file?=$ORIGIN/../boards/initialize_raspberry_pico.resc
+
 path add $ORIGIN/..
-include $ORIGIN/../boards/initialize_raspberry_pico.resc
+
+log "Loading board initialization file"
+include $board_initialization_file
+
+log "Loading firmware file"
 sysbus LoadELF $global.TEST_FILE
 
 sysbus.cpu0 VectorTableOffset 0x00000000

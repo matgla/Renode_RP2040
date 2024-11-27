@@ -199,3 +199,7 @@ watchdog: Timers.RP2040Watchdog @ sysbus 0x40058000 {
 i2c0: I2C.RP2040I2C @ sysbus 0x40044000 {
     clocks: clocks
 }
+
+psm: Miscellaneous.PSM @ sysbus 0x40010000 {
+    address: 0x40010000
+}

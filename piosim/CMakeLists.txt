@@ -12,16 +12,25 @@ project (piosim C CXX)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED)
-set(CMAKE_CXX_FLAGS "-Wall -Wextra -Werror")
+
+if(CMAKE_HOST_WIN32)
+  set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
+  add_link_options("-static")
+endif()
+
+if (MSVC)
+  set(CMAKE_CXX_FLAGS "/W4 /WX")
+  set(CMAKE_CXX_FLAGS_RELEASE "/O2")
+  set(CMAKE_CXX_FLAGS_DEBUG "/Od")
+else ()
+  set(CMAKE_CXX_FLAGS "-Wall -Wextra -Werror")
+  set(CMAKE_CXX_FLAGS_RELEASE "-O3")
+  set(CMAKE_CXX_FLAGS_DEBUG "-Og -g")
+endif ()
+
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-
-
-set(CMAKE_CXX_FLAGS_RELEASE "-O3")
-set(CMAKE_CXX_FLAGS_DEBUG "-Og -g")
-
 add_library(piosim SHARED)
-
 
 target_sources(piosim
   PUBLIC
@@ -36,6 +45,11 @@ target_sources(piosim
     pio_statemachine.cpp
     pio.cpp
     fifo.cpp
+)
+
+target_include_directories(piosim 
+  PUBLIC 
+    ${PROJECT_SOURCE_DIR}
 )
 
 if (ENABLE_TESTS)

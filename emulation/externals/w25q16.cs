@@ -179,7 +179,7 @@ namespace Antmicro.Renode.Peripherals.SPI
                     break;
             }
             currentOperation.State = DecodedOperation.OperationState.RecognizeOperation;
-            currentOperation = default;
+            currentOperation =  default(DecodedOperation);
         }
 
         protected int GetDummyBytes(Command command)
@@ -412,7 +412,7 @@ namespace Antmicro.Renode.Peripherals.SPI
 
         public void Reset()
         {
-            currentOperation = default;
+            currentOperation = default(DecodedOperation);
             writeEnable.Value = false;
             continuousReadMode = null;
             originalCommandDummyBytes = 0;

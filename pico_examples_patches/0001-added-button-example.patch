@@ -1,0 +1,70 @@
+From 2a92bcada218565af1e899679b6872e3b6ccf755 Mon Sep 17 00:00:00 2001
+From: Mateusz Stadnik <matgla@live.com>
+Date: Tue, 26 Nov 2024 18:38:15 +0100
+Subject: [PATCH] added button example
+
+---
+ CMakeLists.txt        |  1 +
+ button/CMakeLists.txt | 13 +++++++++++++
+ button/button.c       | 20 ++++++++++++++++++++
+ 3 files changed, 34 insertions(+)
+ create mode 100644 button/CMakeLists.txt
+ create mode 100644 button/button.c
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 597cb3e..2f3aa1b 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -88,3 +88,4 @@ add_subdirectory(usb)
+ add_subdirectory(watchdog)
+ add_subdirectory(sha)
+ add_subdirectory(freertos)
++add_subdirectory(button)
+diff --git a/button/CMakeLists.txt b/button/CMakeLists.txt
+new file mode 100644
+index 0000000..08294db
+--- /dev/null
++++ b/button/CMakeLists.txt
+@@ -0,0 +1,13 @@
++add_executable(button
++    button.c
++)
++
++# pull in common dependencies
++target_link_libraries(button pico_stdlib)
++
++# create map/bin/hex file etc.
++pico_add_extra_outputs(button)
++
++# add url via pico_set_program_url
++example_auto_set_url(button)
++
+diff --git a/button/button.c b/button/button.c
+new file mode 100644
+index 0000000..b9d202a
+--- /dev/null
++++ b/button/button.c
+@@ -0,0 +1,20 @@
++#include "pico/stdlib.h"
++
++int main() {
++    gpio_init(PICO_DEFAULT_LED_PIN);
++    gpio_init(4);
++    gpio_set_dir(PICO_DEFAULT_LED_PIN, GPIO_OUT);
++    gpio_set_dir(4, GPIO_IN);
++    
++    while (true) {
++        if (gpio_get(4))
++        {
++            gpio_put(PICO_DEFAULT_LED_PIN, true);
++        }
++        else 
++        {
++            gpio_put(PICO_DEFAULT_LED_PIN, false);
++        }
++        sleep_ms(100);
++    }
++}
+-- 
+2.47.0.windows.2
+

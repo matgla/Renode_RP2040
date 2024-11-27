@@ -120,7 +120,7 @@ namespace Antmicro.Renode.Peripherals.DMA
           // Transfer Units |  1  |  2  |  3  |  4  |
           // Source         |  A  |  B  |  C  |  D  |
           // Copied         |  A  |  B  |  C  |  D  |
-          response.ReadAddress += (ulong)ReadFromMemory(sourceAddress + readOffset, buffer, request.request.Size, context: context, request.ringWrite == false ? request.ringSize : 0);
+          response.ReadAddress += (ulong)ReadFromMemory(sourceAddress + readOffset, buffer, request.request.Size, context, request.ringWrite == false ? request.ringSize : 0);
         }
         else
         {

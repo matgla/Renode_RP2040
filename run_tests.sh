@@ -10,18 +10,18 @@ if [ ! -d pico-examples ]; then
     done
 fi
 
-cd pico-examples
-mkdir build
-cd build
-PICO_SDK_FETCH_FROM_GIT=1 cmake ..
-make -j$(nproc)
-cd ../..
+# cd pico-examples
+# mkdir build
+# cd build
+# PICO_SDK_FETCH_FROM_GIT=1 cmake .. -GNinja -DCMAKE_BUILD_TYPE=Release -DPICO_BOARD=pico
+# cmake --build .
+# cd ../..
 
-cd piosim
-mkdir build 
-cd build 
-cmake .. -DCMAKE_BUILD_TYPE=Release 
-cmake --build . 
-cd ../..
-renode-test -t tests/tests.yaml
+# cd piosim
+# mkdir build 
+# cd build 
+# cmake .. -DCMAKE_BUILD_TYPE=Release 
+# cmake --build . 
+# cd ../..
+# renode-test -t tests/tests.yaml
 

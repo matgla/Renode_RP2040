@@ -37,6 +37,7 @@ uint32_t Fifo::pop()
     return 0;
   }
   uint32_t r = queue_.front();
+  
   queue_.pop();
   return r;
 }

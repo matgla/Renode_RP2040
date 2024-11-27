@@ -38,6 +38,308 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
             machine.GetSystemBus(this).Register(this, new BusMultiRegistration(address + xorAliasOffset, aliasSize, "XOR"));
             machine.GetSystemBus(this).Register(this, new BusMultiRegistration(address + setAliasOffset, aliasSize, "SET"));
             machine.GetSystemBus(this).Register(this, new BusMultiRegistration(address + clearAliasOffset, aliasSize, "CLEAR"));
+
+            pinMapping = new GpioFunction[30, 9];
+            pinMapping[0, 0] = GpioFunction.SPI0_RX; 
+            pinMapping[0, 1] = GpioFunction.UART0_TX;
+            pinMapping[0, 2] = GpioFunction.I2C0_SDA; 
+            pinMapping[0, 3] = GpioFunction.PWM0_A; 
+            pinMapping[0, 4] = GpioFunction.SIO; 
+            pinMapping[0, 5] = GpioFunction.PIO0; 
+            pinMapping[0, 6] = GpioFunction.PIO1; 
+            pinMapping[0, 7] = GpioFunction.NONE; 
+            pinMapping[0, 8] = GpioFunction.USB_OVCUR_DET;
+
+            pinMapping[1, 0] = GpioFunction.SPI0_CSN; 
+            pinMapping[1, 1] = GpioFunction.UART0_RX;
+            pinMapping[1, 2] = GpioFunction.I2C0_SCL; 
+            pinMapping[1, 3] = GpioFunction.PWM0_B; 
+            pinMapping[1, 4] = GpioFunction.SIO; 
+            pinMapping[1, 5] = GpioFunction.PIO0; 
+            pinMapping[1, 6] = GpioFunction.PIO1; 
+            pinMapping[1, 7] = GpioFunction.NONE; 
+            pinMapping[1, 8] = GpioFunction.USB_VBUS_DET;
+
+            pinMapping[2, 0] = GpioFunction.SPI0_SCK; 
+            pinMapping[2, 1] = GpioFunction.UART0_CTS;
+            pinMapping[2, 2] = GpioFunction.I2C1_SDA; 
+            pinMapping[2, 3] = GpioFunction.PWM1_A; 
+            pinMapping[2, 4] = GpioFunction.SIO; 
+            pinMapping[2, 5] = GpioFunction.PIO0; 
+            pinMapping[2, 6] = GpioFunction.PIO1; 
+            pinMapping[2, 7] = GpioFunction.NONE; 
+            pinMapping[2, 8] = GpioFunction.USB_VBUS_EN;
+
+            pinMapping[3, 0] = GpioFunction.SPI0_TX; 
+            pinMapping[3, 1] = GpioFunction.UART0_RTS;
+            pinMapping[3, 2] = GpioFunction.I2C1_SCL; 
+            pinMapping[3, 3] = GpioFunction.PWM1_B; 
+            pinMapping[3, 4] = GpioFunction.SIO; 
+            pinMapping[3, 5] = GpioFunction.PIO0; 
+            pinMapping[3, 6] = GpioFunction.PIO1; 
+            pinMapping[3, 7] = GpioFunction.NONE; 
+            pinMapping[3, 8] = GpioFunction.USB_OVCUR_DET;
+
+            pinMapping[4, 0] = GpioFunction.SPI0_RX; 
+            pinMapping[4, 1] = GpioFunction.UART1_TX;
+            pinMapping[4, 2] = GpioFunction.I2C0_SDA; 
+            pinMapping[4, 3] = GpioFunction.PWM2_A; 
+            pinMapping[4, 4] = GpioFunction.SIO; 
+            pinMapping[4, 5] = GpioFunction.PIO0; 
+            pinMapping[4, 6] = GpioFunction.PIO1; 
+            pinMapping[4, 7] = GpioFunction.NONE; 
+            pinMapping[4, 8] = GpioFunction.USB_VBUS_DET;
+
+            pinMapping[5, 0] = GpioFunction.SPI0_CSN; 
+            pinMapping[5, 1] = GpioFunction.UART1_RX;
+            pinMapping[5, 2] = GpioFunction.I2C0_SCL; 
+            pinMapping[5, 3] = GpioFunction.PWM2_B; 
+            pinMapping[5, 4] = GpioFunction.SIO; 
+            pinMapping[5, 5] = GpioFunction.PIO0; 
+            pinMapping[5, 6] = GpioFunction.PIO1; 
+            pinMapping[5, 7] = GpioFunction.NONE; 
+            pinMapping[5, 8] = GpioFunction.USB_VBUS_EN;
+
+            pinMapping[6, 0] = GpioFunction.SPI0_SCK; 
+            pinMapping[6, 1] = GpioFunction.UART1_CTS;
+            pinMapping[6, 2] = GpioFunction.I2C1_SDA; 
+            pinMapping[6, 3] = GpioFunction.PWM3_A; 
+            pinMapping[6, 4] = GpioFunction.SIO; 
+            pinMapping[6, 5] = GpioFunction.PIO0; 
+            pinMapping[6, 6] = GpioFunction.PIO1; 
+            pinMapping[6, 7] = GpioFunction.NONE; 
+            pinMapping[6, 8] = GpioFunction.USB_OVCUR_DET;
+
+            pinMapping[7, 0] = GpioFunction.SPI0_TX; 
+            pinMapping[7, 1] = GpioFunction.UART1_RTS;
+            pinMapping[7, 2] = GpioFunction.I2C1_SCL; 
+            pinMapping[7, 3] = GpioFunction.PWM3_B; 
+            pinMapping[7, 4] = GpioFunction.SIO; 
+            pinMapping[7, 5] = GpioFunction.PIO0; 
+            pinMapping[7, 6] = GpioFunction.PIO1; 
+            pinMapping[7, 7] = GpioFunction.NONE; 
+            pinMapping[7, 8] = GpioFunction.USB_VBUS_DET;
+
+            pinMapping[8, 0] = GpioFunction.SPI1_RX; 
+            pinMapping[8, 1] = GpioFunction.UART1_TX;
+            pinMapping[8, 2] = GpioFunction.I2C0_SDA; 
+            pinMapping[8, 3] = GpioFunction.PWM4_A; 
+            pinMapping[8, 4] = GpioFunction.SIO; 
+            pinMapping[8, 5] = GpioFunction.PIO0; 
+            pinMapping[8, 6] = GpioFunction.PIO1; 
+            pinMapping[8, 7] = GpioFunction.NONE; 
+            pinMapping[8, 8] = GpioFunction.USB_VBUS_EN;
+
+            pinMapping[9, 0] = GpioFunction.SPI1_SCK; 
+            pinMapping[9, 1] = GpioFunction.UART1_CTS;
+            pinMapping[9, 2] = GpioFunction.I2C0_SCL; 
+            pinMapping[9, 3] = GpioFunction.PWM4_B; 
+            pinMapping[9, 4] = GpioFunction.SIO; 
+            pinMapping[9, 5] = GpioFunction.PIO0; 
+            pinMapping[9, 6] = GpioFunction.PIO1; 
+            pinMapping[9, 7] = GpioFunction.NONE; 
+            pinMapping[9, 8] = GpioFunction.USB_OVCUR_DET;
+
+            pinMapping[10, 0] = GpioFunction.SPI1_TX; 
+            pinMapping[10, 1] = GpioFunction.UART1_RTS;
+            pinMapping[10, 2] = GpioFunction.I2C1_SDA; 
+            pinMapping[10, 3] = GpioFunction.PWM5_A; 
+            pinMapping[10, 4] = GpioFunction.SIO; 
+            pinMapping[10, 5] = GpioFunction.PIO0; 
+            pinMapping[10, 6] = GpioFunction.PIO1; 
+            pinMapping[10, 7] = GpioFunction.NONE; 
+            pinMapping[10, 8] = GpioFunction.USB_VBUS_DET;
+
+            pinMapping[11, 0] = GpioFunction.SPI1_RX; 
+            pinMapping[11, 1] = GpioFunction.UART0_TX;
+            pinMapping[11, 2] = GpioFunction.I2C1_SCL; 
+            pinMapping[11, 3] = GpioFunction.PWM5_B; 
+            pinMapping[11, 4] = GpioFunction.SIO; 
+            pinMapping[11, 5] = GpioFunction.PIO0; 
+            pinMapping[11, 6] = GpioFunction.PIO1; 
+            pinMapping[11, 7] = GpioFunction.NONE; 
+            pinMapping[11, 8] = GpioFunction.USB_VBUS_EN;
+
+            pinMapping[12, 0] = GpioFunction.SPI1_CSN; 
+            pinMapping[12, 1] = GpioFunction.UART0_RX;
+            pinMapping[12, 2] = GpioFunction.I2C0_SDA; 
+            pinMapping[12, 3] = GpioFunction.PWM6_A; 
+            pinMapping[12, 4] = GpioFunction.SIO; 
+            pinMapping[12, 5] = GpioFunction.PIO0; 
+            pinMapping[12, 6] = GpioFunction.PIO1; 
+            pinMapping[12, 7] = GpioFunction.NONE; 
+            pinMapping[12, 8] = GpioFunction.USB_OVCUR_DET;
+
+            pinMapping[13, 0] = GpioFunction.SPI1_SCK; 
+            pinMapping[13, 1] = GpioFunction.UART0_CTS;
+            pinMapping[13, 2] = GpioFunction.I2C0_SCL; 
+            pinMapping[13, 3] = GpioFunction.PWM6_B; 
+            pinMapping[13, 4] = GpioFunction.SIO; 
+            pinMapping[13, 5] = GpioFunction.PIO0; 
+            pinMapping[13, 6] = GpioFunction.PIO1; 
+            pinMapping[13, 7] = GpioFunction.NONE; 
+            pinMapping[13, 8] = GpioFunction.USB_VBUS_DET;
+
+            pinMapping[14, 0] = GpioFunction.SPI1_TX; 
+            pinMapping[14, 1] = GpioFunction.UART0_RTS;
+            pinMapping[14, 2] = GpioFunction.I2C1_SDA; 
+            pinMapping[14, 3] = GpioFunction.PWM7_A; 
+            pinMapping[14, 4] = GpioFunction.SIO; 
+            pinMapping[14, 5] = GpioFunction.PIO0; 
+            pinMapping[14, 6] = GpioFunction.PIO1; 
+            pinMapping[14, 7] = GpioFunction.NONE; 
+            pinMapping[14, 8] = GpioFunction.USB_VBUS_EN;
+
+            pinMapping[15, 0] = GpioFunction.SPI0_RX; 
+            pinMapping[15, 1] = GpioFunction.UART0_TX;
+            pinMapping[15, 2] = GpioFunction.I2C1_SCL; 
+            pinMapping[15, 3] = GpioFunction.PWM7_B; 
+            pinMapping[15, 4] = GpioFunction.SIO; 
+            pinMapping[15, 5] = GpioFunction.PIO0; 
+            pinMapping[15, 6] = GpioFunction.PIO1; 
+            pinMapping[15, 7] = GpioFunction.NONE; 
+            pinMapping[15, 8] = GpioFunction.USB_OVCUR_DET;
+
+            pinMapping[16, 0] = GpioFunction.SPI0_CSN; 
+            pinMapping[16, 1] = GpioFunction.UART0_RX;
+            pinMapping[16, 2] = GpioFunction.I2C0_SDA; 
+            pinMapping[16, 3] = GpioFunction.PWM0_A; 
+            pinMapping[16, 4] = GpioFunction.SIO; 
+            pinMapping[16, 5] = GpioFunction.PIO0; 
+            pinMapping[16, 6] = GpioFunction.PIO1; 
+            pinMapping[16, 7] = GpioFunction.NONE; 
+            pinMapping[16, 8] = GpioFunction.USB_VBUS_DET;
+
+            pinMapping[17, 0] = GpioFunction.SPI0_SCK; 
+            pinMapping[17, 1] = GpioFunction.UART0_CTS;
+            pinMapping[17, 2] = GpioFunction.I2C0_SCL; 
+            pinMapping[17, 3] = GpioFunction.PWM0_B; 
+            pinMapping[17, 4] = GpioFunction.SIO; 
+            pinMapping[17, 5] = GpioFunction.PIO0; 
+            pinMapping[17, 6] = GpioFunction.PIO1; 
+            pinMapping[17, 7] = GpioFunction.NONE; 
+            pinMapping[17, 8] = GpioFunction.USB_VBUS_EN;
+
+            pinMapping[18, 0] = GpioFunction.SPI0_TX; 
+            pinMapping[18, 1] = GpioFunction.UART0_RTS;
+            pinMapping[18, 2] = GpioFunction.I2C1_SDA; 
+            pinMapping[18, 3] = GpioFunction.PWM1_A; 
+            pinMapping[18, 4] = GpioFunction.SIO; 
+            pinMapping[18, 5] = GpioFunction.PIO0; 
+            pinMapping[18, 6] = GpioFunction.PIO1; 
+            pinMapping[18, 7] = GpioFunction.NONE; 
+            pinMapping[18, 8] = GpioFunction.USB_OVCUR_DET;
+
+            pinMapping[19, 0] = GpioFunction.SPI0_RX; 
+            pinMapping[19, 1] = GpioFunction.UART1_TX;
+            pinMapping[19, 2] = GpioFunction.I2C1_SCL; 
+            pinMapping[19, 3] = GpioFunction.PWM1_B; 
+            pinMapping[19, 4] = GpioFunction.SIO; 
+            pinMapping[19, 5] = GpioFunction.PIO0; 
+            pinMapping[19, 6] = GpioFunction.PIO1; 
+            pinMapping[19, 7] = GpioFunction.NONE; 
+            pinMapping[19, 8] = GpioFunction.USB_VBUS_DET;
+
+            pinMapping[20, 0] = GpioFunction.SPI0_CSN; 
+            pinMapping[20, 1] = GpioFunction.UART1_RX;
+            pinMapping[20, 2] = GpioFunction.I2C0_SDA; 
+            pinMapping[20, 3] = GpioFunction.PWM2_A; 
+            pinMapping[20, 4] = GpioFunction.SIO; 
+            pinMapping[20, 5] = GpioFunction.PIO0; 
+            pinMapping[20, 6] = GpioFunction.PIO1; 
+            pinMapping[20, 7] = GpioFunction.CLOCK_GPIN0; 
+            pinMapping[20, 8] = GpioFunction.USB_VBUS_EN;
+
+            pinMapping[21, 0] = GpioFunction.SPI0_SCK; 
+            pinMapping[21, 1] = GpioFunction.UART1_CTS;
+            pinMapping[21, 2] = GpioFunction.I2C0_SCL; 
+            pinMapping[21, 3] = GpioFunction.PWM2_B; 
+            pinMapping[21, 4] = GpioFunction.SIO; 
+            pinMapping[21, 5] = GpioFunction.PIO0; 
+            pinMapping[21, 6] = GpioFunction.PIO1; 
+            pinMapping[21, 7] = GpioFunction.CLOCK_GPOUT0; 
+            pinMapping[21, 8] = GpioFunction.USB_OVCUR_DET;
+
+            pinMapping[22, 0] = GpioFunction.SPI0_TX; 
+            pinMapping[22, 1] = GpioFunction.UART1_RTS;
+            pinMapping[22, 2] = GpioFunction.I2C1_SDA; 
+            pinMapping[22, 3] = GpioFunction.PWM3_A; 
+            pinMapping[22, 4] = GpioFunction.SIO; 
+            pinMapping[22, 5] = GpioFunction.PIO0; 
+            pinMapping[22, 6] = GpioFunction.PIO1; 
+            pinMapping[22, 7] = GpioFunction.CLOCK_GPIN1; 
+            pinMapping[22, 8] = GpioFunction.USB_VBUS_DET;
+
+            pinMapping[23, 0] = GpioFunction.SPI1_RX; 
+            pinMapping[23, 1] = GpioFunction.UART1_TX;
+            pinMapping[23, 2] = GpioFunction.I2C1_SCL; 
+            pinMapping[23, 3] = GpioFunction.PWM3_B; 
+            pinMapping[23, 4] = GpioFunction.SIO; 
+            pinMapping[23, 5] = GpioFunction.PIO0; 
+            pinMapping[23, 6] = GpioFunction.PIO1; 
+            pinMapping[23, 7] = GpioFunction.CLOCK_GPOUT1; 
+            pinMapping[23, 8] = GpioFunction.USB_VBUS_EN;
+
+            pinMapping[24, 0] = GpioFunction.SPI1_CSN; 
+            pinMapping[24, 1] = GpioFunction.UART1_RX;
+            pinMapping[24, 2] = GpioFunction.I2C0_SDA; 
+            pinMapping[24, 3] = GpioFunction.PWM4_A; 
+            pinMapping[24, 4] = GpioFunction.SIO; 
+            pinMapping[24, 5] = GpioFunction.PIO0; 
+            pinMapping[24, 6] = GpioFunction.PIO1; 
+            pinMapping[24, 7] = GpioFunction.CLOCK_GPOUT2; 
+            pinMapping[24, 8] = GpioFunction.USB_OVCUR_DET;
+
+            pinMapping[25, 0] = GpioFunction.SPI1_SCK; 
+            pinMapping[25, 1] = GpioFunction.UART1_CTS;
+            pinMapping[25, 2] = GpioFunction.I2C0_SCL; 
+            pinMapping[25, 3] = GpioFunction.PWM4_B; 
+            pinMapping[25, 4] = GpioFunction.SIO; 
+            pinMapping[25, 5] = GpioFunction.PIO0; 
+            pinMapping[25, 6] = GpioFunction.PIO1; 
+            pinMapping[25, 7] = GpioFunction.CLOCK_GPOUT3; 
+            pinMapping[25, 8] = GpioFunction.USB_VBUS_DET;
+
+            pinMapping[26, 0] = GpioFunction.SPI1_TX; 
+            pinMapping[26, 1] = GpioFunction.UART1_RTS;
+            pinMapping[26, 2] = GpioFunction.I2C1_SDA; 
+            pinMapping[26, 3] = GpioFunction.PWM5_A; 
+            pinMapping[26, 4] = GpioFunction.SIO; 
+            pinMapping[26, 5] = GpioFunction.PIO0; 
+            pinMapping[26, 6] = GpioFunction.PIO1; 
+            pinMapping[26, 7] = GpioFunction.NONE; 
+            pinMapping[26, 8] = GpioFunction.USB_VBUS_EN;
+
+            pinMapping[27, 0] = GpioFunction.SPI1_RX; 
+            pinMapping[27, 1] = GpioFunction.UART0_TX;
+            pinMapping[27, 2] = GpioFunction.I2C1_SCL; 
+            pinMapping[27, 3] = GpioFunction.PWM5_B; 
+            pinMapping[27, 4] = GpioFunction.SIO; 
+            pinMapping[27, 5] = GpioFunction.PIO0; 
+            pinMapping[27, 6] = GpioFunction.PIO1; 
+            pinMapping[27, 7] = GpioFunction.NONE; 
+            pinMapping[27, 8] = GpioFunction.USB_OVCUR_DET;
+
+            pinMapping[28, 0] = GpioFunction.SPI1_CSN; 
+            pinMapping[28, 1] = GpioFunction.UART0_RX;
+            pinMapping[28, 2] = GpioFunction.I2C0_SDA; 
+            pinMapping[28, 3] = GpioFunction.PWM6_A; 
+            pinMapping[28, 4] = GpioFunction.SIO; 
+            pinMapping[28, 5] = GpioFunction.PIO0; 
+            pinMapping[28, 6] = GpioFunction.PIO1; 
+            pinMapping[28, 7] = GpioFunction.NONE; 
+            pinMapping[28, 8] = GpioFunction.USB_VBUS_DET;
+
+            pinMapping[29, 0] = GpioFunction.SPI1_CSN; 
+            pinMapping[29, 1] = GpioFunction.UART0_RX;
+            pinMapping[29, 2] = GpioFunction.I2C0_SCL; 
+            pinMapping[29, 3] = GpioFunction.PWM6_B; 
+            pinMapping[29, 4] = GpioFunction.SIO; 
+            pinMapping[29, 5] = GpioFunction.PIO0; 
+            pinMapping[29, 6] = GpioFunction.PIO1; 
+            pinMapping[29, 7] = GpioFunction.NONE; 
+            pinMapping[29, 8] = GpioFunction.USB_VBUS_EN;
+
             Reset();
         }
 
@@ -172,39 +474,6 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
             {
                 return GpioFunction.NONE;
             }
-
-            GpioFunction[,] pinMapping = new GpioFunction[30, 9]{
-            /* 0 */    {GpioFunction.SPI0_RX,  GpioFunction.UART0_TX,  GpioFunction.I2C0_SDA, GpioFunction.PWM0_A, GpioFunction.SIO, GpioFunction.PIO0, GpioFunction.PIO1, GpioFunction.NONE, GpioFunction.USB_OVCUR_DET},
-            /* 1 */    {GpioFunction.SPI0_CSN, GpioFunction.UART0_RX,  GpioFunction.I2C0_SCL, GpioFunction.PWM0_B, GpioFunction.SIO, GpioFunction.PIO0, GpioFunction.PIO1, GpioFunction.NONE, GpioFunction.USB_VBUS_DET},
-            /* 2 */    {GpioFunction.SPI0_SCK, GpioFunction.UART0_CTS, GpioFunction.I2C1_SDA, GpioFunction.PWM1_A, GpioFunction.SIO, GpioFunction.PIO0, GpioFunction.PIO1, GpioFunction.NONE, GpioFunction.USB_VBUS_EN},
-            /* 3 */    {GpioFunction.SPI0_TX,  GpioFunction.UART0_RTS, GpioFunction.I2C1_SCL, GpioFunction.PWM1_B, GpioFunction.SIO, GpioFunction.PIO0, GpioFunction.PIO1, GpioFunction.NONE, GpioFunction.USB_OVCUR_DET},
-            /* 4 */    {GpioFunction.SPI0_RX,  GpioFunction.UART1_TX,  GpioFunction.I2C0_SDA, GpioFunction.PWM2_A, GpioFunction.SIO, GpioFunction.PIO0, GpioFunction.PIO1, GpioFunction.NONE, GpioFunction.USB_VBUS_DET},
-            /* 5 */    {GpioFunction.SPI0_CSN, GpioFunction.UART1_RX,  GpioFunction.I2C0_SCL, GpioFunction.PWM2_B, GpioFunction.SIO, GpioFunction.PIO0, GpioFunction.PIO1, GpioFunction.NONE, GpioFunction.USB_VBUS_EN},
-            /* 6 */    {GpioFunction.SPI0_SCK, GpioFunction.UART1_CTS, GpioFunction.I2C1_SDA, GpioFunction.PWM3_A, GpioFunction.SIO, GpioFunction.PIO0, GpioFunction.PIO1, GpioFunction.NONE, GpioFunction.USB_OVCUR_DET},
-            /* 7 */    {GpioFunction.SPI0_TX,  GpioFunction.UART1_RTS, GpioFunction.I2C1_SCL, GpioFunction.PWM3_B, GpioFunction.SIO, GpioFunction.PIO0, GpioFunction.PIO1, GpioFunction.NONE, GpioFunction.USB_VBUS_DET},
-            /* 8 */    {GpioFunction.SPI1_RX,  GpioFunction.UART1_TX,  GpioFunction.I2C0_SDA, GpioFunction.PWM4_A, GpioFunction.SIO, GpioFunction.PIO0, GpioFunction.PIO1, GpioFunction.NONE, GpioFunction.USB_VBUS_EN},
-            /* 9 */    {GpioFunction.SPI1_SCK, GpioFunction.UART1_CTS, GpioFunction.I2C0_SCL, GpioFunction.PWM4_B, GpioFunction.SIO, GpioFunction.PIO0, GpioFunction.PIO1, GpioFunction.NONE, GpioFunction.USB_OVCUR_DET},
-            /* 10 */   {GpioFunction.SPI1_TX,  GpioFunction.UART1_RTS, GpioFunction.I2C1_SDA, GpioFunction.PWM5_A, GpioFunction.SIO, GpioFunction.PIO0, GpioFunction.PIO1, GpioFunction.NONE, GpioFunction.USB_VBUS_DET},
-            /* 11 */   {GpioFunction.SPI1_RX,  GpioFunction.UART0_TX,  GpioFunction.I2C1_SCL, GpioFunction.PWM5_B, GpioFunction.SIO, GpioFunction.PIO0, GpioFunction.PIO1, GpioFunction.NONE, GpioFunction.USB_VBUS_EN},
-            /* 12 */   {GpioFunction.SPI1_CSN, GpioFunction.UART0_RX,  GpioFunction.I2C0_SDA, GpioFunction.PWM6_A, GpioFunction.SIO, GpioFunction.PIO0, GpioFunction.PIO1, GpioFunction.NONE, GpioFunction.USB_OVCUR_DET},
-            /* 13 */   {GpioFunction.SPI1_SCK, GpioFunction.UART0_CTS, GpioFunction.I2C0_SCL, GpioFunction.PWM6_B, GpioFunction.SIO, GpioFunction.PIO0, GpioFunction.PIO1, GpioFunction.NONE, GpioFunction.USB_VBUS_DET},
-            /* 14 */   {GpioFunction.SPI1_TX,  GpioFunction.UART0_RTS, GpioFunction.I2C1_SDA, GpioFunction.PWM7_A, GpioFunction.SIO, GpioFunction.PIO0, GpioFunction.PIO1, GpioFunction.NONE, GpioFunction.USB_VBUS_EN},
-            /* 15 */   {GpioFunction.SPI0_RX,  GpioFunction.UART0_TX,  GpioFunction.I2C1_SCL, GpioFunction.PWM7_B, GpioFunction.SIO, GpioFunction.PIO0, GpioFunction.PIO1, GpioFunction.NONE, GpioFunction.USB_OVCUR_DET},
-            /* 16 */   {GpioFunction.SPI0_CSN, GpioFunction.UART0_RX,  GpioFunction.I2C0_SDA, GpioFunction.PWM0_A, GpioFunction.SIO, GpioFunction.PIO0, GpioFunction.PIO1, GpioFunction.NONE, GpioFunction.USB_VBUS_DET},
-            /* 17 */   {GpioFunction.SPI0_SCK, GpioFunction.UART0_CTS, GpioFunction.I2C0_SCL, GpioFunction.PWM0_B, GpioFunction.SIO, GpioFunction.PIO0, GpioFunction.PIO1, GpioFunction.NONE, GpioFunction.USB_VBUS_EN},
-            /* 18 */   {GpioFunction.SPI0_TX,  GpioFunction.UART0_RTS, GpioFunction.I2C1_SDA, GpioFunction.PWM1_A, GpioFunction.SIO, GpioFunction.PIO0, GpioFunction.PIO1, GpioFunction.NONE, GpioFunction.USB_OVCUR_DET},
-            /* 19 */   {GpioFunction.SPI0_RX,  GpioFunction.UART1_TX,  GpioFunction.I2C1_SCL, GpioFunction.PWM1_B, GpioFunction.SIO, GpioFunction.PIO0, GpioFunction.PIO1, GpioFunction.NONE, GpioFunction.USB_VBUS_DET},
-            /* 20 */   {GpioFunction.SPI0_CSN, GpioFunction.UART1_RX,  GpioFunction.I2C0_SDA, GpioFunction.PWM2_A, GpioFunction.SIO, GpioFunction.PIO0, GpioFunction.PIO1, GpioFunction.CLOCK_GPIN0, GpioFunction.USB_VBUS_EN},
-            /* 21 */   {GpioFunction.SPI0_SCK, GpioFunction.UART1_CTS, GpioFunction.I2C0_SCL, GpioFunction.PWM2_B, GpioFunction.SIO, GpioFunction.PIO0, GpioFunction.PIO1, GpioFunction.CLOCK_GPOUT0, GpioFunction.USB_OVCUR_DET},
-            /* 22 */   {GpioFunction.SPI0_TX,  GpioFunction.UART1_RTS, GpioFunction.I2C1_SDA, GpioFunction.PWM3_A, GpioFunction.SIO, GpioFunction.PIO0, GpioFunction.PIO1, GpioFunction.CLOCK_GPIN1, GpioFunction.USB_VBUS_DET},
-            /* 23 */   {GpioFunction.SPI1_RX,  GpioFunction.UART1_TX,  GpioFunction.I2C1_SCL, GpioFunction.PWM3_B, GpioFunction.SIO, GpioFunction.PIO0, GpioFunction.PIO1, GpioFunction.CLOCK_GPOUT1, GpioFunction.USB_VBUS_EN},
-            /* 24 */   {GpioFunction.SPI1_CSN, GpioFunction.UART1_RX,  GpioFunction.I2C0_SDA, GpioFunction.PWM4_A, GpioFunction.SIO, GpioFunction.PIO0, GpioFunction.PIO1, GpioFunction.CLOCK_GPOUT2, GpioFunction.USB_OVCUR_DET},
-            /* 25 */   {GpioFunction.SPI1_SCK, GpioFunction.UART1_CTS, GpioFunction.I2C0_SCL, GpioFunction.PWM4_B, GpioFunction.SIO, GpioFunction.PIO0, GpioFunction.PIO1, GpioFunction.CLOCK_GPOUT3, GpioFunction.USB_VBUS_DET},
-            /* 26 */   {GpioFunction.SPI1_TX,  GpioFunction.UART1_RTS, GpioFunction.I2C1_SDA, GpioFunction.PWM5_A, GpioFunction.SIO, GpioFunction.PIO0, GpioFunction.PIO1, GpioFunction.NONE, GpioFunction.USB_VBUS_EN},
-            /* 27 */   {GpioFunction.SPI1_RX,  GpioFunction.UART0_TX,  GpioFunction.I2C1_SCL, GpioFunction.PWM5_B, GpioFunction.SIO, GpioFunction.PIO0, GpioFunction.PIO1, GpioFunction.NONE, GpioFunction.USB_OVCUR_DET},
-            /* 28 */   {GpioFunction.SPI1_CSN, GpioFunction.UART0_RX,  GpioFunction.I2C0_SDA, GpioFunction.PWM6_A, GpioFunction.SIO, GpioFunction.PIO0, GpioFunction.PIO1, GpioFunction.NONE, GpioFunction.USB_VBUS_DET},
-            /* 29 */   {GpioFunction.SPI1_CSN, GpioFunction.UART0_RX,  GpioFunction.I2C0_SCL, GpioFunction.PWM6_B, GpioFunction.SIO, GpioFunction.PIO0, GpioFunction.PIO1, GpioFunction.NONE, GpioFunction.USB_VBUS_EN}
-            };
 
             return pinMapping[pin, functionSelect[pin] - 1];
         }
@@ -535,10 +804,11 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
                     {
                         WritePin(i, true, peri);
                     }
-                    else
+                    else 
                     {
                         WritePin(i, false, peri);
                     }
+
                 }
                 OperationDone.Toggle();
             }
@@ -554,12 +824,11 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
                     {
                         continue;
                     }
-
                     if ((bitset & (1UL << i)) != 0)
                     {
                         WritePin(i, true, peri);
                     }
-                    else
+                    else 
                     {
                         WritePin(i, false, peri);
                     }
@@ -590,7 +859,6 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
                 }
             }
         }
-
 
         public void ClearGpioBitset(ulong bitset, GpioFunction peri)
         {
@@ -785,8 +1053,8 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
 
         public override void OnGPIO(int number, bool value)
         {
+            WritePin(number, value, GetFunction(number), true);
             base.OnGPIO(number, value);
-            WritePin(number, value, GetFunction(number));
         }
 
         // most probably may hide some bugs, but full emulation of gpio function interconnection may not be necessary in most cases
@@ -800,16 +1068,16 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
             WritePin(number, !State[number], GetFunction(number));
         }
 
-        public void WritePin(int number, bool value, GpioFunction peri)
+        public void WritePin(int number, bool value, GpioFunction peri, bool forced = false)
         {
             if (State[number] == value)
             {
                 return;
             }
             this.Log(LogLevel.Noisy, "Setting GPIO" + number + " to: " + value + ", time: " + machine.ElapsedVirtualTime.TimeElapsed + ", from: " + peri);
-            if (!IsPinOutput(number))
+
+            if (!IsPinOutput(number) && !forced)
             {
-                this.Log(LogLevel.Warning, "Trying to set input pin: " + number + " to: " + value);
                 return;
             }
 
@@ -880,6 +1148,7 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
             Inverse
         };
         private PeripheralDrive[] peripheralDrive;
+        private readonly GpioFunction[,] pinMapping;
     }
 
 }

@@ -48,3 +48,5 @@ include $ORIGIN/emulation/peripherals/watchdog/rp2040_watchdog.cs
 include $ORIGIN/emulation/peripherals/i2c/rp2040_i2c.cs
 
 include $ORIGIN/emulation/externals/pcf8523.cs
+
+include $ORIGIN/emulation/peripherals/psm/rp2040_psm.cs

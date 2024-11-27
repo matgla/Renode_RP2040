@@ -581,7 +581,11 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
         private void DefineRegisters()
         {
             int registerCounter = 0;
-            Registers[] controlRegs = { Registers.CLK_GPOUT0_CTRL, Registers.CLK_GPOUT1_CTRL, Registers.CLK_GPOUT2_CTRL, Registers.CLK_GPOUT3_CTRL };
+            Registers[] controlRegs = new Registers[4];
+            controlRegs[0] = Registers.CLK_GPOUT0_CTRL; 
+            controlRegs[1] = Registers.CLK_GPOUT1_CTRL; 
+            controlRegs[2] = Registers.CLK_GPOUT2_CTRL; 
+            controlRegs[3] = Registers.CLK_GPOUT3_CTRL;
             foreach (var r in controlRegs)
             {
                 int id = registerCounter;
@@ -624,7 +628,11 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             }
 
             registerCounter = 0;
-            Registers[] dividerRegs = { Registers.CLK_GPOUT0_DIV, Registers.CLK_GPOUT1_DIV, Registers.CLK_GPOUT2_DIV, Registers.CLK_GPOUT3_DIV };
+            Registers[] dividerRegs = new Registers[4];
+            dividerRegs[0] = Registers.CLK_GPOUT0_DIV; 
+            dividerRegs[1] = Registers.CLK_GPOUT1_DIV; 
+            dividerRegs[2] = Registers.CLK_GPOUT2_DIV; 
+            dividerRegs[3] = Registers.CLK_GPOUT3_DIV;
             foreach (var r in dividerRegs)
             {
                 int id = registerCounter;
