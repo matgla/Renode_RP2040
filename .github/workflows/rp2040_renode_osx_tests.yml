@@ -36,7 +36,6 @@ jobs:
       - name: Run tests
         shell: bash
         run: |
-          ls /Applications/Renode.app/Contents/MacOS/tests
           export PATH=$PATH:/Applications/Renode.app/Contents/MacOS/tests
           ./run_tests.sh
 
