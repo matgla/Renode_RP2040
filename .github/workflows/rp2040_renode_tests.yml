@@ -1,4 +1,4 @@
-name: Renode RP2040 board support tests
+name: Renode RP2040 Linux - Tests
 
 on:
   push:
