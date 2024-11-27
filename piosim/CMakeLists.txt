@@ -13,6 +13,8 @@ project (piosim C CXX)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED)
 
+set(CMAKE_OSX_ARCHITECTURES "x86_64")
+
 if(CMAKE_HOST_WIN32)
   set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
   add_link_options("-static")

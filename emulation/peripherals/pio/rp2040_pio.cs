@@ -28,12 +28,12 @@ namespace Antmicro.Renode.Peripherals.CPU
 
         private static string GetPioSimLibraryPath()
         {
-            string libraryName = "";
+            string libraryName;
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 // for windows there is delivered compiled version of piosim
                 // environment to compile that is quite hard to setup correctly
-                libraryName = "../redist/libpiosim.dll";
+                libraryName = "libpiosim.dll";
             }
             else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
             {
@@ -41,9 +41,9 @@ namespace Antmicro.Renode.Peripherals.CPU
             }
             else
             {
-                libraryName = "../redist/libpiosim.so";
+                libraryName = "libpiosim.so";
             }
-            return Path.GetFullPath(GetSourceFileDirectory() + "/../../../piosim/build/" + libraryName);
+            return Path.GetFullPath(GetSourceFileDirectory() + "/../../../piosim/redist/" + libraryName);
         }
 
         private static string GetPioSimDirectory()
@@ -51,86 +51,9 @@ namespace Antmicro.Renode.Peripherals.CPU
             return Path.GetFullPath(GetSourceFileDirectory() + "/../../../piosim");
         }
 
-        private void CompilePioSim()
-        {
-            string buildPath = GetPioSimDirectory() + "/build";
-            if (!Directory.Exists(buildPath))
-            {
-                Directory.CreateDirectory(buildPath);
-            }
-            Process find_cmake = new Process();
-
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                find_cmake.StartInfo.FileName = "where";
-            }
-            else
-            {
-                find_cmake.StartInfo.FileName = "which";
-
-            }
-            find_cmake.StartInfo.Arguments = "cmake";
-            find_cmake.StartInfo.UseShellExecute = false;
-            find_cmake.StartInfo.RedirectStandardOutput = true;
-            find_cmake.StartInfo.CreateNoWindow = true;
-            find_cmake.Start();
-
-            string cmake_command = "";
-            while (!find_cmake.StandardOutput.EndOfStream)
-            {
-                cmake_command = find_cmake.StandardOutput.ReadLine();
-            }
-
-            if (!cmake_command.Contains("cmake"))
-            {
-                this.Log(LogLevel.Error, "Cannot find 'cmake' executable");
-            }
-
-
-            Process configure = new Process();
-            configure.StartInfo.FileName = cmake_command;
-            configure.StartInfo.Arguments = ".. -DCMAKE_BUILD_TYPE=Release";
-
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                configure.StartInfo.Arguments += "  -DCMAKE_SH=CMAKE_SH-NOTFOUND";
-            }
- 
-
-            configure.StartInfo.CreateNoWindow = false;
-            configure.StartInfo.UseShellExecute = false;
-            configure.StartInfo.WorkingDirectory = buildPath;
-            configure.Start();
-            configure.WaitForExit();
-            if (configure.ExitCode != 0)
-            {
-                throw new Exception("CMake configuration failed");
-            }
-
-
-            Directory.CreateDirectory(buildPath);
-            Process build = new Process();
-            build.StartInfo.FileName = cmake_command;
-            build.StartInfo.Arguments = "--build . --config Release";
-            build.StartInfo.CreateNoWindow = false;
-            build.StartInfo.UseShellExecute = true;
-            build.StartInfo.WorkingDirectory = buildPath;
-            build.Start();
-            build.WaitForExit();
-            if (build.ExitCode != 0)
-            {
-                throw new Exception("CMake build failed");
-            }
-
-        }
-
         public RP2040PIOCPU(string cpuType, IMachine machine, ulong address, GPIOPort.RP2040GPIO gpio, uint id, RP2040Clocks clocks, Endianess endianness = Endianess.LittleEndian, CpuBitness bitness = CpuBitness.Bits32)
             : base(id + 100, cpuType, machine, endianness, bitness)
         {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-            {
-                CompilePioSim();
-            }
             pioId = (int)id;
             string libraryFile = GetPioSimLibraryPath();
             binder = new NativeBinder(this, libraryFile);
