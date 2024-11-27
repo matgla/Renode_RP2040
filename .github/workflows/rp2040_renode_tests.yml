@@ -7,7 +7,8 @@ on:
     branches: [main]
 
 jobs:
-  execute_renode_tests:
+  tests_linux:
+    name: "Renode Linux"
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/matgla/yasldtoolchain:0.4.1

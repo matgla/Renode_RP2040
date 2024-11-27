@@ -8,6 +8,7 @@ on:
 
 jobs:
   osx_rp2040_tests:
+    name: "Renode MacOS"
     runs-on: macos-14 
     steps:
       - uses: actions/checkout@v3
@@ -36,6 +37,7 @@ jobs:
       - name: Run tests
         shell: bash
         run: |
+          ls /Applications/Renode.app/Contents/MacOS/bin
           export PATH=$PATH:/Applications/Renode.app/Contents/MacOS/bin
           ./run_tests.sh
 

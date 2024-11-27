@@ -1,4 +1,4 @@
-name: Renode RP2040 Windows Host Tests
+name: Renode RP2040 Windows - Tests
 
 on:
   push:
