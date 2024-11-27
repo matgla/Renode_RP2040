@@ -1,4 +1,4 @@
-name: Renode RP2040 OSX Tests
+name: Renode RP2040 OSX - Tests
 
 on:
   push:
@@ -7,13 +7,8 @@ on:
     branches: [main]
 
 jobs:
-  tests_osx:
-    name: "Renode OSX"
-    runs-on: macos-14
-    container:
-      credentials:
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
+  osx_rp2040_tests:
+    runs-on: macos-14 
     steps:
       - uses: actions/checkout@v3
         with:
@@ -22,10 +17,14 @@ jobs:
         shell: bash 
         run: | 
           git config --global user.email "you@example.com" && git config --global user.name "Your Name"
-      # - name: Install Renode 
-      #   shell: bash 
-      #   run: |
-      #     wget https://github.com/renode/renode/releases/download/v1.15.3/renode_1.15.3.dmg 
-      #     hidutil attach renode_1.15.3.dmg 
-      #     installer -package /Volumes/renode_1.15.3/renode_1.15.3.pkg -target /
-      #     hiduti detach /Volume/renode_1.15.3
+      - name: Build & Execute Tests
+        shell: bash
+        run: |
+          ./run_tests.sh
+      - name: Install Renode 
+        shell: bash 
+        run: |
+          wget https://github.com/renode/renode/releases/download/v1.15.3/renode_1.15.3.dmg 
+          hidutil attach renode_1.15.3.dmg 
+          installer -package /Volumes/renode_1.15.3/renode_1.15.3.pkg -target /
+          hiduti detach /Volume/renode_1.15.3
