@@ -89,7 +89,7 @@ namespace Antmicro.Renode.Peripherals.CPU
 
             Process configure = new Process();
             configure.StartInfo.FileName = cmake_command;
-            configure.StartInfo.Arguments = ".. -DCMAKE_BUILD_TYPE=Debug";
+            configure.StartInfo.Arguments = ".. -DCMAKE_BUILD_TYPE=Release";
 
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
@@ -111,7 +111,7 @@ namespace Antmicro.Renode.Peripherals.CPU
             Directory.CreateDirectory(buildPath);
             Process build = new Process();
             build.StartInfo.FileName = cmake_command;
-            build.StartInfo.Arguments = "--build . --config Debug";
+            build.StartInfo.Arguments = "--build . --config Release";
             build.StartInfo.CreateNoWindow = false;
             build.StartInfo.UseShellExecute = true;
             build.StartInfo.WorkingDirectory = buildPath;

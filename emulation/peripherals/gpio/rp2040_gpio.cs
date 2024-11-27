@@ -1082,7 +1082,7 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
                 value = !value;
             }
             State[number] = value;
-            // Connections[number].Set(value);
+            Connections[number].Set(value);
         }
 
         public void ReevaluatePio(uint steps)
