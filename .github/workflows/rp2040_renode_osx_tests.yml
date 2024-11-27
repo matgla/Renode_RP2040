@@ -29,6 +29,7 @@ jobs:
         shell: bash 
         run: |
           brew install arm-none-eabi-gcc
+          ls /Applications/Renode.app/
       - name: Run Tests
         shell: bash
         run: |
