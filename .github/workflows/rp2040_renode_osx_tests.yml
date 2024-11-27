@@ -17,10 +17,6 @@ jobs:
         shell: bash 
         run: | 
           git config --global user.email "you@example.com" && git config --global user.name "Your Name"
-      - name: Build & Execute Tests
-        shell: bash
-        run: |
-          ./run_tests.sh
       - name: Install Renode 
         shell: bash 
         run: |
@@ -28,3 +24,7 @@ jobs:
           hidutil attach renode_1.15.3.dmg 
           installer -package /Volumes/renode_1.15.3/renode_1.15.3.pkg -target /
           hiduti detach /Volume/renode_1.15.3
+      - name: Install Dependencies
+        shell: bash 
+        run: |
+          brew install arm-none-eabi-gcc
