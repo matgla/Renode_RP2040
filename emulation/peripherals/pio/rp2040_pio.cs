@@ -145,6 +145,8 @@ namespace Antmicro.Renode.Peripherals.CPU
                 totalExecutedInstructions += PioExecute(pioId, steps);
             });
             clocks.OnSystemClockChange(UpdateClocks);
+
+            this.Log(LogLevel.Info, "PIO{0} successfuly created!", id);
         }
 
         [ConnectionRegion("XOR")]
