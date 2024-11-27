@@ -112,11 +112,18 @@ clocks:
 
 gpio: GPIOPort.RP2040GPIO @ sysbus 0x40014000 {
     numberOfPins: 30;
+    numberOfCores: 2;
     address: 0x40014000
 }
+
+gpio:
+    IRQ0 -> nvic0@13
+    IRQ1 -> nvic1@13
+
     
 gpio_qspi: GPIOPort.RP2040GPIO @ sysbus 0x40018000 {
     numberOfPins: 6;
+    numberOfCores: 2;
     address: 0x40018000
 }
     

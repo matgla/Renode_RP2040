@@ -123,10 +123,7 @@ namespace Antmicro.Renode.Peripherals.Timers
                 .WithFlags(0, 4, FieldMode.Write,
                     writeCallback: (i, _, value) =>
                     {
-                        if (value == false)
-                        {
-                            alarms[i].Irq.Unset();
-                        }
+                        alarms[i].Irq.Unset();
                     },
                     name: "INTR");
 
