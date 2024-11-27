@@ -23,7 +23,7 @@ jobs:
           wget https://github.com/renode/renode/releases/download/v1.15.3/renode_1.15.3.dmg 
           hdiutil attach renode_1.15.3.dmg 
           ls -la /Volumes/renode_1.15.3/
-          cp /Volumes/renode_1.15.3/Renode.app /Applications
+          cp -r /Volumes/renode_1.15.3/Renode.app /Applications
           hdiutil detach /Volume/renode_1.15.3
       - name: Install Dependencies
         shell: bash 
