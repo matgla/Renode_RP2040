@@ -20,7 +20,7 @@ jobs:
           fetch-depth: 0
       - name: Install Dependencies
         shell: bash 
-        run: pacman -S ninja
+        run: pacman -S --noconfirm ninja
       - name: Create GIT Identity
         shell: bash 
         run: | 

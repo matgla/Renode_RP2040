@@ -28,7 +28,7 @@ jobs:
       - name: Install Dependencies
         shell: bash 
         run: |
-          brew install arm-none-eabi-gcc ninja
+          brew install gcc-arm-embedded ninja 
       - name: Install Renode Test 
         shell: bash
         run: |
