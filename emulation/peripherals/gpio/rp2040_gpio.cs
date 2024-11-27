@@ -804,6 +804,10 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
                     {
                         WritePin(i, true, peri);
                     }
+                    else 
+                    {
+                        WritePin(i, false, peri);
+                    }
                 }
                 OperationDone.Toggle();
             }
@@ -851,7 +855,6 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
                 }
             }
         }
-
 
         public void ClearGpioBitset(ulong bitset, GpioFunction peri)
         {

@@ -1,4 +1,4 @@
-using "../../raspberry_pico.repl"
+using "raspberry_pico.repl"
 
 led1: Miscellaneous.LED @ gpio 2 
 led2: Miscellaneous.LED @ gpio 3

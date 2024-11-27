@@ -1,16 +1,9 @@
-$global.TEST_FILE=$ORIGIN/../../pico-examples/build/button/button.elf
-
+$global.TEST_FILE=$ORIGIN/../../blinky
 $machine_name="pico_tests"
-path add $ORIGIN/..
-include $ORIGIN/../../initialize_common.resc
-machine LoadPlatformDescription $ORIGIN/raspberry_pico_with_led_and_button.repl
-sysbus LoadELF $ORIGIN/../../b2.elf
-
-sysbus LoadELF $global.TEST_FILE
-
-sysbus.cpu0 VectorTableOffset 0x00000000
-sysbus.cpu1 VectorTableOffset 0x00000000 
+$platform_file=$ORIGIN/raspberry_pico_with_led_and_button.repl
+include $ORIGIN/../prepare.resc
 
 logLevel -1
-showAnalyzer sysbus.uart0
 emulation SetGlobalQuantum "0.00001"
+
+

@@ -1,6 +1,8 @@
-$machine_name="pico_tests"
+$machine_name?="pico_tests"
+$platform_file?=$ORIGIN/../boards/initialize_raspberry_pico.resc
+
 path add $ORIGIN/..
-include $ORIGIN/../boards/initialize_raspberry_pico.resc
+include $platform_file
 sysbus LoadELF $global.TEST_FILE
 
 sysbus.cpu0 VectorTableOffset 0x00000000
