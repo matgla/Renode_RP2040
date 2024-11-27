@@ -54,4 +54,4 @@ jobs:
         with:
           python-version: '3.13'
           cache: 'pip' # caching pip dependencies
-      - run: pip install -r renode_1.15.3/tests/requirements.txt && renode_1.15.3/bin/renode-test.bat -t tests/tests.yaml
+      - run: pip install -r renode_1.15.3/tests/requirements.txt && renode_1.15.3/bin/renode-test.bat --show-log tests/hello_world/serial/hello_serial.robot

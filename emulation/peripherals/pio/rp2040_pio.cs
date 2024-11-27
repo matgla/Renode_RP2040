@@ -41,7 +41,7 @@ namespace Antmicro.Renode.Peripherals.CPU
             }
             else
             {
-                libraryName = "libpiosim.so";
+                libraryName = "../redist/libpiosim.so";
             }
             return Path.GetFullPath(GetSourceFileDirectory() + "/../../../piosim/build/" + libraryName);
         }
@@ -127,7 +127,7 @@ namespace Antmicro.Renode.Peripherals.CPU
         public RP2040PIOCPU(string cpuType, IMachine machine, ulong address, GPIOPort.RP2040GPIO gpio, uint id, RP2040Clocks clocks, Endianess endianness = Endianess.LittleEndian, CpuBitness bitness = CpuBitness.Bits32)
             : base(id + 100, cpuType, machine, endianness, bitness)
         {
-            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
             {
                 CompilePioSim();
             }
