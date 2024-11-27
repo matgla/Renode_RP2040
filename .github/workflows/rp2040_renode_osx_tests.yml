@@ -23,7 +23,6 @@ jobs:
         run: |
           wget https://github.com/renode/renode/releases/download/v1.15.3/renode_1.15.3.dmg 
           hdiutil attach renode_1.15.3.dmg 
-          ls -la /Volumes/renode_1.15.3/
           cp -r /Volumes/renode_1.15.3/Renode.app /Applications
           hdiutil detach /Volumes/renode_1.15.3
       - name: Install Dependencies
@@ -37,8 +36,8 @@ jobs:
       - name: Run tests
         shell: bash
         run: |
-          ls /Applications/Renode.app/Contents/MacOS/bin
-          export PATH=$PATH:/Applications/Renode.app/Contents/MacOS/bin
+          ls /Applications/Renode.app/Contents/MacOS/tests
+          export PATH=$PATH:/Applications/Renode.app/Contents/MacOS/tests
           ./run_tests.sh
 
 
