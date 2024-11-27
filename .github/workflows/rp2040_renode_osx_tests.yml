@@ -24,8 +24,12 @@ jobs:
           hdiutil attach renode_1.15.3.dmg 
           ls -la /Volumes/renode_1.15.3/
           cp -r /Volumes/renode_1.15.3/Renode.app /Applications
-          hdiutil detach /Volume/renode_1.15.3
+          hdiutil detach /Volumes/renode_1.15.3
       - name: Install Dependencies
         shell: bash 
         run: |
           brew install arm-none-eabi-gcc
+      - name: Run Tests
+        shell: bash
+        run: |
+          ./run_tests.sh
