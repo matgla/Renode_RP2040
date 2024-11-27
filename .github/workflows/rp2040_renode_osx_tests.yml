@@ -1,11 +1,5 @@
 name: Renode RP2040 OSX - Tests
 
-on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
-
 jobs:
   osx_rp2040_tests:
     name: "Renode MacOS"

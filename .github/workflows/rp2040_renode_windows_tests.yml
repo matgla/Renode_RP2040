@@ -1,11 +1,5 @@
 name: Renode RP2040 Windows - Tests
 
-on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
-
 jobs:
   tests_windows:
     name: "Renode Windows"

@@ -1,13 +1,15 @@
 name: Renode RP2040 Linux - Tests
 
 on:
-  push:
+  workflow_run:
+    workflows: ["Renode RP2040 - Build Pico Examples"]
     branches: [main]
-  pull_request:
-    branches: [main]
+    types: 
+      - completed
 
 jobs:
   tests_linux:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     name: "Renode Linux"
     runs-on: ubuntu-latest
     container:
@@ -26,7 +28,11 @@ jobs:
         shell: bash 
         run: | 
           git config --global user.email "you@example.com" && git config --global user.name "Your Name"
+      - uses: actions/download-artifact@v4
+        with:
+          name: pico-examples 
+          path: pico-examples/build
       - name: Build & Execute Tests
         shell: bash
         run: |
-          ./run_tests.sh
+          ./tests/run_tests.py -r 3 -f tests/tests.yaml

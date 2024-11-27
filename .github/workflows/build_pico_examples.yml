@@ -1,0 +1,36 @@
+name: Renode RP2040 - Build Pico Examples 
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  tests_linux:
+    name: "Renode Linux"
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/matgla/yasldtoolchain:0.4.1
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Install Dependencies
+        shell: bash 
+        run: pacman -S --noconfirm ninja
+      - name: Create GIT Identity
+        shell: bash 
+        run: | 
+          git config --global user.email "you@example.com" && git config --global user.name "Your Name"
+      - name: Build Pico Examples
+        shell: bash
+        run: |
+          ./build_pico_examples.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pico-examples 
+          path: pico-examples/build
