@@ -685,6 +685,7 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
                         return GetEnabledInterruptsForCore(0, startingPin);
                     }, writeCallback: (_, value) => {
                         IRQ0.Unset();
+                        ClearRawInterrupts(startingPin, ~value);
                         EnableInterruptsForCore(0, startingPin, value);
                     }, name: "INTE0" + p + "_PROC0");
             }
@@ -860,7 +861,7 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
             {
                 for (int i = 0; i < NumberOfPins; ++i)
                 {
-                    if ((bitmask & (1UL << i)) != 0)
+                    if (((bitset & bitmask) & (1UL << i)) != 0)
                     {
                         WritePin(i, true, peri);
                     }
@@ -875,9 +876,15 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
             {
                 for (int i = 0; i < NumberOfPins; ++i)
                 {
-                    if ((bitmask & (1UL << i)) != 0)
+                    if ((bitmask & (1UL << i)) == 0) continue;
+
+                    if ((bitset & (1UL << i)) != 0)
                     {
                         outputEnableOverride[i] = OutputEnableOverride.Enable;
+                    }
+                    else 
+                    {
+                        outputEnableOverride[i] = OutputEnableOverride.Disable;
                     }
                 }
             }

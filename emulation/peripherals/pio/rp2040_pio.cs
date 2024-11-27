@@ -238,13 +238,14 @@ namespace Antmicro.Renode.Peripherals.CPU
         [Export]
         protected virtual void GpioPinWriteBitset(uint bitset, uint bitmap)
         {
-            this.gpio.SetGpioBitset(bitset, gpioFunction, bitmap);
+            gpio.ClearGpioBitset((~bitset) & bitmap, gpioFunction);
+            gpio.SetGpioBitset(bitset, gpioFunction, bitmap);
         }
 
         [Export]
         protected virtual void GpioPindirWriteBitset(uint bitset, uint bitmap)
         {
-            this.gpio.SetPinDirectionBitset(bitset, bitmap);
+            gpio.SetPinDirectionBitset(bitset, bitmap);
         }
 
         [Export]

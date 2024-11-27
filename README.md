@@ -17,7 +17,7 @@ There is predefined Raspberry Pico board description in: 'boards/raspberry_pico.
 | **IRQ**  | $${\color{yellow}✓}$$ | Propagation from some peripherals is implemented |
 | **DMA**  | $${\color{green}✓}$$  | DMA implemented with ringing and control blocks support |
 | **Clocks** | $${\color{yellow}✓}$$ | Clocks are mostly just stubs, but with tree propagation, but virtual time is always correct | 
-| **GPIO** | $${\color{yellow}✓}$$ | Pins manipulation implemented, limitations not yet known except when some pins changed PIO may needs to be manually reevaluated due to CPU emulation (it's not step by step). Look for RP2040_SPI (PL022) peripheral as an example |
+| **GPIO** | $${\color{yellow}✓}$$ | Pins manipulation implemented, with CORE0 interrupts support. PIO may needs to be manually reevaluated due to CPU emulation (it's not step by step). Look for RP2040_SPI (PL022) peripheral as an example. Statuses needs to be implemented, now they're showing true on all fields when pin is high. |
 | **XOSC** |  $${\color{green}✓}$$  | |
 | **ROSC** | $${\color{green}✓}$$  | |
 | **PLL** | $${\color{green}✓}$$  | |
@@ -46,11 +46,6 @@ There is predefined Raspberry Pico board description in: 'boards/raspberry_pico.
 PIO is implemented as external simulator written in C++: `piosim` directory. Decision was made due to performance issues with C# implementation. 
 Due to that PIO is modelled as additional CPU. 
 Renode executes more than 1 step at once on given CPU, so manual synchronization is necessary in some cases, like interworking between SPI and PIO. 
-
-> [!IMPORTANT]
-> This is true only for non Windows machines
-> `piosim` requires `cmake` and `C++` compiler available on machine. 
-> It is compiled by renode simulation automatically, no manual steps are necessary. 
 
 > [!IMPORTANT]
 > For Windows piosim.dll is delivered in piosim/redist directory

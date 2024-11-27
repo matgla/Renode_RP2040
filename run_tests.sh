@@ -17,11 +17,5 @@ PICO_SDK_FETCH_FROM_GIT=1 cmake .. -GNinja -DCMAKE_BUILD_TYPE=Release -DPICO_BOA
 cmake --build .
 cd ../..
 
-cd piosim
-mkdir build 
-cd build 
-cmake .. -DCMAKE_BUILD_TYPE=Release 
-cmake --build . 
-cd ../..
 renode-test -t tests/tests.yaml
 
