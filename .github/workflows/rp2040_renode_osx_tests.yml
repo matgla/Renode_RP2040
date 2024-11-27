@@ -32,4 +32,4 @@ jobs:
       - name: Run Tests
         shell: bash
         run: |
-          ls /Applications/Renode.app/
+          ls /Applications/Renode.app/Contents
