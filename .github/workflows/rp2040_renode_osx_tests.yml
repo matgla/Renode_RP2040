@@ -8,6 +8,7 @@ on:
 
 jobs:
   tests_osx:
+    name: "Renode OSX"
     runs-on: macos-14
     container:
       credentials:
