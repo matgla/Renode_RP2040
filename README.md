@@ -17,7 +17,7 @@ There is predefined Raspberry Pico board description in: 'boards/raspberry_pico.
 | **IRQ**  | $${\color{yellow}✓}$$ | Propagation from some peripherals is implemented |
 | **DMA**  | $${\color{green}✓}$$  | DMA implemented with ringing and control blocks support |
 | **Clocks** | $${\color{yellow}✓}$$ | Clocks are mostly just stubs, but with tree propagation, but virtual time is always correct | 
-| **GPIO** | $${\color{yellow}✓}$$ | Pins manipulation implemented, with CORE0 interrupts support. PIO may needs to be manually reevaluated due to CPU emulation (it's not step by step). Look for RP2040_SPI (PL022) peripheral as an example. Statuses needs to be implemented, now they're showing true on all fields when pin is high. |
+| **GPIO** | $${\color{green}✓}$$ | Pins manipulation implemented, with interrupts support. PIO may needs to be manually reevaluated due to CPU emulation (it's not step by step). Look for RP2040_SPI (PL022) peripheral as an example. Statuses may not be adequate to simplify simulation for now . |
 | **XOSC** |  $${\color{green}✓}$$  | |
 | **ROSC** | $${\color{green}✓}$$  | |
 | **PLL** | $${\color{green}✓}$$  | |
