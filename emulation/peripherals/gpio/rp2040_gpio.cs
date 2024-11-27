@@ -20,10 +20,11 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
     [AllowedTranslations(AllowedTranslation.WordToDoubleWord)]
     public class RP2040GPIO : BaseGPIOPort, IRP2040Peripheral, IDoubleWordPeripheral, IGPIOReceiver, IKnownSize
     {
-        public RP2040GPIO(IMachine machine, int numberOfPins, ulong address) : base(machine, numberOfPins)
+        public RP2040GPIO(IMachine machine, int numberOfPins, int numberOfCores, ulong address) : base(machine, numberOfPins)
         {
             functionSelectCallbacks = new List<Action<int, GpioFunction>>();
             NumberOfPins = numberOfPins;
+            this.numberOfCores = numberOfCores;
             registers = CreateRegisters();
             functionSelect = new int[NumberOfPins];
             ReevaluatePioActions = new List<Action<uint>>();
@@ -33,7 +34,17 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
             forcedOutputDisableMap = new bool[NumberOfPins];
             outputOverride = new OutputOverride[NumberOfPins];
             peripheralDrive = new PeripheralDrive[NumberOfPins];
+            
+            edgeHighState = new bool[NumberOfPins];
+            edgeLowState = new bool[NumberOfPins];
+            irqProc = new GpioIrqEnableState[numberOfCores, NumberOfPins];
+
             OperationDone = new GPIO();
+            IRQ = new GPIO[numberOfCores];
+            for (int i = 0; i < numberOfCores; ++i)
+            {
+                IRQ[i] = new GPIO();
+            }
 
             machine.GetSystemBus(this).Register(this, new BusMultiRegistration(address + xorAliasOffset, aliasSize, "XOR"));
             machine.GetSystemBus(this).Register(this, new BusMultiRegistration(address + setAliasOffset, aliasSize, "SET"));
@@ -355,6 +366,18 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
                 forcedOutputDisableMap[i] = false;
                 outputOverride[i] = OutputOverride.Peripheral;
                 peripheralDrive[i] = PeripheralDrive.None;
+                edgeLowState[i] = false;
+                edgeHighState[i] = false;
+                
+                for (int c = 0; c < numberOfCores; ++c)
+                {
+                    irqProc[c, i].EdgeHigh = false;
+                    irqProc[c, i].EdgeLow = false;
+                    irqProc[c, i].LevelHigh = false;
+                    irqProc[c, i].LevelLow = false;
+                    IRQ[c].Unset();
+                }
+
             }
         }
 
@@ -575,6 +598,7 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
                         writeCallback: (_, value) =>
                         {
                             outputOverride[i] = (OutputOverride)value;
+                            this.Log(LogLevel.Noisy, "Setting GPIO{0} output override to: {1}", i, value);
                             if (outputOverride[i] == OutputOverride.Peripheral || outputOverride[i] == OutputOverride.InversePeripheral)
                             {
                                 // left the job for a peripheral
@@ -594,7 +618,6 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
                             }
                             else
                             {
-                                this.Log(LogLevel.Error, "GPIO " + i + ": Set output but not output");
                                 SetPinAccordingToPulls(i);
                             }
                         },
@@ -607,6 +630,7 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
                         },
                         writeCallback: (_, value) =>
                         {
+                            this.Log(LogLevel.Noisy, "Setting GPIO{0} output enable override to: {1}", i, value);
                             outputEnableOverride[i] = (OutputEnableOverride)value;
                             switch (value)
                             {
@@ -641,16 +665,28 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
             // 8 pins per register
             for (int p = 0; p < numberOfIntRegisters; ++p)
             {
+                int startingPin = p * 8;
                 registersMap[intr0p0 + p * 4] = new DoubleWordRegister(this)
-                    .WithValueField(0, 32, name: "INTR0" + p + "_PROC0");
+                    .WithValueField(0, 32, valueProviderCallback: _ => {
+                        return BuildRawInterruptsForCore(0, startingPin);
+                    }, writeCallback: (_, value) => {
+                        ClearRawInterrupts(startingPin, value);
+                        IRQ0.Unset();
+                    }, name: "INTR0" + p + "_PROC0");
             }
 
             int inte0p0 = intr0p0 + numberOfIntRegisters * 4;
             // 8 pins per register
             for (int p = 0; p < numberOfIntRegisters; ++p)
             {
+                int startingPin = p * 8;
                 registersMap[inte0p0 + p * 4] = new DoubleWordRegister(this)
-                    .WithValueField(0, 32, name: "INTE0" + p + "_PROC0");
+                    .WithValueField(0, 32, valueProviderCallback: _ => {
+                        return GetEnabledInterruptsForCore(0, startingPin);
+                    }, writeCallback: (_, value) => {
+                        IRQ0.Unset();
+                        EnableInterruptsForCore(0, startingPin, value);
+                    }, name: "INTE0" + p + "_PROC0");
             }
 
 
@@ -667,8 +703,12 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
             // 8 pins per register
             for (int p = 0; p < numberOfIntRegisters; ++p)
             {
+                int startingPin = p * 8;
                 registersMap[ints0p0 + p * 4] = new DoubleWordRegister(this)
-                    .WithValueField(0, 32, name: "INTS0" + p + "_PROC0");
+                    .WithValueField(0, 32, FieldMode.Read, valueProviderCallback: _ => {
+                        uint ret = BuildRawInterruptsForCore(0, startingPin);
+                        return BuildRawInterruptsForCore(0, startingPin);
+                    }, name: "INTS0" + p + "_PROC0");
             }
 
             int intr0p1 = ints0p0 + numberOfIntRegisters * 4;
@@ -820,17 +860,9 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
             {
                 for (int i = 0; i < NumberOfPins; ++i)
                 {
-                    if ((bitmask & (1UL << i)) == 0)
-                    {
-                        continue;
-                    }
-                    if ((bitset & (1UL << i)) != 0)
+                    if ((bitmask & (1UL << i)) != 0)
                     {
                         WritePin(i, true, peri);
-                    }
-                    else 
-                    {
-                        WritePin(i, false, peri);
                     }
                 }
                 OperationDone.Toggle();
@@ -843,18 +875,9 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
             {
                 for (int i = 0; i < NumberOfPins; ++i)
                 {
-                    if ((bitmask & (1UL << i)) == 0)
-                    {
-                        continue;
-                    }
-
-                    if ((bitset & (1UL << i)) != 0)
+                    if ((bitmask & (1UL << i)) != 0)
                     {
                         outputEnableOverride[i] = OutputEnableOverride.Enable;
-                    }
-                    else
-                    {
-                        outputEnableOverride[i] = OutputEnableOverride.Disable;
                     }
                 }
             }
@@ -945,7 +968,6 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
                         }
                     }
 
-
                     if (enable)
                     {
                         state = IsPinOutput(i) ^ true;
@@ -1033,10 +1055,6 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
                     {
                         outputEnableOverride[i] = OutputEnableOverride.Enable;
                     }
-                    else
-                    {
-                        outputEnableOverride[i] = OutputEnableOverride.Disable;
-                    }
                 }
             }
         }
@@ -1074,12 +1092,13 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
             {
                 return;
             }
-            this.Log(LogLevel.Noisy, "Setting GPIO" + number + " to: " + value + ", time: " + machine.ElapsedVirtualTime.TimeElapsed + ", from: " + peri);
 
             if (!IsPinOutput(number) && !forced)
             {
                 return;
             }
+
+            this.Log(LogLevel.Noisy, "Setting GPIO" + number + " to: " + value + ", time: " + machine.ElapsedVirtualTime.TimeElapsed + ", from: " + peri);
 
             if (peripheralDrive[number] != PeripheralDrive.None && GetFunction(number) != peri)
             {
@@ -1091,8 +1110,36 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
                 value = !value;
             }
             State[number] = value;
+
+            // we have edge, so mark it
+            if (value)
+            {
+                edgeHighState[number] = true;
+                for (int c = 0; c < numberOfCores; ++c)
+                {
+                    if (irqProc[c, number].EdgeHigh || irqProc[c, number].LevelHigh)
+                    {
+                        this.Log(LogLevel.Noisy, "Sending IRQ to core: {0}, for pin: {1}", c, number);
+                        IRQ[c].Set(true);
+                    }
+                }
+            }
+            else 
+            {
+                edgeLowState[number] = true;
+                for (int c = 0; c < numberOfCores; ++c)
+                {
+                    if (irqProc[c, number].EdgeLow || irqProc[c, number].LevelLow)
+                    {
+                        this.Log(LogLevel.Noisy, "Sending IRQ to core: {0}, for pin: {1}", c, number);
+                        IRQ[c].Set(true);
+                    }
+                }
+            }
+
             Connections[number].Set(value);
         }
+
 
         public void ReevaluatePio(uint steps)
         {
@@ -1110,13 +1157,102 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
         public const ulong clearAliasOffset = 0x3000;
         public int[] functionSelect;
 
-        public int NumberOfPins;
+        public readonly int NumberOfPins;
+        public GPIO[] IRQ;
+        public GPIO IRQ0 => IRQ[0];
+        public GPIO IRQ1 => IRQ[1];
+
+
 
         // Currently I have no better idea how to retrigger CPU evaluation when GPIO state changes 
         // This is necessary to have synchronized PIO with System Clock
         public List<Action<uint>> ReevaluatePioActions { get; set; }
         public GPIO OperationDone { get; }
+        private uint BuildRawInterruptsForCore(int core, int startingPin)
+        {
+            uint ret = 0;
+            for (int i = 0; i < 8; ++i)
+            {
+                int pin = i + startingPin;
+                if (pin >= NumberOfPins) break;
+                ret |= ((State[pin] == false) && irqProc[core, pin].LevelLow) ? 1u << (i * 4) : 0;
+                ret |= ((State[pin] == true) && irqProc[core, pin].LevelHigh) ? 1u << (i * 4 + 1) : 0;
+                ret |= (edgeLowState[pin] && irqProc[core, pin].EdgeLow) == true ? 1u << (i * 4 + 2) : 0;
+                ret |= (edgeHighState[pin] && irqProc[core, pin].EdgeHigh) == true ? 1u << (i * 4 + 3) : 0;
+            }
+            return ret;
+        }
 
+        private void ClearRawInterrupts(int startingPin, ulong value)
+        {
+            for (int i = 0; i < 8; ++i)
+            {
+                int pin = startingPin + i;
+                if (pin >= NumberOfPins) break;
+                if ((value & (1u << (i * 4) + 2)) != 0)
+                {
+                    edgeLowState[pin] = false;
+                } 
+                if ((value & (1u << (i * 4) + 3)) != 0)
+                {
+                    edgeHighState[pin] = false;
+                } 
+            }
+        }
+
+        private void EnableInterruptsForCore(int core, int startingPin, ulong value)
+        {
+            this.Log(LogLevel.Noisy, "Enabling interrupts for core: {0}, starting pin: {1}, value: 0x{2:x}", core, startingPin, value);
+            for (int i = 0; i < 8; ++i)
+            {
+                int pin = i + startingPin;
+                if (pin >= NumberOfPins) break;
+                bool levelLow = (value & (1u << (i * 4))) != 0;
+                if (levelLow)
+                {
+                    this.Log(LogLevel.Noisy, "Enabling level low interrupt for pin: {0}", pin);
+                }
+                irqProc[core, pin].LevelLow = levelLow;
+
+                bool levelHigh = (value & (1u << (i * 4 + 1))) != 0;
+                if (levelHigh)
+                {
+                    this.Log(LogLevel.Noisy, "Enabling level high interrupt for pin: {0}", pin);
+                }
+                irqProc[core, pin].LevelHigh = levelHigh;
+
+                bool edgeLow = (value & (1u << (i * 4 + 2))) != 0;
+                if (edgeLow)
+                {
+                    this.Log(LogLevel.Noisy, "Enabling edge low interrupt for pin: {0}", pin);
+                }
+                irqProc[core, pin].EdgeLow = edgeLow;
+
+                bool edgeHigh = (value & (1u << (i * 4 + 3))) != 0;
+                if (edgeHigh)
+                {
+                    this.Log(LogLevel.Noisy, "Enabling edge high interrupt for pin: {0}", pin);
+                }
+                irqProc[core, pin].EdgeHigh = edgeHigh;
+            }
+        }
+
+        private uint GetEnabledInterruptsForCore(int core, int startingPin)
+        {
+            uint ret = 0;
+            for (int i = 0; i < 8; ++i)
+            {
+                int pin = i + startingPin;
+                if (pin >= NumberOfPins) break;
+                ret |= irqProc[core, pin].LevelLow ? 1u << (i * 4) : 0;
+                ret |= irqProc[core, pin].LevelHigh ? 1u << (i * 4 + 1) : 0;
+                ret |= irqProc[core, pin].EdgeLow == true ? 1u << (i * 4 + 2) : 0;
+                ret |= irqProc[core, pin].EdgeHigh == true ? 1u << (i * 4 + 3) : 0;
+            }
+            return ret;
+        }
+
+        private readonly int numberOfCores;
         private readonly DoubleWordRegisterCollection registers;
         private bool[] pullDown;
         private bool[] pullUp;
@@ -1149,6 +1285,19 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
         };
         private PeripheralDrive[] peripheralDrive;
         private readonly GpioFunction[,] pinMapping;
+
+        private struct GpioIrqEnableState 
+        {
+            public bool EdgeHigh;
+            public bool EdgeLow;
+            public bool LevelHigh;
+            public bool LevelLow;
+        };
+
+        private GpioIrqEnableState[,] irqProc;
+
+        private bool[] edgeLowState;
+        private bool[] edgeHighState;
     }
 
 }
