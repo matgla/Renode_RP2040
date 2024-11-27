@@ -1,4 +1,0 @@
-$platform_file=$ORIGIN/raspberry_pico_with_leds_and_button.repl
-$global.FIRMWARE=$ORIGIN/blinky
-include $ORIGIN/run_firmware.resc
-

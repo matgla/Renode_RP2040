@@ -236,7 +236,8 @@ uint32_t PioSimulator::execute(uint32_t steps)
 
     if (break_in_next)
     {
-      return i + 1;
+      return steps;
+      // return i + 1;
     }
   }
 

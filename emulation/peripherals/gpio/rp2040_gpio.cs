@@ -808,6 +808,7 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
                     {
                         WritePin(i, false, peri);
                     }
+
                 }
                 OperationDone.Toggle();
             }
@@ -823,10 +824,13 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
                     {
                         continue;
                     }
-
                     if ((bitset & (1UL << i)) != 0)
                     {
                         WritePin(i, true, peri);
+                    }
+                    else 
+                    {
+                        WritePin(i, false, peri);
                     }
                 }
                 OperationDone.Toggle();
@@ -1049,7 +1053,7 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
 
         public override void OnGPIO(int number, bool value)
         {
-            WritePin(number, value, GetFunction(number));
+            WritePin(number, value, GetFunction(number), true);
             base.OnGPIO(number, value);
         }
 
@@ -1064,13 +1068,18 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
             WritePin(number, !State[number], GetFunction(number));
         }
 
-        public void WritePin(int number, bool value, GpioFunction peri)
+        public void WritePin(int number, bool value, GpioFunction peri, bool forced = false)
         {
             if (State[number] == value)
             {
                 return;
             }
             this.Log(LogLevel.Noisy, "Setting GPIO" + number + " to: " + value + ", time: " + machine.ElapsedVirtualTime.TimeElapsed + ", from: " + peri);
+
+            if (!IsPinOutput(number) && !forced)
+            {
+                return;
+            }
 
             if (peripheralDrive[number] != PeripheralDrive.None && GetFunction(number) != peri)
             {
