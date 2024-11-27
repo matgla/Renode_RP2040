@@ -7,7 +7,7 @@ on:
     branches: [main]
 
 jobs:
-  execute_renode_tests:
+  tests_osx:
     runs-on: macos-14
     container:
       credentials:
@@ -28,8 +28,3 @@ jobs:
           hidutil attach renode_1.15.3.dmg 
           installer -package /Volumes/renode_1.15.3/renode_1.15.3.pkg -target /
           hiduti detach /Volume/renode_1.15.3
-
-      # - name: Build & Execute Tests
-      #   shell: bash
-      #   run: |
-      #     ./run_tests.sh
