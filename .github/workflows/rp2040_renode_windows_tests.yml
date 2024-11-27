@@ -54,4 +54,4 @@ jobs:
         with:
           python-version: '3.13'
           cache: 'pip' # caching pip dependencies
-      - run: pip install -r renode_1.15.3/tests/requirements.txt && renode_1.15.3/bin/renode-test.bat -N 3 -t tests/tests.yaml
+      - run: pip install psutil && pip install -r renode_1.15.3/tests/requirements.txt && python3 tests/run_tests.py -r 3 -f tests/tests.yaml -e renode_1.15.3/bin/renode-test.bat 

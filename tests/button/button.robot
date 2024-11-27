@@ -3,11 +3,11 @@
 Suite Setup     Setup
 Suite Teardown  Teardown
 Test Teardown   Test Teardown
-Test Timeout    270 seconds
+Test Timeout    20 seconds
 
 *** Test Cases ***
-Run successfully 'pio_blink' example
-    Execute Command             include @${CURDIR}/pio_blink.resc
+Run successfully 'button' example
+    Execute Command             include @${CURDIR}/button.resc
     Execute Command             logLevel -1
     ${led1}=     Create LED Tester           sysbus.gpio.led1   
     ${led2}=     Create LED Tester           sysbus.gpio.led2  

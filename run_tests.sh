@@ -17,5 +17,5 @@ PICO_SDK_FETCH_FROM_GIT=1 cmake .. -GNinja -DCMAKE_BUILD_TYPE=Release -DPICO_BOA
 cmake --build .
 cd ../..
 
-renode-test -N 3 -t tests/tests.yaml
 
+./tests/run_tests.py -r 3 -f tests/tests.yaml
