@@ -13,8 +13,6 @@ using Antmicro.Renode.Core;
 using Antmicro.Renode.Logging;
 using Antmicro.Renode.Peripherals.Bus;
 using Antmicro.Renode.Core.Structure.Registers;
-using Dynamitey;
-using Mono.Cecil;
 
 namespace Antmicro.Renode.Peripherals.GPIOPort
 {
