@@ -46,7 +46,7 @@ jobs:
           path: pico-examples/build
   run_linux_tests:
     needs: [build_pico_examples]
-    uses: ./.github/workflows/rp2040_renode_linux_tests.yaml
+    uses: ./.github/workflows/rp2040_renode_linux_tests.yml
   # run_osx_tests:
   #   needs: [build_pico_examples]
   #   uses: ./.github/workflows/rp2040_renode_osx_tests.yaml
