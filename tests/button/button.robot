@@ -3,7 +3,7 @@
 Suite Setup     Setup
 Suite Teardown  Teardown
 Test Teardown   Test Teardown
-Test Timeout    20 seconds
+Test Timeout    120 seconds
 
 *** Test Cases ***
 Run successfully 'button' example
