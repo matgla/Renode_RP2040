@@ -1,0 +1,22 @@
+[
+{
+  "directory": "/workdir/build_linux",
+  "command": "/usr/bin/c++   -Dpiosim_EXPORTS -I/workdir  -Wall -Wextra -Werror -O3 -fPIC   -o CMakeFiles/piosim.dir/pio_renode_glue.cpp.o -c /workdir/pio_renode_glue.cpp",
+  "file": "/workdir/pio_renode_glue.cpp"
+},
+{
+  "directory": "/workdir/build_linux",
+  "command": "/usr/bin/c++   -Dpiosim_EXPORTS -I/workdir  -Wall -Wextra -Werror -O3 -fPIC   -o CMakeFiles/piosim.dir/pio_statemachine.cpp.o -c /workdir/pio_statemachine.cpp",
+  "file": "/workdir/pio_statemachine.cpp"
+},
+{
+  "directory": "/workdir/build_linux",
+  "command": "/usr/bin/c++   -Dpiosim_EXPORTS -I/workdir  -Wall -Wextra -Werror -O3 -fPIC   -o CMakeFiles/piosim.dir/pio.cpp.o -c /workdir/pio.cpp",
+  "file": "/workdir/pio.cpp"
+},
+{
+  "directory": "/workdir/build_linux",
+  "command": "/usr/bin/c++   -Dpiosim_EXPORTS -I/workdir  -Wall -Wextra -Werror -O3 -fPIC   -o CMakeFiles/piosim.dir/fifo.cpp.o -c /workdir/fifo.cpp",
+  "file": "/workdir/fifo.cpp"
+}
+]
