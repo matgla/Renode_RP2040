@@ -45,7 +45,7 @@ with open(test_file, "r") as file:
         if line.find("#") != -1:
             continue
 
-        test_file = script_dir / line.removeprefix("- tests/").strip()
+        test_file = script_dir / line.removeprefix("- ").strip()
         tests_to_run.append(str(test_file))
 
 
@@ -60,7 +60,7 @@ if args.threads != 0:
                 passed_tests += 1
             else: 
                 failed_tests += 1
-                failed_names += test
+                failed_names.append(test)
 else:
     for test in tests_to_run:
         passed, test = run_test(str(runner), test, 3)
@@ -68,7 +68,7 @@ else:
             passed_tests += 1
         else: 
             failed_tests += 1
-            failed_names += test
+            failed_names.append(test)
 
 
 print("Test passed: " + str(passed_tests) + "/" + str(failed_tests + passed_tests))

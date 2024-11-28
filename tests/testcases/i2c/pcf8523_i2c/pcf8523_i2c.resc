@@ -1,0 +1,15 @@
+$global.TEST_FILE=$ORIGIN/../../../pico-examples/build/i2c/pcf8523_i2c/pcf8523_i2c.elf
+
+$machine_name="pico_tests"
+path add $ORIGIN/../..
+include $ORIGIN/../../../../cores/initialize_peripherals.resc
+machine LoadPlatformDescription $ORIGIN/raspberry_pico_with_pcf8523.repl
+sysbus LoadELF $ORIGIN/../../../b2.elf
+
+
+sysbus LoadELF $global.TEST_FILE
+sysbus.cpu0 VectorTableOffset 0x00000000
+sysbus.cpu1 VectorTableOffset 0x00000000
+
+showAnalyzer sysbus.uart0
+

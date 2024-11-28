@@ -1,0 +1,5 @@
+using "../../../../cores/rp2040.repl"
+
+gpio: 
+    2 -> gpio@3 
+

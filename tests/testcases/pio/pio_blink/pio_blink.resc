@@ -1,0 +1,8 @@
+$global.TEST_FILE=$ORIGIN/../../../pico-examples/build/pio/pio_blink/pio_blink.elf
+$platform_file=$ORIGIN/raspberry_pico_with_more_leds.repl
+$machine_name="pico_tests"
+
+include $ORIGIN/../../../prepare.resc
+
+showAnalyzer sysbus.uart0
+emulation SetGlobalQuantum "0.00001"

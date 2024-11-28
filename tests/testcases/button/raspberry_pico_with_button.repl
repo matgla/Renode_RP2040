@@ -1,0 +1,4 @@
+using "../../../boards/raspberry_pico.repl"
+
+button: Miscellaneous.Button @ gpio 4
+    -> gpio@4

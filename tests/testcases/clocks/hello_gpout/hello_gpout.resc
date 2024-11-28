@@ -1,0 +1,9 @@
+$global.TEST_FILE=$ORIGIN/../../../pico-examples/build/clocks/hello_gpout/hello_gpout.elf
+$machine_name="pico_tests"
+$platform_file=$ORIGIN/gpout_leds.repl
+
+include $ORIGIN/../../../prepare.resc
+
+showAnalyzer sysbus.uart0
+
+emulation SetGlobalQuantum "0.0000001"

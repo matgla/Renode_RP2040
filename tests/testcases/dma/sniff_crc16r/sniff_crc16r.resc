@@ -1,0 +1,5 @@
+$global.TEST_FILE=$ORIGIN/../../../pico-examples/build/dma/sniff_crc16r/sniff_crc16r.elf
+
+include $ORIGIN/../../../prepare.resc
+
+showAnalyzer sysbus.uart0

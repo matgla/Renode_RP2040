@@ -1,8 +1,0 @@
-$global.TEST_FILE=$ORIGIN/../../../pico-examples/build/adc/microphone_adc/microphone_adc.elf
-
-include $ORIGIN/../../prepare.resc
-
-sysbus.adc FeedVoltageSampleToChannel 0 0.0 0.1 1 20
-
-showAnalyzer sysbus.uart0
- 
