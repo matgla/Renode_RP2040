@@ -1,8 +1,11 @@
 #!/bin/sh
 
+revision=`cat ./tests/pico_examples_revision`
+echo "$revision"
+
 if [ ! -d pico-examples ]; then
     git clone https://github.com/raspberrypi/pico-examples.git
-    git checkout 7e77a0c381863be0c49086567e7f1934d78ac591
+    git checkout $value
     for i in pico_examples_patches/*.patch; do
         cd pico-examples 
         git am < ../${i}
