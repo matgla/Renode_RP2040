@@ -28,31 +28,16 @@ jobs:
           echo github.event.action: ${{ github.event.action }}
           echo github.event_name: ${{ github.event_name }}
       
-      - name: Checkout pico-examples 
-        run: |
-          ./fetch_pico_examples.bat
-      
-      - name: Install dependencies
-        working-directory: ${{github.workspace}}/pico-examples
-        run: |
-          choco install wget
-          choco install --force .github/workflows/choco_packages.config
-
       - name: Download Renode
         shell: pwsh
         run: | 
           wget https://github.com/renode/renode/releases/download/v1.15.3/renode_1.15.3.zip 
           Expand-Archive '.\renode_1.15.3.zip' -DestinationPath .
 
-      - name: Build Pico Examples 
-        shell: pwsh
-        run: |
-          cd pico-examples 
-          mkdir build
-          cd build
-          cmake .. -G Ninja -DPICO_SDK_FETCH_FROM_GIT=ON -DCMAKE_BUILD_TYPE=Release -DPICO_BOARD=pico
-          cmake --build .
-      
+      - uses: actions/download-artifact@v4
+        with:
+          name: pico-examples 
+          path: pico-examples/build
       - name: Execute Tests 
         uses: actions/setup-python@v5
         with:

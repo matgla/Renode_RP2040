@@ -46,15 +46,20 @@ jobs:
   
   run_linux_tests:
     name: Renode Linux Tests
-    if: ${{ always() }}
     needs: [build_pico_examples]
     uses: ./.github/workflows/rp2040_renode_linux_tests.yml
-  # run_osx_tests:
-  #   needs: [build_pico_examples]
-  #   uses: ./.github/workflows/rp2040_renode_osx_tests.yaml
-  # run_windows_tests:
-  #   needs: [build_pico_examples]
-  #   uses: ./.github/workflows/rp2040_renode_windows_tests.yaml
 
+  run_osx_tests:
+    name: Run OSX Tests
+    needs: [build_pico_examples]
+    uses: ./.github/workflows/rp2040_renode_osx_tests.yml
 
+  run_windows_tests:
+    name: Run Windows Tests
+    needs: [build_pico_examples]
+    uses: ./.github/workflows/rp2040_renode_windows_tests.yml
 
+  delete_artifacts:
+    name: Post removal of artifacts
+    if: ${{ always() }}
+    needs: [run_linux_tests, run_osx_tests, run_windows_tests]

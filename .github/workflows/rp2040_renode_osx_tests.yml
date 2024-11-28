@@ -29,19 +29,19 @@ jobs:
           hdiutil attach renode_1.15.3.dmg 
           cp -r /Volumes/renode_1.15.3/Renode.app /Applications
           hdiutil detach /Volumes/renode_1.15.3
-      - name: Install Dependencies
-        shell: bash 
-        run: |
-          brew install gcc-arm-embedded ninja 
       - name: Install Renode Test 
         shell: bash
         run: |
           pip3 install --break-system-packages -r /Applications/Renode.app/Contents/MacOS/tests/requirements.txt
+      - uses: actions/download-artifact@v4
+        with:
+          name: pico-examples 
+          path: pico-examples/build
       - name: Run tests
         shell: bash
         run: |
           export PATH=$PATH:/Applications/Renode.app/Contents/MacOS/tests
-          ./run_tests.sh
+          ./tests/run_tests.py -r 3 -f tests/tests.yaml
 
 
         
