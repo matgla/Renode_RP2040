@@ -45,6 +45,7 @@ jobs:
           path: pico-examples/build
   
   run_linux_tests:
+    name: Renode Linux Tests
     if: ${{ always() }}
     needs: [build_pico_examples]
     uses: ./.github/workflows/rp2040_renode_linux_tests.yml
