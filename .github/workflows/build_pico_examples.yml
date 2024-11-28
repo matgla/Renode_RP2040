@@ -19,9 +19,7 @@ jobs:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0
-      - name: Install Dependencies
-        shell: bash 
-        run: pacman -S --noconfirm ninja
+      
       - name: Create GIT Identity
         shell: bash 
         run: | 
@@ -38,13 +36,16 @@ jobs:
         shell: bash
         if: steps.pico-examples-cache.outputs.cache-hit != 'true'
         run: |
+          pacman -S --noconfirm ninja
           ./build_pico_examples.sh
 
       - uses: actions/upload-artifact@v4
         with:
           name: pico-examples 
           path: pico-examples/build
+  
   run_linux_tests:
+    if: ${{ always() }}
     needs: [build_pico_examples]
     uses: ./.github/workflows/rp2040_renode_linux_tests.yml
   # run_osx_tests:
