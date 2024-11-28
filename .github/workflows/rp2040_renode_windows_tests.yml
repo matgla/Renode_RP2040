@@ -24,6 +24,7 @@ jobs:
       - name: Download Renode
         shell: pwsh
         run: | 
+          choco install wget
           wget https://github.com/renode/renode/releases/download/v1.15.3/renode_1.15.3.zip 
           Expand-Archive '.\renode_1.15.3.zip' -DestinationPath .
 
