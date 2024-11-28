@@ -2,3 +2,5 @@ $global.TEST_FILE=$ORIGIN/../../pico-examples/build/button/button.elf
 $platform_file=$ORIGIN/raspberry_pico_with_button.repl
 include $ORIGIN/../prepare.resc
 
+logLevel -1 sysbus.gpio 
+logLevel -1 sysbus.gpio.led

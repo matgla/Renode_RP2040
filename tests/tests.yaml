@@ -7,6 +7,7 @@
 - tests/adc/read_vsys/read_vsys.robot
 - tests/blink/blink.robot
 - tests/blink_simple/blink_simple.robot
+- tests/button/button.robot
 - tests/clocks/detached_clk_peri/detached_clk_peri.robot
 - tests/clocks/hello_48MHz/hello_48MHz.robot
 - tests/clocks/hello_resus/hello_resus.robot
