@@ -63,3 +63,6 @@ jobs:
     name: Post removal of artifacts
     if: ${{ always() }}
     needs: [run_linux_tests, run_osx_tests, run_windows_tests]
+    uses: GeekyEggo/delete-artifact@v5.1.0
+    with:
+      name: pico-examples
