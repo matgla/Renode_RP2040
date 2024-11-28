@@ -7,8 +7,8 @@ on:
     branches: [main]
 
 jobs:
-  tests_linux:
-    name: "Renode Linux"
+  build_pico_examples:
+    name: "Renode Build Pico Examples"
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/matgla/yasldtoolchain:0.4.1
@@ -26,10 +26,20 @@ jobs:
         shell: bash 
         run: | 
           git config --global user.email "you@example.com" && git config --global user.name "Your Name"
+     
+      - name: Configure cache for Pico Examples 
+        id: pico-examples-cache
+        uses: actions/cache@v4
+        with: 
+          path: pico-examples
+          key: pico-examples-key-${{ hashFiles('tests/pico_examples_revision')}}-${{ hashFiles('pico_example_patches/**.patch')}}
+
       - name: Build Pico Examples
         shell: bash
+        if: steps.pico-examples-cache.outputs.cache-git != 'true'
         run: |
           ./build_pico_examples.sh
+
       - uses: actions/upload-artifact@v4
         with:
           name: pico-examples 
