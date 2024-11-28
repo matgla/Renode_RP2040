@@ -40,5 +40,5 @@ jobs:
       - run: | 
           pip install psutil 
           pip install -r renode_1.15.3/tests/requirements.txt 
-          $env:PATH += (Get-Item .).FullName + "\renode_1.15.3\bin"
+          $env:PATH += ";" + (Get-Item .).FullName + "\renode_1.15.3\bin"
           python3 tests/run_tests.py -r 3 -f tests/tests.yaml 
