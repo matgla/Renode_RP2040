@@ -1,1 +1,0 @@
-/usr/bin/c++  -fPIC -Wall -Wextra -Werror -O3  -shared -Wl,-soname,libpiosim.so -o libpiosim.so CMakeFiles/piosim.dir/pio_renode_glue.cpp.o CMakeFiles/piosim.dir/pio_statemachine.cpp.o CMakeFiles/piosim.dir/pio.cpp.o CMakeFiles/piosim.dir/fifo.cpp.o 

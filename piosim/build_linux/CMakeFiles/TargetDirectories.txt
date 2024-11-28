@@ -1,3 +1,0 @@
-/workdir/build_linux/CMakeFiles/rebuild_cache.dir
-/workdir/build_linux/CMakeFiles/edit_cache.dir
-/workdir/build_linux/CMakeFiles/piosim.dir
