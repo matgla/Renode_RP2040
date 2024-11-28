@@ -30,7 +30,7 @@ with open(test_file, "r") as file:
 
         passed = False
         for i in range(0, args.retry):
-            if run([args.renode_test + " " + str(test_file)], shell=True).returncode == 0:
+            if run([str(Path(args.renode_test).absolute()) + " " + str(test_file)], shell=True).returncode == 0:
                 passed = True 
                 break
             else:
