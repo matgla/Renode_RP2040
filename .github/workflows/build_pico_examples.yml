@@ -21,7 +21,7 @@ jobs:
           fetch-depth: 0
       - name: Validate PioSim
         run: |
-          python3 -m pip --break-system-packages requests shutil
+          pip3 --break-system-packages requests shutil
           python3 piosim/fetch_piosim.py --verify 
       - name: Create GIT Identity
         shell: bash 
