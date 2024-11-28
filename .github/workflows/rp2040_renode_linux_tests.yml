@@ -8,7 +8,7 @@ on:
       - completed
 
 jobs:
-  tests_linux:
+  build_pico_examples:
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     name: "Renode Linux"
     runs-on: ubuntu-latest
@@ -36,3 +36,6 @@ jobs:
         shell: bash
         run: |
           ./tests/run_tests.py -r 3 -f tests/tests.yaml
+  run_tests:
+    needs: [build_pico_examples]
+    uses: ./.github/workflows/rp2040_renode_linux_tests.yaml
