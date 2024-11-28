@@ -34,6 +34,7 @@ jobs:
         shell: bash
         run: |
           export PATH=$PATH:/Applications/Renode.app/Contents/MacOS/tests
+          pip3 install psutil --break-system-packages
           ./tests/run_tests.py -r 3 -f tests/tests.yaml
 
 
