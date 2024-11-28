@@ -10,4 +10,6 @@ RUN echo "builder ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 RUN su - builder -c "git clone https://aur.archlinux.org/yay.git /tmp/yay-build/yay"
 RUN su - builder -c "cd /tmp/yay-build/yay && makepkg -si --noconfirm"
 RUN rm -rf /tmp/yay-build
-RUN su - builder -c "yay --noconfirm -Syu && yay --noconfirm -S mingw-w64-gcc mingw-w64-cmake"
+RUN su - builder -c "yay --noconfirm -Syu && yay --noconfirm -S mingw-w64-gcc mingw-w64-cmake" 
+RUN pacman --noconfirm -S python3
+RUN su - builder -c "yay --noconfirm -Syu && yay --noconfirm -S osxcross-git" 

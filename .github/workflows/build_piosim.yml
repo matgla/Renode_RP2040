@@ -1,0 +1,22 @@
+name: Build Pio Simulator
+
+on:
+  push:
+    branches: [main]
+    paths: 
+      - piosim/**
+        !piosim/redist/**
+  pull_request: 
+    branches: [main]
+    paths: 
+      - piosim/**
+        !piosim/redist/**
+
+jobs:
+  build_pio_simulator:
+    name: "Build Pio Simulator for all platforms"
+    runs-on: ubuntu-latest 
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
