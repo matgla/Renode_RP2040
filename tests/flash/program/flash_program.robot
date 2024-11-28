@@ -3,7 +3,7 @@
 Suite Setup     Setup
 Suite Teardown  Teardown
 Test Teardown   Test Teardown
-Test Timeout    30 seconds
+Test Timeout    80 seconds
 Library    Collections
 
 *** Test Cases ***

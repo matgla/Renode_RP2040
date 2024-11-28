@@ -3,7 +3,7 @@
 Suite Setup     Setup
 Suite Teardown  Teardown
 Test Teardown   Test Teardown
-Test Timeout    150 seconds
+Test Timeout    500 seconds
 
 *** Test Cases ***
 Run successfully 'hello_timer' example

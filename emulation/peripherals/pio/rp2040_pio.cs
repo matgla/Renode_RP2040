@@ -43,7 +43,7 @@ namespace Antmicro.Renode.Peripherals.CPU
             {
                 libraryName = "libpiosim.so";
             }
-            return Path.GetFullPath(GetSourceFileDirectory() + "/../../../piosim/redist/" + libraryName);
+            return Path.GetFullPath(GetSourceFileDirectory() + "/../../../piosim/" + libraryName);
         }
 
         public RP2040PIOCPU(string cpuType, IMachine machine, ulong address, GPIOPort.RP2040GPIO gpio, uint id, RP2040Clocks clocks, Endianess endianness = Endianess.LittleEndian, CpuBitness bitness = CpuBitness.Bits32)

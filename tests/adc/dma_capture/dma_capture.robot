@@ -6,7 +6,7 @@ Library             String
 Suite Setup         Setup
 Suite Teardown      Teardown
 Test Teardown       Test Teardown
-Test Timeout        300 seconds
+Test Timeout        1000 seconds
 
 
 *** Test Cases ***

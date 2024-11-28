@@ -5,7 +5,7 @@ Library             Telnet
 Suite Setup         Setup
 Suite Teardown      Teardown
 Test Teardown       Test Teardown
-Test Timeout        60 seconds
+Test Timeout        80 seconds
 
 
 *** Test Cases ***

@@ -3,7 +3,7 @@
 Suite Setup     Setup
 Suite Teardown  Teardown
 Test Teardown   Test Teardown
-Test Timeout    1000 seconds
+Test Timeout    180 seconds
 
 *** Test Cases ***
 Run successfully 'hello_gpout' example

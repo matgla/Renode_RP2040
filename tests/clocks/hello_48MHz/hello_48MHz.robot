@@ -3,7 +3,7 @@
 Suite Setup     Setup
 Suite Teardown  Teardown
 Test Teardown   Test Teardown
-Test Timeout    270 seconds
+Test Timeout    100 seconds
 
 *** Test Cases ***
 Run successfully 'hello_48MHz' example

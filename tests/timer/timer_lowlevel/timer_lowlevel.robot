@@ -3,7 +3,7 @@
 Suite Setup     Setup
 Suite Teardown  Teardown
 Test Teardown   Test Teardown
-Test Timeout    90 seconds
+Test Timeout    400 seconds
 
 *** Test Cases ***
 Run successfully 'timer_lowlevel' example

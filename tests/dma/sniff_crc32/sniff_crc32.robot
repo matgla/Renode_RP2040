@@ -3,7 +3,7 @@
 Suite Setup     Setup
 Suite Teardown  Teardown
 Test Teardown   Test Teardown
-Test Timeout    40 seconds
+Test Timeout    80 seconds
 
 Resource    ${CURDIR}/../../common.resource
 

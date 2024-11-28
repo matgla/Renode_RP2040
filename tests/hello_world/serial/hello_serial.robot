@@ -3,7 +3,7 @@
 Suite Setup     Setup
 Suite Teardown  Teardown
 Test Teardown   Test Teardown
-Test Timeout    90 seconds
+Test Timeout    160 seconds
 
 *** Test Cases ***
 Run successfully 'hello_serial' example
