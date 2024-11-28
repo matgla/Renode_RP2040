@@ -23,7 +23,7 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: pico-examples 
-          path: pico-examples/build
+          path: tests/pico-examples/build
       - name: Build & Execute Tests
         shell: bash
         run: |

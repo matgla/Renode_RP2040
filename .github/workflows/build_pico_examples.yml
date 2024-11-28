@@ -40,12 +40,12 @@ jobs:
         if: steps.pico-examples-cache.outputs.cache-hit != 'true'
         run: |
           pacman -S --noconfirm ninja
-          ./build_pico_examples.sh
+          cd tests && ./build_pico_examples.sh
 
       - uses: actions/upload-artifact@v4
         with:
           name: pico-examples 
-          path: pico-examples/build
+          path: tests/pico-examples/build
   
   run_linux_tests:
     name: Renode Linux Tests

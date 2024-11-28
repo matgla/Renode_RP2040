@@ -31,7 +31,7 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: pico-examples 
-          path: pico-examples/build
+          path: tests/pico-examples/build
       - name: Execute Tests 
         uses: actions/setup-python@v5
         with:
