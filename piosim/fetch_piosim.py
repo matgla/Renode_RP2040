@@ -58,13 +58,13 @@ target_file = script_dir / package_name
 open(target_file, 'wb').write(r.content)
 
 with zipfile.ZipFile(target_file, "r") as zip_ref:
-    zip_ref.extractall(script_dir / "piosim")
+    zip_ref.extractall(path=script_dir / "piosim")
 
 match = True
 if not args.verify:
     for filename in os.listdir(script_dir / "piosim"): 
         source_file = script_dir / "piosim" / filename 
-        shutil.copy(source_file, ".")
+        shutil.copy(source_file, script_dir) 
 else: 
     for filename in os.listdir(script_dir / "piosim"): 
         source_file = script_dir / "piosim" / filename 
