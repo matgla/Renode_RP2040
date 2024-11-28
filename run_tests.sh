@@ -18,4 +18,4 @@ cmake --build .
 cd ../..
 
 
-./tests/run_tests.py -r 3 -f tests/tests.yaml
+python3 ./tests/run_tests.py -r 3 -f tests/tests.yaml
