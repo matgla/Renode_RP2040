@@ -41,8 +41,9 @@ jobs:
           pip install psutil 
           pip install -r renode_1.15.3/tests/requirements.txt 
           $env:PATH += ";" + (Get-Item .).FullName + "\renode_1.15.3\bin"
-          python3 tests/run_tests.py -r 3 -f tests/tests.yaml 
+          python3 tests/run_tests.py -r 3 -f tests/tests.yaml -j 2
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: run_artifacts
           compression-level: 9
