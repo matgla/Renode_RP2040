@@ -15,8 +15,8 @@ args, _ = parser.parse_known_args()
 
 script_dir = Path(os.path.dirname(os.path.realpath(__file__)));
 test_file = script_dir / "tests.yaml"
-print ("Running tests from: ", test_file)
-
+print ("Running tests from:", test_file)
+print ("Using runner:", args.renode_test);
 failed_tests=0
 passed_tests=0
 failed_names=[]
