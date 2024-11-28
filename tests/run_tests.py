@@ -6,6 +6,7 @@ from subprocess import run
 from argparse import ArgumentParser
 import psutil
 import sys
+import shutil
 
 parser = ArgumentParser()
 parser.add_argument("-f", "--file", help="Path to yaml file with tests")
@@ -13,10 +14,11 @@ parser.add_argument("-r", "--retry", type=int, default=1, help="Number of retrie
 parser.add_argument("-e", "--renode_test", default="renode-test", help="renode-test executable path")
 args, _ = parser.parse_known_args()
 
-script_dir = Path(os.path.dirname(os.path.realpath(__file__)));
+script_dir = Path(os.path.dirname(os.path.realpath(__file__)))
 test_file = script_dir / "tests.yaml"
 print ("Running tests from:", test_file)
-print ("Using runner:", args.renode_test);
+runner = shutil.which(args.renode_test)
+print ("Using runner:", runner)
 failed_tests=0
 passed_tests=0
 failed_names=[]
@@ -30,7 +32,7 @@ with open(test_file, "r") as file:
 
         passed = False
         for i in range(0, args.retry):
-            if run([str(Path(args.renode_test).absolute()) + " " + str(test_file)], shell=True).returncode == 0:
+            if run([str(runner), str(test_file)]).returncode == 0:
                 passed = True 
                 break
             else:
