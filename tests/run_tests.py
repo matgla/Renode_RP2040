@@ -23,7 +23,7 @@ parser = ArgumentParser()
 parser.add_argument("-f", "--file", help="Path to yaml file with tests")
 parser.add_argument("-r", "--retry", type=int, default=1, help="Number of retries of tests if failed")
 parser.add_argument("-e", "--renode_test", default="renode-test", help="renode-test executable path")
-parser.add_argument("-j", "--threads", default=multiprocessing.cpu_count(), help="Number of thread for renode tests")
+parser.add_argument("-j", "--threads", default=multiprocessing.cpu_count(), type=int, help="Number of thread for renode tests")
 
 
 args, _ = parser.parse_known_args()
@@ -37,6 +37,7 @@ failed_tests=0
 passed_tests=0
 failed_names=[]
 
+print("Using threads:", args.threads)
 
 tests_to_run = []
 with open(test_file, "r") as file:
@@ -47,16 +48,28 @@ with open(test_file, "r") as file:
         test_file = script_dir / line.removeprefix("- tests/").strip()
         tests_to_run.append(str(test_file))
 
-with ThreadPoolExecutor(max_workers=multiprocessing.cpu_count()) as executor:
-    futures = [executor.submit(run_test, str(runner), test, 3) for test in tests_to_run]
 
-    for future in as_completed(futures):
-        passed, test = future.result()
-        if passed:
+
+if args.threads != 0:
+    with ThreadPoolExecutor(max_workers=multiprocessing.cpu_count()) as executor:
+        futures = [executor.submit(run_test, str(runner), test, 3) for test in tests_to_run]
+
+        for future in as_completed(futures):
+            passed, test = future.result()
+            if passed:
+                passed_tests += 1
+            else: 
+                failed_tests += 1
+                failed_names += test
+else:
+    for test in tests_to_run:
+        passed, test = run_test(str(runner), test, 3)
+        if passed: 
             passed_tests += 1
         else: 
             failed_tests += 1
             failed_names += test
+
 
 print("Test passed: " + str(passed_tests) + "/" + str(failed_tests + passed_tests))
 print("Failed tests:")
