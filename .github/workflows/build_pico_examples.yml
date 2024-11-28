@@ -36,7 +36,7 @@ jobs:
 
       - name: Build Pico Examples
         shell: bash
-        if: steps.pico-examples-cache.outputs.cache-git != 'true'
+        if: steps.pico-examples-cache.outputs.cache-hit != 'true'
         run: |
           ./build_pico_examples.sh
 
@@ -44,3 +44,15 @@ jobs:
         with:
           name: pico-examples 
           path: pico-examples/build
+  run_linux_tests:
+    needs: [build_pico_examples]
+    uses: ./.github/workflows/rp2040_renode_linux_tests.yaml
+  # run_osx_tests:
+  #   needs: [build_pico_examples]
+  #   uses: ./.github/workflows/rp2040_renode_osx_tests.yaml
+  # run_windows_tests:
+  #   needs: [build_pico_examples]
+  #   uses: ./.github/workflows/rp2040_renode_windows_tests.yaml
+
+
+

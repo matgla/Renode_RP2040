@@ -1,11 +1,15 @@
 name: Renode RP2040 Linux - Tests
 
 on:
-  workflow_run:
-    workflows: ["Renode RP2040 - Build Pico Examples"]
-    branches: [main]
-    types: 
-      - completed
+  workflow_call:
+    inputs:
+      config-path:
+        required: true
+        type: string
+    secrets:
+      personal_access_token:
+        required: true
+
 
 jobs:
   build_pico_examples:
@@ -36,6 +40,3 @@ jobs:
         shell: bash
         run: |
           ./tests/run_tests.py -r 3 -f tests/tests.yaml
-  run_tests:
-    needs: [build_pico_examples]
-    uses: ./.github/workflows/rp2040_renode_linux_tests.yaml

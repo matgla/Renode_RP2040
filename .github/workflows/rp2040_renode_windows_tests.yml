@@ -1,5 +1,15 @@
 name: Renode RP2040 Windows - Tests
 
+on:
+  workflow_call:
+    inputs:
+      config-path:
+        required: true
+        type: string
+    secrets:
+      personal_access_token:
+        required: true
+
 jobs:
   tests_windows:
     name: "Renode Windows"
