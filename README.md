@@ -74,7 +74,7 @@ You may use it inside your simulation scripts, look at `tests/prepare.resc` as a
 
 # How to define own board 
 Raspberry Pico configuration may be extended to configure board connections. 
-As an example you can check `tests/pio/clocked_input/raspberry_pico_with_redirected_spi.repl`.
+As an example you can check `tests/testcases/pio/clocked_input/raspberry_pico_with_redirected_spi.repl`.
 
 Then you can include `boards/initalize_custom_board.resc` after setting $platform_file variable that points to your board.
 
@@ -111,7 +111,7 @@ To improve accuracy you can use command:
 ``` emulation SetGlobalQuantum "0.000001" ```
 With value necessary for your needs. 
 
-You can check example usages inside tests/pio/pio_blink/pio_blink.resc or tests/adc/adc_console/adc_console.resc.
+You can check example usages inside `tests/testcases/pio/pio_blink/pio_blink.resc` or `tests/testcases/adc/adc_console/adc_console.resc`.
 
 # Renode Version
 
