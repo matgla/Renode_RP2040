@@ -1,8 +1,8 @@
 $machine_name?="raspberry_pico"
 
-include $ORIGIN/../initialize_common.resc
+include $ORIGIN/../cores/initialize_peripherals.resc
 machine LoadPlatformDescription $platform_file
-sysbus LoadELF $ORIGIN/../b2.elf
+sysbus LoadELF $ORIGIN/../bootroms/rp2040/b2.elf
 
 
 

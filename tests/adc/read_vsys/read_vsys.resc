@@ -1,9 +1,0 @@
-$global.TEST_FILE=$ORIGIN/../../../pico-examples/build/adc/read_vsys/read_vsys.elf
-
-include $ORIGIN/../../prepare.resc
-
-sysbus.adc SetOnboardTemperature 33
-sysbus.adc SetDefaultVoltageOnChannel 3 0.2
-
-showAnalyzer sysbus.uart0
- 

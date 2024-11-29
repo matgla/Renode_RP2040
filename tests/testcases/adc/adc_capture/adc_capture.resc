@@ -1,0 +1,10 @@
+$global.TEST_FILE=$ORIGIN/../../../pico-examples/build/adc/adc_capture/adc_capture.elf
+
+include $ORIGIN/../../../prepare.resc
+
+sysbus.adc FeedVoltageSampleToChannel 0 0 0.01 20 100
+sysbus.adc FeedVoltageSampleToChannel 1 1.0 0.01 20 100
+sysbus.adc FeedVoltageSampleToChannel 2 2.0 0.01 20 100
+sysbus.adc FeedVoltageSampleToChannel 3 3.0 0.001 20 100
+
+showAnalyzer sysbus.uart0

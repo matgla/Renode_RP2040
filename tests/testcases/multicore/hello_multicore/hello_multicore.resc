@@ -1,0 +1,4 @@
+$global.TEST_FILE=$ORIGIN/../../../pico-examples/build/multicore/hello_multicore/hello_multicore.elf
+
+include $ORIGIN/../../../prepare.resc
+showAnalyzer sysbus.uart0

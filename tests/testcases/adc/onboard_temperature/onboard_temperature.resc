@@ -1,0 +1,8 @@
+$global.TEST_FILE=$ORIGIN/../../../pico-examples/build/adc/onboard_temperature/onboard_temperature.elf
+
+include $ORIGIN/../../../prepare.resc
+
+sysbus.adc SetOnboardTemperature 33
+
+showAnalyzer sysbus.uart0
+ 

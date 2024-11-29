@@ -1,10 +1,7 @@
 name: Renode RP2040 Windows - Tests
 
 on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+  workflow_call:
 
 jobs:
   tests_windows:
@@ -24,34 +21,32 @@ jobs:
           echo github.event.action: ${{ github.event.action }}
           echo github.event_name: ${{ github.event_name }}
       
-      - name: Checkout pico-examples 
-        run: |
-          ./fetch_pico_examples.bat
-      
-      - name: Install dependencies
-        working-directory: ${{github.workspace}}/pico-examples
-        run: |
-          choco install wget
-          choco install --force .github/workflows/choco_packages.config
-
       - name: Download Renode
         shell: pwsh
         run: | 
+          choco install wget
           wget https://github.com/renode/renode/releases/download/v1.15.3/renode_1.15.3.zip 
           Expand-Archive '.\renode_1.15.3.zip' -DestinationPath .
 
-      - name: Build Pico Examples 
-        shell: pwsh
-        run: |
-          cd pico-examples 
-          mkdir build
-          cd build
-          cmake .. -G Ninja -DPICO_SDK_FETCH_FROM_GIT=ON -DCMAKE_BUILD_TYPE=Release -DPICO_BOARD=pico
-          cmake --build .
-      
+      - uses: actions/download-artifact@v4
+        with:
+          name: pico-examples 
+          path: tests/pico-examples/build
       - name: Execute Tests 
         uses: actions/setup-python@v5
         with:
           python-version: '3.13'
           cache: 'pip' # caching pip dependencies
-      - run: pip install -r renode_1.15.3/tests/requirements.txt && renode_1.15.3/bin/renode-test.bat -t tests/tests.yaml
+      - run: | 
+          pip install psutil 
+          pip install -r renode_1.15.3/tests/requirements.txt 
+          $env:PATH += ";" + (Get-Item .).FullName + "\renode_1.15.3\bin"
+          python3 tests/run_tests.py -r 3 -f tests/tests.yaml -j 0
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: run_artifacts
+          compression-level: 9
+          path: |
+            logs/*
+            snapshots/*

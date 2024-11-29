@@ -1,5 +1,0 @@
-$global.TEST_FILE=$ORIGIN/../../../pico-examples/build/dma/ring_tests/ring_tests.elf
-
-include $ORIGIN/../../prepare.resc
-
-showAnalyzer sysbus.uart0

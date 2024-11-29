@@ -1,0 +1,73 @@
+name: Renode RP2040 - Build Pico Examples 
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build_pico_examples:
+    name: "Renode Build Pico Examples"
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/matgla/yasldtoolchain:0.4.1
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Validate PioSim
+        run: |
+          pip3 install --break-system-packages requests 
+          python3 piosim/fetch_piosim.py --verify 
+      - name: Create GIT Identity
+        shell: bash 
+        run: | 
+          git config --global user.email "you@example.com" && git config --global user.name "Your Name"
+     
+      - name: Configure cache for Pico Examples 
+        id: pico-examples-cache
+        uses: actions/cache@v4
+        with: 
+          path: pico-examples
+          key: pico-examples-key-${{ hashFiles('tests/pico_examples_revision')}}-${{ hashFiles('pico_example_patches/**.patch')}}
+
+      - name: Build Pico Examples
+        shell: bash
+        if: steps.pico-examples-cache.outputs.cache-hit != 'true'
+        run: |
+          pacman -S --noconfirm ninja
+          cd tests && ./build_pico_examples.sh
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pico-examples 
+          path: tests/pico-examples/build
+  
+  run_linux_tests:
+    name: Renode Linux Tests
+    needs: [build_pico_examples]
+    uses: ./.github/workflows/rp2040_renode_linux_tests.yml
+
+  run_osx_tests:
+    name: Run OSX Tests
+    needs: [build_pico_examples]
+    uses: ./.github/workflows/rp2040_renode_osx_tests.yml
+
+  run_windows_tests:
+    name: Run Windows Tests
+    needs: [build_pico_examples]
+    uses: ./.github/workflows/rp2040_renode_windows_tests.yml
+
+  delete_artifacts:
+    name: Post removal of artifacts
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    needs: [run_linux_tests, run_osx_tests, run_windows_tests]
+    steps:
+      - uses: GeekyEggo/delete-artifact@v5.1.0
+        with:
+          name: pico-examples

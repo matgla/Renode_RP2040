@@ -1,0 +1,4 @@
+$global.TEST_FILE=$ORIGIN/../../../pico-examples/build/pio/hello_pio/hello_pio.elf
+
+include $ORIGIN/../../../prepare.resc
+showAnalyzer sysbus.uart0

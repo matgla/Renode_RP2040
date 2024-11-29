@@ -1,6 +1,0 @@
-using "rp2040.repl"
-
-led: Miscellaneous.LED @ gpio 25
-
-gpio: 
-    25 -> led@0

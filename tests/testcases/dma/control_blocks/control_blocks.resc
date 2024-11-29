@@ -1,0 +1,6 @@
+$global.TEST_FILE=$ORIGIN/../../../pico-examples/build/dma/control_blocks/dma_control_blocks.elf
+
+include $ORIGIN/../../../prepare.resc
+
+showAnalyzer sysbus.uart0
+

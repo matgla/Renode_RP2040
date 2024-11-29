@@ -1,5 +1,0 @@
-$global.TEST_FILE=$ORIGIN/../../../pico-examples/build/dma/sniff_sum/sniff_sum.elf
-
-include $ORIGIN/../../prepare.resc
-
-showAnalyzer sysbus.uart0

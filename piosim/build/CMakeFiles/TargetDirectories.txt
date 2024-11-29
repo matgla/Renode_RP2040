@@ -1,0 +1,3 @@
+/home/mateusz/repos/Renode_RP2040/piosim/build/CMakeFiles/piosim.dir
+/home/mateusz/repos/Renode_RP2040/piosim/build/CMakeFiles/edit_cache.dir
+/home/mateusz/repos/Renode_RP2040/piosim/build/CMakeFiles/rebuild_cache.dir

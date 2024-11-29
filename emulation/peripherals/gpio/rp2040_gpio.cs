@@ -38,6 +38,7 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
             edgeHighState = new bool[NumberOfPins];
             edgeLowState = new bool[NumberOfPins];
             irqProc = new GpioIrqEnableState[numberOfCores, NumberOfPins];
+            irqForced = new GpioIrqEnableState[numberOfCores, NumberOfPins];
 
             OperationDone = new GPIO();
             IRQ = new GPIO[numberOfCores];
@@ -552,10 +553,10 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
                         name: "GPIO" + i + "_STATUS_OUTTOPAD")
                     .WithReservedBits(10, 2)
                     .WithFlag(12, FieldMode.Read,
-                        valueProviderCallback: _ => State[i],
+                        valueProviderCallback: _ => IsPinOutput(i),
                         name: "GPIO" + i + "_STATUS_OEFROMPERI")
                     .WithFlag(13, FieldMode.Read,
-                        valueProviderCallback: _ => State[i],
+                        valueProviderCallback: _ => IsPinOutput(i),
                         name: "GPIO" + i + "_STATUS_OETOPAD")
                     .WithReservedBits(14, 3)
                     .WithFlag(17, FieldMode.Read,
@@ -567,11 +568,11 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
                         name: "GPIO" + i + "_STATUS_INTOPERI")
                     .WithReservedBits(20, 4)
                     .WithFlag(24, FieldMode.Read,
-                        valueProviderCallback: _ => State[i],
+                        valueProviderCallback: _ => IRQ1.IsSet || IRQ0.IsSet,
                         name: "GPIO" + i + "_STATUS_IRQFROMPAD")
                     .WithReservedBits(25, 1)
                     .WithFlag(26, FieldMode.Read,
-                        valueProviderCallback: _ => State[i],
+                        valueProviderCallback: _ => IRQ1.IsSet || IRQ0.IsSet,
                         name: "GPIO" + i + "_STATUS_IRQTOPROC")
                     .WithReservedBits(27, 5);
 
@@ -707,8 +708,7 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
                 int startingPin = p * 8;
                 registersMap[ints0p0 + p * 4] = new DoubleWordRegister(this)
                     .WithValueField(0, 32, FieldMode.Read, valueProviderCallback: _ => {
-                        uint ret = BuildRawInterruptsForCore(0, startingPin);
-                        return BuildRawInterruptsForCore(0, startingPin);
+                        return BuildRawInterruptsForCore(0, startingPin, true);
                     }, name: "INTS0" + p + "_PROC0");
             }
 
@@ -716,16 +716,30 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
             // 8 pins per register
             for (int p = 0; p < numberOfIntRegisters; ++p)
             {
+                int startingPin = p * 8;
                 registersMap[intr0p1 + p * 4] = new DoubleWordRegister(this)
-                    .WithValueField(0, 32, name: "INTR0" + p + "_PROC1");
+                    .WithValueField(0, 32, writeCallback: (_, value) => {
+                        ClearRawInterrupts(startingPin, value);
+                        IRQ1.Unset();
+                    }, valueProviderCallback: _ => {
+                        return BuildRawInterruptsForCore(1, startingPin);
+                    }, name: "INTR0" + p + "_PROC1");
             }
 
             int inte0p1 = intr0p1 + numberOfIntRegisters * 4;
             // 8 pins per register
             for (int p = 0; p < numberOfIntRegisters; ++p)
             {
+                int startingPin = p * 8;
                 registersMap[inte0p1 + p * 4] = new DoubleWordRegister(this)
-                    .WithValueField(0, 32, name: "INTE0" + p + "_PROC1");
+                    .WithValueField(0, 32, valueProviderCallback: _ => {
+                        return GetEnabledInterruptsForCore(1, startingPin);
+                    }, writeCallback: (_, value) => {
+                        IRQ0.Unset();
+                        ClearRawInterrupts(startingPin, ~value);
+                        EnableInterruptsForCore(1, startingPin, value);
+                    },
+                    name: "INTE0" + p + "_PROC1");
             }
 
             int intf0p1 = inte0p1 + numberOfIntRegisters * 4;
@@ -740,8 +754,12 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
             // 8 pins per register
             for (int p = 0; p < numberOfIntRegisters; ++p)
             {
+                int startingPin = p * 8;
                 registersMap[ints0p1 + p * 4] = new DoubleWordRegister(this)
-                    .WithValueField(0, 32, name: "INTS0" + p + "_PROC1");
+                    .WithValueField(0, 32, FieldMode.Read, valueProviderCallback: _ => {
+                        return BuildRawInterruptsForCore(1, startingPin, true);
+                    },
+                    name: "INTS0" + p + "_PROC1");
             }
 
             int dormantWakeInte0 = ints0p1 + numberOfIntRegisters * 4;
@@ -1169,13 +1187,11 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
         public GPIO IRQ0 => IRQ[0];
         public GPIO IRQ1 => IRQ[1];
 
-
-
         // Currently I have no better idea how to retrigger CPU evaluation when GPIO state changes 
         // This is necessary to have synchronized PIO with System Clock
         public List<Action<uint>> ReevaluatePioActions { get; set; }
         public GPIO OperationDone { get; }
-        private uint BuildRawInterruptsForCore(int core, int startingPin)
+        private uint BuildRawInterruptsForCore(int core, int startingPin, bool checkForce = false)
         {
             uint ret = 0;
             for (int i = 0; i < 8; ++i)
@@ -1187,6 +1203,20 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
                 ret |= (edgeLowState[pin] && irqProc[core, pin].EdgeLow) == true ? 1u << (i * 4 + 2) : 0;
                 ret |= (edgeHighState[pin] && irqProc[core, pin].EdgeHigh) == true ? 1u << (i * 4 + 3) : 0;
             }
+
+            if (checkForce)
+            {
+                for (int i = 0; i < 8; ++i)
+                {
+                     int pin = i + startingPin;
+                     if (pin >= NumberOfPins) break;
+                     ret |= irqForced[core, pin].LevelLow ? 1u << (i * 4) : 0;
+                     ret |= irqForced[core, pin].LevelHigh ? 1u << (i * 4 + 1) : 0;
+                     ret |= irqForced[core, pin].EdgeLow ? 1u << (i * 4 + 2) : 0;
+                     ret |= irqForced[core, pin].EdgeHigh ? 1u << (i * 4 + 3) : 0;
+                 }
+            }
+ 
             return ret;
         }
 
@@ -1302,6 +1332,7 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
         };
 
         private GpioIrqEnableState[,] irqProc;
+        private GpioIrqEnableState[,] irqForced;
 
         private bool[] edgeLowState;
         private bool[] edgeHighState;

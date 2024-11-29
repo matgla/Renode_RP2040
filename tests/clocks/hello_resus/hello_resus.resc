@@ -1,4 +1,0 @@
-$global.TEST_FILE=$ORIGIN/../../../pico-examples/build/clocks/hello_resus/hello_resus.elf
-
-include $ORIGIN/../../prepare.resc
-showAnalyzer sysbus.uart0

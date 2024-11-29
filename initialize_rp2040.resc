@@ -1,5 +1,0 @@
-include $ORIGIN/initialize_common.resc
-
-machine LoadPlatformDescription $ORIGIN/rp2040.repl
-sysbus LoadELF $ORIGIN/b2.elf
-

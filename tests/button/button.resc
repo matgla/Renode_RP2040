@@ -1,9 +1,0 @@
-$global.TEST_FILE=$ORIGIN/../../blinky
-$machine_name="pico_tests"
-$platform_file=$ORIGIN/raspberry_pico_with_led_and_button.repl
-include $ORIGIN/../prepare.resc
-
-logLevel -1
-emulation SetGlobalQuantum "0.00001"
-
-

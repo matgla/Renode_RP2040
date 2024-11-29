@@ -1,0 +1,40 @@
+name: Renode RP2040 Linux - Tests
+
+on:
+  workflow_call:
+
+jobs:
+  build_pico_examples:
+    name: "Renode Linux"
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/matgla/yasldtoolchain:0.4.1
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Create GIT Identity
+        shell: bash 
+        run: | 
+          git config --global user.email "you@example.com" && git config --global user.name "Your Name"
+      - uses: actions/download-artifact@v4
+        with:
+          name: pico-examples 
+          path: tests/pico-examples/build
+      - name: Build & Execute Tests
+        shell: bash
+        run: |
+          ./tests/run_tests.py -r 3 -f tests/tests.yaml
+      - uses: actions/upload-artifact@v4
+        with:
+          name: run_artifacts
+          if: always()
+          compression-level: 9
+          path: |
+            logs/*
+            snapshots/*
+          
+

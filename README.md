@@ -17,7 +17,7 @@ There is predefined Raspberry Pico board description in: 'boards/raspberry_pico.
 | **IRQ**  | $${\color{yellow}✓}$$ | Propagation from some peripherals is implemented |
 | **DMA**  | $${\color{green}✓}$$  | DMA implemented with ringing and control blocks support |
 | **Clocks** | $${\color{yellow}✓}$$ | Clocks are mostly just stubs, but with tree propagation, but virtual time is always correct | 
-| **GPIO** | $${\color{yellow}✓}$$ | Pins manipulation implemented, with CORE0 interrupts support. PIO may needs to be manually reevaluated due to CPU emulation (it's not step by step). Look for RP2040_SPI (PL022) peripheral as an example. Statuses needs to be implemented, now they're showing true on all fields when pin is high. |
+| **GPIO** | $${\color{green}✓}$$ | Pins manipulation implemented, with interrupts support. PIO may needs to be manually reevaluated due to CPU emulation (it's not step by step). Look for RP2040_SPI (PL022) peripheral as an example. Statuses may not be adequate to simplify simulation for now . |
 | **XOSC** |  $${\color{green}✓}$$  | |
 | **ROSC** | $${\color{green}✓}$$  | |
 | **PLL** | $${\color{green}✓}$$  | |
@@ -61,7 +61,7 @@ To use Raspberry Pico simulation clone Renode_RP2040 repository, then add path t
 Example use:
 ```
 (monitor) path add @repos/Renode_RP2040 
-(monitor) include @repos/Renode_RP2040/boards/initialize_raspberry_pico.resc 
+(monitor) include @boards/initialize_raspberry_pico.resc 
 (raspberry_pico) sysbus LoadELF @repos/Renode_RP2040/pico-examples/build/hello_world/serial/
 hello_serial.elf
 (raspberry_pico) showAnalyzer sysbus.uart0
@@ -76,7 +76,7 @@ You may use it inside your simulation scripts, look at `tests/prepare.resc` as a
 Raspberry Pico configuration may be extended to configure board connections. 
 As an example you can check `tests/pio/clocked_input/raspberry_pico_with_redirected_spi.repl`.
 
-Then you can include boards/initalize_custom_board.resc after setting $platform_file variable that points to your board.
+Then you can include `boards/initalize_custom_board.resc` after setting $platform_file variable that points to your board.
 
 ```
 $platform_file=@my_board.repl
