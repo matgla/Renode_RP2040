@@ -1,136 +1,140 @@
-# -*- coding: utf-8 -*-
-
-#
-# visualization_server.py
-#
-# Copyright (c) 2024 Mateusz Stadnik <matgla@live.com>
-#
-# Distributed under the terms of the MIT License.
-#
-
-import SocketServer 
-import SimpleHTTPServer 
-
-import subprocess
 import sys
-print("Executable: ", sys.executable)
-
-subprocess.check_call([sys.executable, "-m", "pip", "install", "websockets"])
-
-from websockets.server import serve 
+import time 
+import psutil 
+import os
+import json
 import asyncio
+import websockets
+import aiohttp
+from aiohttp import web
+import argparse 
 
-from threading import Thread
+parser = argparse.ArgumentParser()
+parser.add_argument("--port", type=int, help="Server Port", required=True)
+args, _ = parser.parse_known_args()
 
-import json 
+script_dir = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(script_dir)
+os.chdir(script_dir)
 
-class VisualizationServer:
-    def __init__(self, port):
-        self.port = port 
-        self.leds = {}
-        self.buttons = {}
-        self.server = None
+parent_pid = psutil.Process(os.getpid()).ppid()
 
-    def serve(self):
-        if self.server is not None:
-            print("Visualization is already running")
-            return
+async def handle_root(request):
+    return web.FileResponse("index.html") 
 
-        print("Serving visualization at localhost:" + str(self.port))
+app = web.Application()
+app.router.add_get("/", handle_root)
+app.router.add_static("/", path=".", name="static", show_index=True)
 
-        try:
-            self.server = SocketServer.TCPServer(("", self.port), SimpleHTTPServer.SimpleHTTPRequestHandler)
-            self.server_thread = Thread(target = self.server.serve_forever)
-            self.server.allow_reuse_address = True
-            
-            #self.server_thread.deamon = True
-            self.server_thread.start()
-        except:
-            import traceback
-            traceback.print_exc()
+clients = [] 
 
+def run_http_server():
+    runner = web.AppRunner(app)
+    return runner
 
+leds = {}
+buttons = []
 
-    def stop(self):
-        print("Stopping visualization from localhost:" + str(self.port))
-        if self.server is not None:
-            self.server.shutdown() 
-            self.server.server_close()
+async def send_to_clients(msg):
+    if clients:
+        for ws in clients:
+            await ws.send_str(json.dumps(msg)) 
 
-        # if self.websocket is not None:
-            # self.websocket.close_server()
-    
-        self.server_thread.join()
-        # self.websocket_thread.join()
-        
-        print("Visualization is done")
-        
-        # self.websocket_thread = None
-        # self.websocket = None 
-        self.server = None
-        self.server_thread = None
+async def register_device(msg):
+    if msg["peripheral_type"] == "led":
+        leds[msg["name"]] = msg["state"]
+        await send_to_clients(msg)
+    if msg["peripheral_type"] == "button":
+        buttons.append(msg["name"])
+        await send_to_clients(msg)
 
-    def on_led_change(self, led, state):
-        self.websocket_send_message({
-            "type": "led",
-            "target": led,
-            "state": state
-        })
+async def state_change(msg):
+    if msg["peripheral_type"] == "led":
+        leds[msg["name"]] = msg["state"]
+        await send_to_clients(msg)
+ 
+async def process_message(message, stop_event):
+    if message["msg"] == "exit":
+        stop_event.set()
+        for ws in clients:
+            await ws.close()
 
-    def register_led(self, led):
-        self.leds[led] = False
-        self.websocket_send_message({
-            "type": "register",
+    if message["msg"] == "register":
+        await register_device(message)
+
+    if message["msg"] == "state_change":
+        await state_change(message)
+
+async def process_message_from_ws(msg):
+    sys.stdout.write(msg + "\n") 
+    sys.stdout.flush()
+
+async def websocket_handler(request):
+    global ws
+    ws = web.WebSocketResponse()
+    await ws.prepare(request)
+
+    clients.append(ws)
+    for led, value in leds.items():
+        await ws.send_str(json.dumps({
+            "msg": "register",
             "peripheral_type": "led",
-            "target": led,
-            "state": False
-        })
+            "name": led,
+            "state": value
+        }))
 
-    def register_button(self, name, button):
-        self.buttons[name] = button 
-        self.websocket_send_message({
-            "type": "register",
+    for button in buttons: 
+        await ws.send_str(json.dumps({
+            "msg": "register",
             "peripheral_type": "button",
-            "target": button
-        })
+            "name": button
+        }))
 
-    def websocket_new_client(self, client, server):
-        print("New client is registered, sending registration messages")
-        for key, value in self.leds.items(): 
-            self.websocket_send_to_client(client, {
-                "type": "register",
-                "peripheral_type": "led",
-                "target": key,
-                "state": value 
-            })
+    try:
+        async for msg in ws:
+            if msg.type == aiohttp.WSMsgType.TEXT:
+                await process_message_from_ws(msg.data)
+            elif msg.type == aiohttp.WSMsgType.ERROR or msg.type == aiohttp.WSMsgType.CLOSED:
+                clents.remove(ws)
+    finally:
+        clients.remove(ws)
+    return ws
 
-        for key, value in self.buttons.items(): 
-            self.websocket_send_to_client(client, {
-                "type": "register",
-                "peripheral_type": "button",
-                "target": key
-            })
 
-    def websocket_message_received(self, client, server, message):
-        message = json.loads(message)
-        if (message["type"] == "action"):
-            if (message["peripheral_type"] == "button"):
-                if message["action"] == "press":
-                    self.buttons[message["target"]].Press()
-                else:
-                    self.buttons[message["target"]].Release()
+app.add_routes([web.get('/ws', websocket_handler)])
 
-    def websocket_send_message(self, message):
-        if self.websocket is not None and len(self.websocket.clients) > 0:
-            for client in self.websocket.clients:
-                try:
-                    self.websocket.send_message(client, json.dumps(message))
-                except Exception as e:
-                    pass
+async def check_parent(stop_event):
+    while not stop_event.is_set() and psutil.pid_exists(parent_pid):
+        loop = asyncio.get_event_loop()
+        data = await loop.run_in_executor(None, sys.stdin.readline)
+        try: 
+            msg = json.loads(data.strip())
+            await process_message(msg, stop_event)
+        except:
+            if msg == "quit":
+                stop_event.set() 
+                for ws in clients:
+                    await ws.close() 
 
-    def websocket_send_to_client(self, client, message):
-        if self.websocket is not None and client is not None:
-            try:
-                self.websocket.send_message(client, json.dumps(message))
-            except Exception as e:
-                pass
+    stop_event.set()    
+
+
+async def start_http_server(runner, stop_event):
+    await runner.setup()
+    site = web.TCPSite(runner, "localhost", args.port)
+    await site.start()
+    await stop_event.wait()
+    await runner.cleanup()
+
+async def main():
+    stop_event = asyncio.Event()
+    runner = run_http_server()
+    server_task = asyncio.create_task(start_http_server(runner, stop_event))
+    parent_exists = asyncio.create_task(check_parent(stop_event))
+    try:
+        await asyncio.gather(server_task, parent_exists)
+    except asyncio.CancelledError:
+        pass 
+
+asyncio.run(main())
+

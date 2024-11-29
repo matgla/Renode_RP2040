@@ -61,6 +61,7 @@ def mc_stopVisualization():
     global process
     global close 
     global receiver
+    print("Closing visualization")
     if process is not None: 
         sendMessage({
             "msg": "exit"
@@ -68,9 +69,11 @@ def mc_stopVisualization():
         process.wait()
 
     close = True
+    print("Closing receiver thread")
     if receiver is not None: 
         receiver.join()
 
+    print("Visualization was closed")
     process = None 
     receiver = None
 
@@ -84,13 +87,13 @@ def mc_startVisualization(port):
     global receiver
     global close 
 
-    command = ["python3", script_dir + "/visualization_server2.py"]
+    command = ["python3", script_dir + "/visualization_server.py", "--port", str(port)]
     process = subprocess.Popen(command, 
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE)
     print("Spawned process with PID: " + str(process.pid))
-   
+    
     emulation = Antmicro.Renode.Core.EmulationManager.Instance.CurrentEmulation 
     machine = emulation.Machines[0]
     machine.StateChanged += machine_state_changed

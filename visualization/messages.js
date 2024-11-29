@@ -1,16 +1,70 @@
 var ws;
 
+i = 0;
+ledColors = ["red", "green", "blue", "orange", "pink"];
+
+function getNextColor() {
+  colorIndex = i++ % ledColors.length;
+  console.log("Getting: ", colorIndex);
+
+  return ledColors[colorIndex];
+}
+
+function changeLedState(led, state, color = null) {
+  svg = led.querySelector("svg");
+  if (svg) {
+    const circle = svg.querySelector("#On");
+    if (circle && !state) {
+      if (circle.style != null) {
+        circle.style.display = "none";
+      }
+    }
+    else if(circle)  {
+      if (circle.style != null) {
+        circle.style.display = "block";
+      }
+    }
+    if (color)
+    {
+    console.log(color, " is ")
+    }
+    if (circle && color != null)
+    {
+      console.log("Setting color: " + color)
+      const bulb = circle.querySelector("circle");
+      if (bulb)
+      {
+        bulb.style.fill = color;
+      }
+    }
+  }
+}
+
 function registerLed(name, state) {
   if (name == "led") {
     console.log("adding board led handler");
     return;
   }
   console.log("adding user led: ", name)
-  var led = document.createElement("div");
-  led.className = state ? "led_on" : "led_off";
-  led.id = name;
+  var ledContainer = document.createElement("div");
+  ledContainer.className = "ledElement"
 
-  document.getElementById("leds").appendChild(led);
+  var led = document.createElement("div");
+  fetch("./assets/led.svg")
+    .then(response => response.text())
+    .then(svgContent => {
+      led.innerHTML = svgContent
+      led.id = name;
+      led.className = "led";
+      console.log("Adding led");
+      changeLedState(led, state, getNextColor());
+      var ledText = document.createElement("div");
+      ledText.innerHTML += name;  
+      ledContainer.appendChild(ledText)
+      ledContainer.appendChild(led)
+      document.getElementById("leds").appendChild(ledContainer);
+    })
+    .catch(error => console.error("Error loading SVG: ", error));
 }
 
 function sendMessage(obj) {
@@ -18,25 +72,40 @@ function sendMessage(obj) {
 }
 
 function registerButton(name) {
+  var buttonsContainer = document.createElement("div");
+  buttonsContainer.className = "buttonElement";
   var button = document.createElement("div");
   button.className = "button";
   button.id = name;
-  button.addEventListener('mousedown', function() {
+  
+  fetch("./assets/button.svg")
+    .then(response => response.text())
+    .then(svgContent => {
+      button.innerHTML = svgContent;
+      var buttonText = document.createElement("div");
+      buttonText.innerHTML += name;  
+      buttonsContainer.appendChild(buttonText);
+      buttonsContainer.appendChild(button);
+      document.getElementById("buttons").appendChild(buttonsContainer);
+   })
+   .catch(error => console.error("Error loading SVG: ", error));
+  
+  button.addEventListener('mousedown', function () {
     console.log("Button " + name + " pressed");
     let message = {
-      "type": "action", 
-      "target": "button", 
+      "type": "action",
+      "target": "button",
       "name": name,
       "action": "press"
     };
     sendMessage(message);
   });
 
-  button.addEventListener('mouseup', function() {
+  button.addEventListener('mouseup', function () {
     console.log("Button " + name + "released");
     let message = {
-      "type": "action", 
-      "target": "button", 
+      "type": "action",
+      "target": "button",
       "name": name,
       "action": "release"
     };
@@ -47,12 +116,7 @@ function registerButton(name) {
 }
 
 function ledStateChange(msg) {
-  if (msg["state"]) {
-    document.getElementById(msg["name"]).className = "led_on";
-  } else {
-    document.getElementById(msg["name"]).className = "led_off";
-  }
-
+  changeLedState(document.getElementById(msg["name"]), msg["state"]);
 }
 
 function registerAsset(msg) {
@@ -86,7 +150,7 @@ window.addEventListener('DOMContentLoaded', (event) => {
 
   ws.onmessage = function (e) {
     const obj = JSON.parse(e.data);
-    processMessage(obj); 
+    processMessage(obj);
   }
 
   ws.onclose = function () {
