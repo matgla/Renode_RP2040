@@ -1,5 +1,6 @@
 $machine_name?="rasbperry_pico"
 $platform_file?=$ORIGIN/boards/raspberry_pico.repl
+$visualization_file?=$ORIGIN/visualization/raspberry_pico
 include $ORIGIN/boards/initialize_custom_board.resc
 
 sysbus LoadELF $global.FIRMWARE
