@@ -1,8 +1,11 @@
 $machine_name?="raspberry_pico"
+$visualization_path?=$ORIGIN/../visualization
 
 include $ORIGIN/../cores/initialize_peripherals.resc
 machine LoadPlatformDescription $platform_file
 sysbus LoadELF $ORIGIN/../bootroms/rp2040/b2.elf
 
+include $ORIGIN/../visualization/visualization.py 
 
+setVisualizationPath $visualization_path
 

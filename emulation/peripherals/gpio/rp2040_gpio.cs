@@ -802,7 +802,7 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
         public void SetPullDown(int pin, bool state)
         {
             pullDown[pin] = state;
-            if (!IsPinOutput(pin) && state == true)
+            if (state == true)
             {
                 State[pin] = false;
                 Connections[pin].Set(false);
@@ -812,7 +812,7 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
         public void SetPullUp(int pin, bool state)
         {
             pullUp[pin] = state;
-            if (!IsPinOutput(pin) && state == true)
+            if (state == true)
             {
                 State[pin] = true;
                 Connections[pin].Set(true);
@@ -1247,14 +1247,22 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
                 bool levelLow = (value & (1u << (i * 4))) != 0;
                 if (levelLow)
                 {
-                    this.Log(LogLevel.Noisy, "Enabling level low interrupt for pin: {0}", pin);
+                    this.Log(LogLevel.Noisy, "Enabling level low interrupt for pin: {0}, current: {1}", pin, State[pin]);
+                    if (!State[pin])
+                    {
+                        IRQ[core].Set(true);
+                    }
                 }
                 irqProc[core, pin].LevelLow = levelLow;
 
                 bool levelHigh = (value & (1u << (i * 4 + 1))) != 0;
                 if (levelHigh)
                 {
-                    this.Log(LogLevel.Noisy, "Enabling level high interrupt for pin: {0}", pin);
+                    this.Log(LogLevel.Noisy, "Enabling level high interrupt for pin: {0}, current: {1}", pin, State[pin]);
+                    if (State[pin])
+                    {
+                        IRQ[core].Set(true);
+                    }
                 }
                 irqProc[core, pin].LevelHigh = levelHigh;
 
