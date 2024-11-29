@@ -100,6 +100,26 @@ $global.FIRMWARE=my_awesome_binary.elf
 include @run_firmware.resc
 ```
 
+# Board visualization 
+There is possibility to visualize board using python visualization plugin. 
+> [!IMPORTANT]
+> Only Raspberry Pico based boards are currently supported
+> You can add buttons or leds and they will be automatically registered
+> But totally different boards are not supported yet
+
+To use it create python virtual env, then inside virtualenv:
+```
+pip3 install -r visualization/requirements.txt
+renode --console your_simulation.resc
+
+inside renode console:
+(rasbperry_pico) startVisualization 8080 
+```
+and open localhost:8080 in your web browser.
+
+Current visualization is ugly, but it works!
+
+
 # Multi Node simulation. 
 Many RP2040 simulators may interwork together. I am using that possibility in full MSPC simulation. To interwork between them GPIOConnector may be used, please check existing usage (`simulation` directory):
  [MSPC Board Simulation](https://github.com/matgla/mspc-south-bridge/) 
