@@ -91,7 +91,8 @@ def mc_startVisualization(port):
     process = subprocess.Popen(command, 
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE)
+        stderr=subprocess.STDOUT)
+
     print("Spawned process with PID: " + str(process.pid))
     
     emulation = Antmicro.Renode.Core.EmulationManager.Instance.CurrentEmulation 
@@ -136,4 +137,6 @@ def getMessage():
             process_message(json.loads(data.strip()))
         except:
             continue 
-    print("Process IO has died")
+    
+    print("Process IO has died: ")
+    print(process.stdout.read())
