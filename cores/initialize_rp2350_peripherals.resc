@@ -1,0 +1,5 @@
+mach create $machine_name 
+
+include $ORIGIN/initialize_common.resc
+
+include $ORIGIN/../emulation/peripherals/gpio/rp2350_gpio.cs

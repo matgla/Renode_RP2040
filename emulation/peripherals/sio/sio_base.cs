@@ -19,7 +19,7 @@ using Antmicro.Renode.Peripherals.GPIOPort;
 
 namespace Antmicro.Renode.Peripherals.Miscellaneous
 {
-    class FifoStatus
+    public class FifoStatus
     {
         public bool Roe { get; set; }
         public bool Wof { get; set; }
@@ -27,7 +27,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
         public bool Vld { get; set; }
     }
 
-    class Divider
+    public class Divider
     {
         public long Dividend { get; set; }
         public long Divisor { get; set; }

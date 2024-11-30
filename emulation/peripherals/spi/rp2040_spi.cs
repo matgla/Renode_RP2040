@@ -115,33 +115,33 @@ namespace Antmicro.Renode.Peripherals.SPI
       }
     }
 
-    private void OnGpioFunctionSelect(int pin, RP2040GPIO.GpioFunction function)
+    private void OnGpioFunctionSelect(int pin, RpGpioFunction function)
     {
       if (id == 0)
       {
         switch (function)
         {
-          case RP2040GPIO.GpioFunction.SPI0_TX:
+          case RpGpioFunction.SPI0_TX:
             {
               txPins.Add(pin);
               return;
             }
-          case RP2040GPIO.GpioFunction.SPI0_RX:
+          case RpGpioFunction.SPI0_RX:
             {
               rxPins.Add(pin);
               return;
             }
-          case RP2040GPIO.GpioFunction.SPI0_CSN:
+          case RpGpioFunction.SPI0_CSN:
             {
               csPins.Add(pin);
               return;
             }
-          case RP2040GPIO.GpioFunction.SPI0_SCK:
+          case RpGpioFunction.SPI0_SCK:
             {
               clockPins.Add(pin);
               return;
             }
-          case RP2040GPIO.GpioFunction.NONE:
+          case RpGpioFunction.NONE:
             {
               txPins.Remove(pin);
               rxPins.Remove(pin);
@@ -155,27 +155,27 @@ namespace Antmicro.Renode.Peripherals.SPI
       {
         switch (function)
         {
-          case RP2040GPIO.GpioFunction.SPI1_TX:
+          case RpGpioFunction.SPI1_TX:
             {
               txPins.Add(pin);
               return;
             }
-          case RP2040GPIO.GpioFunction.SPI1_RX:
+          case RpGpioFunction.SPI1_RX:
             {
               rxPins.Add(pin);
               return;
             }
-          case RP2040GPIO.GpioFunction.SPI1_CSN:
+          case RpGpioFunction.SPI1_CSN:
             {
               csPins.Add(pin);
               return;
             }
-          case RP2040GPIO.GpioFunction.SPI1_SCK:
+          case RpGpioFunction.SPI1_SCK:
             {
               clockPins.Add(pin);
               return;
             }
-          case RP2040GPIO.GpioFunction.NONE:
+          case RpGpioFunction.NONE:
             {
               txPins.Remove(pin);
               rxPins.Remove(pin);

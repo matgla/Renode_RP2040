@@ -107,27 +107,27 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             UpdateAllClocks();
         }
 
-        private void UpdateGpioMapping(int id, RP2040GPIO.GpioFunction function)
+        private void UpdateGpioMapping(int id, RpGpioFunction function)
         {
             this.Log(LogLevel.Info, "Update of GPIO mapping for pin: " + id + " function: " + function);
             switch (function)
             {
-                case RP2040GPIO.GpioFunction.CLOCK_GPOUT0:
+                case RpGpioFunction.CLOCK_GPOUT0:
                     {
                         gpoutPins[0] = id;
                         break;
                     }
-                case RP2040GPIO.GpioFunction.CLOCK_GPOUT1:
+                case RpGpioFunction.CLOCK_GPOUT1:
                     {
                         gpoutPins[1] = id;
                         break;
                     }
-                case RP2040GPIO.GpioFunction.CLOCK_GPOUT2:
+                case RpGpioFunction.CLOCK_GPOUT2:
                     {
                         gpoutPins[2] = id;
                         break;
                     }
-                case RP2040GPIO.GpioFunction.CLOCK_GPOUT3:
+                case RpGpioFunction.CLOCK_GPOUT3:
                     {
                         gpoutPins[3] = id;
                         break;

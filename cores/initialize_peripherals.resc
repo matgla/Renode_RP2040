@@ -1,13 +1,4 @@
-mach create $machine_name 
-
-include $ORIGIN/../emulation/externals/w25q16.cs
-
-include $ORIGIN/../emulation/peripherals/memory/memory_alias.cs
-
-include $ORIGIN/../emulation/peripherals/rp2040_peripheral_base.cs
-EnsureTypeIsLoaded "Antmicro.Renode.Peripherals.RP2040PeripheralBase"
-EnsureTypeIsLoaded "Antmicro.Renode.Peripherals.IRP2040Peripheral"
-
+include $ORIGIN/initialize_common.resc
 
 include $ORIGIN/../emulation/peripherals/clocks/rp2040_xosc.cs
 EnsureTypeIsLoaded "Antmicro.Renode.Peripherals.Miscellaneous.RP2040XOSC"
@@ -32,6 +23,10 @@ include $ORIGIN/../emulation/peripherals/pio/rp2040_pio.cs
 include $ORIGIN/../emulation/peripherals/spi/rp2040_spi.cs
 EnsureTypeIsLoaded "Antmicro.Renode.Peripherals.SPI.PL022"
 include $ORIGIN/../emulation/peripherals/spi/rp2040_xip_ssi.cs
+
+include $ORIGIN/../emulation/peripherals/sio/sio_base.cs
+EnsureTypeIsLoaded "Antmicro.Renode.Peripherals.Miscellaneous.FifoStatus"
+EnsureTypeIsLoaded "Antmicro.Renode.Peripherals.Miscellaneous.Divider"
 
 include $ORIGIN/../emulation/peripherals/sio/rp2040_sio.cs
 

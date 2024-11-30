@@ -54,7 +54,7 @@ namespace Antmicro.Renode.Peripherals.CPU
             binder = new NativeBinder(this, libraryFile);
             machine.GetSystemBus(this).Register(this, new BusRangeRegistration(new Antmicro.Renode.Core.Range(address, (ulong)Size)));
             this.gpio = gpio;
-            gpioFunction = id == 0 ? GPIOPort.RP2040GPIO.GpioFunction.PIO0 : GPIOPort.RP2040GPIO.GpioFunction.PIO1;
+            gpioFunction = id == 0 ? GPIOPort.RpGpioFunction.PIO0 : GPIOPort.RpGpioFunction.PIO1;
             machine.GetSystemBus(this).Register(this, new BusMultiRegistration(address + xorAliasOffset, aliasSize, "XOR"));
             machine.GetSystemBus(this).Register(this, new BusMultiRegistration(address + setAliasOffset, aliasSize, "SET"));
             machine.GetSystemBus(this).Register(this, new BusMultiRegistration(address + clearAliasOffset, aliasSize, "CLEAR"));
@@ -264,7 +264,7 @@ namespace Antmicro.Renode.Peripherals.CPU
         // [This needs to be mapped to the id of the Program Counter register used by the simulator]
         private const int PCRegisterId = 0;
         private int pioId;
-        private GPIOPort.RP2040GPIO.GpioFunction gpioFunction;
+        private GPIOPort.RpGpioFunction gpioFunction;
 
         [Transient]
         private NativeBinder binder;

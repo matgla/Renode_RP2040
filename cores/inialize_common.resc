@@ -1,0 +1,11 @@
+mach create $machine_name 
+
+include $ORIGIN/../emulation/externals/w25q16.cs
+include $ORIGIN/../emulation/peripherals/memory/memory_alias.cs
+
+include $ORIGIN/../emulation/peripherals/rp2040_peripheral_base.cs
+EnsureTypeIsLoaded "Antmicro.Renode.Peripherals.RP2040PeripheralBase"
+EnsureTypeIsLoaded "Antmicro.Renode.Peripherals.IRP2040Peripheral"
+
+include $ORIGIN/../emulation/peripherals/gpio/gpio_base.cs 
+EnsureTypeIsLoaded "Antmicro.Renode.Peripherals.GPIOPort.RpGpioFunctionBuilder"
