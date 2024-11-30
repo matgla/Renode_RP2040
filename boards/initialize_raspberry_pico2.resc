@@ -1,0 +1,5 @@
+$machine_name?="raspberry_pico_2"
+$platform_file?=$ORIGIN/raspberry_pico2.repl
+
+include $ORIGIN/initialize_custom_rp2350_board.resc
+

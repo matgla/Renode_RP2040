@@ -13,12 +13,13 @@ using Antmicro.Renode.Logging;
 using Antmicro.Renode.Core.Structure.Registers;
 using Antmicro.Renode.Peripherals.IRQControllers;
 using Antmicro.Renode.Peripherals.GPIOPort;
+using System.Data;
 
 namespace Antmicro.Renode.Peripherals.Miscellaneous
 {
     public class RP2040Clocks : RP2040PeripheralBase, IKnownSize
     {
-        public RP2040Clocks(Machine machine, RP2040XOSC xosc, RP2040ROSC rosc, RP2040PLL pll, RP2040PLL pllusb, NVIC nvic0, NVIC nvic1, ulong address, RP2040GPIO gpio) : base(machine, address)
+        public RP2040Clocks(Machine machine, RP2040XOSC xosc, RP2040PLL pll, RP2040PLL pllusb, NVIC nvic0, NVIC nvic1, ulong address, RP2040GPIO gpio, RP2040ROSC rosc = null) : base(machine, address)
         {
             IRQ = new GPIO();
             gpio.SubscribeOnFunctionChange(UpdateGpioMapping);
@@ -190,7 +191,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             switch (refClockSource)
             {
                 case RefClockSource.ROSCClkSrcPh:
-                    return rosc.Frequency;
+                    return rosc == null ? 1 : rosc.Frequency;
                 case RefClockSource.XOSCClkSrc:
                     return xosc.Frequency;
                 case RefClockSource.ClkSrcClkRefAux:
@@ -239,7 +240,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                 {
                     case SysClockAuxSource.ROSCClkSrc:
                         {
-                            return rosc.Frequency;
+                            return rosc == null ? 1 : rosc.Frequency;
                         }
                     case SysClockAuxSource.XOSCClkSrc:
                         {
@@ -348,7 +349,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                         }
                     case SysClockAuxSource.ROSCClkSrc:
                         {
-                            newResus = !rosc.Enabled;
+                            newResus = rosc == null ? false : !rosc.Enabled;
                             break;
                         }
                 }
@@ -383,7 +384,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                 case PeriClockAuxSource.ClkXosc:
                     return xosc.Frequency;
                 case PeriClockAuxSource.ClkRosc:
-                    return rosc.Frequency;
+                    return rosc == null ? 1 : rosc.Frequency;
                 case PeriClockAuxSource.ClkGPin0:
                 case PeriClockAuxSource.ClkGPin1:
                     {
@@ -418,7 +419,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                 case UsbClockAuxSource.ClkPllSys:
                     return pll.CalculateOutputFrequency(xosc.Frequency);
                 case UsbClockAuxSource.ClkRosc:
-                    return rosc.Frequency;
+                    return rosc == null ? 1 : rosc.Frequency;
                 case UsbClockAuxSource.ClkXosc:
                     return xosc.Frequency;
                 case UsbClockAuxSource.ClkGPin0:
@@ -453,7 +454,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                 case RtcClockAuxSource.ClkPllSys:
                     return pll.CalculateOutputFrequency(xosc.Frequency);
                 case RtcClockAuxSource.ClkRosc:
-                    return rosc.Frequency;
+                    return rosc == null ? 1 : rosc.Frequency;
                 case RtcClockAuxSource.ClkXosc:
                     return xosc.Frequency;
                 case RtcClockAuxSource.ClkGPin0:
@@ -488,7 +489,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                 case AdcClockAuxSource.ClkPllSys:
                     return pll.CalculateOutputFrequency(xosc.Frequency);
                 case AdcClockAuxSource.ClkRosc:
-                    return rosc.Frequency;
+                    return rosc == null ? 1 : rosc.Frequency;
                 case AdcClockAuxSource.ClkXosc:
                     return xosc.Frequency;
                 case AdcClockAuxSource.ClkGPin0:
@@ -526,7 +527,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                         return 0;
                     }
                 case GPOUTControl.AuxSource.ClkSrcPllUsb: return pllusb.CalculateOutputFrequency(xosc.Frequency);
-                case GPOUTControl.AuxSource.RoscClkSrc: return rosc.Frequency;
+                case GPOUTControl.AuxSource.RoscClkSrc: return rosc == null ? 1 : rosc.Frequency;
                 case GPOUTControl.AuxSource.XoscClkSrc: return xosc.Frequency;
                 case GPOUTControl.AuxSource.ClkSys: return SystemClockFrequency;
                 case GPOUTControl.AuxSource.ClkUsb: return UsbClockFrequency;
@@ -1010,12 +1011,12 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                             }
                         case 3:
                             {
-                                frequencyCounter = ((ulong)rosc.Frequency << 5) / 1000;
+                                frequencyCounter = (rosc == null ? 1000 : rosc.Frequency << 5) / 1000;
                                 break;
                             }
                         case 4:
                             {
-                                frequencyCounter = ((ulong)rosc.Frequency << 5) / 1000;
+                                frequencyCounter = (rosc == null ? 1000 : rosc.Frequency << 5) / 1000;
                                 break;
                             }
                         case 5:

@@ -1,0 +1,218 @@
+
+bootrom0: Memory.MappedMemory @ sysbus 0x00000000
+    size: 0x8000
+
+bootram0: Memory.MappedMemory @ sysbus 0x400e0000
+    size: 0x400
+
+flash0: Memory.MappedMemory @ sysbus 0x10000000
+    size: 0x200000
+
+flash0_al1: Memory.MemoryAlias @ sysbus 0x13000000
+    address: 0x10000000
+    size: 0x200000
+
+
+sram0: Memory.MappedMemory @ sysbus 0x20000000
+    size: 0x82000
+
+usbram: Memory.MappedMemory @ sysbus 0x50100000
+    size: 0x1000
+
+cpu0: CPU.CortexM @ sysbus
+    cpuType: "cortex-m33"
+    id: 0
+    nvic: nvic0
+
+cpu1: CPU.CortexM @ sysbus
+    cpuType: "cortex-m33"
+    id: 1
+    nvic: nvic1
+    init:
+        IsHalted false 
+
+nvic0: IRQControllers.NVIC @ sysbus new Bus.BusPointRegistration {
+        address: 0xe000e000;
+        cpu: cpu0
+    }
+    systickFrequency: 125000000
+    -> cpu0@0
+
+nvic1: IRQControllers.NVIC @ sysbus new Bus.BusPointRegistration {
+    address: 0xe000e000;
+    cpu: cpu1
+    }
+    systickFrequency: 125000000
+    -> cpu1@0
+
+clocks: Miscellaneous.RP2040Clocks @ sysbus 0x40010000 {
+    xosc: xosc;
+    pll: pll;
+    pllusb: pll_usb;
+    nvic0: nvic0;
+    nvic1: nvic1;
+    address: 0x40010000;
+    gpio: gpio
+}
+
+clocks:
+    IRQ -> nvic0@17
+
+gpio: GPIOPort.RP2040GPIO @ sysbus 0x40028000 {
+    numberOfPins: 30;
+    numberOfCores: 2;
+    address: 0x40028000
+}
+
+gpio:
+    IRQ0 -> nvic0@13
+    IRQ1 -> nvic1@13
+
+    
+gpio_qspi: GPIOPort.RP2040GPIO @ sysbus 0x40030000 {
+    numberOfPins: 6;
+    numberOfCores: 2;
+    address: 0x40030000
+}
+
+//gpio_qspi:
+//    1 -> xip_flash@0
+
+pads: GPIOPort.RP2040Pads @ sysbus 0x40038000 {
+    gpio: gpio;
+    address: 0x40038000
+}
+
+qspi_pads: GPIOPort.RP2040QspiPads @ sysbus 0x40040000 {
+    gpio: gpio_qspi;
+    address: 0x40040000
+}
+
+xosc: Miscellaneous.RP2040XOSC @ sysbus 0x40048000 {
+    frequency: 12000000;
+    address: 0x40048000
+}
+
+pll: Miscellaneous.RP2040PLL @ sysbus 0x40050000 {
+    address: 0x40050000
+}
+
+pll_usb: Miscellaneous.RP2040PLL @ sysbus 0x40058000 {
+    address: 0x40058000
+}
+
+uart0: UART.RP2040Uart @ sysbus 0x40070000
+    address: 0x40070000
+
+uart0:
+    IRQ ->nvic0@20
+    DMATransmitRequest -> dma@20
+    DMAReceiveRequest -> dma@21
+
+uart1: UART.RP2040Uart @ sysbus 0x40078000
+    address: 0x40078000
+
+uart1:
+    IRQ ->nvic0@20
+    DMATransmitRequest -> dma@20
+    DMAReceiveRequest -> dma@21
+
+spi0: SPI.PL022 @ sysbus 0x40080000 {
+    gpio: gpio;
+    id: 0;
+    clocks: clocks;
+    address: 0x40080000
+}
+
+spi1: SPI.PL022 @ sysbus 0x4008800 {
+    gpio: gpio;
+    id: 1;
+    clocks: clocks;
+    address: 0x40088000
+}
+
+i2c0: I2C.RP2040I2C @ sysbus 0x40090000 {
+    clocks: clocks
+}
+
+i2c1: I2C.RP2040I2C @ sysbus 0x40098000 {
+    clocks: clocks
+}
+
+adc: Analog.RP2040ADC @ sysbus 0x400a0000 {
+    address: 0x400a0000;
+    clocks: clocks;
+    pads: pads
+}
+adc: 
+    DMARequest -> dma@36
+
+timer0: Timers.RP2040Timer @  sysbus 0x400b0000
+    address: 0x400b0000
+    IRQ0 -> nvic0@0
+    IRQ1 -> nvic0@1
+    IRQ2 -> nvic0@2
+    IRQ3 -> nvic0@3
+
+timer1: Timers.RP2040Timer @  sysbus 0x400b8000
+    address: 0x400b8000
+    IRQ0 -> nvic0@0
+    IRQ1 -> nvic0@1
+    IRQ2 -> nvic0@2
+    IRQ3 -> nvic0@3
+
+
+
+dwt: Miscellaneous.DWT @ sysbus 0xE0001000
+    // according to 4.7.2 RP2040 Datasheet is 1MHz 
+    frequency: 1000000 
+
+
+poweron: Miscellaneous.PowerOnInput @ sysbus 
+
+// xip_flash: SPI.W25QXX @ xip_ssi {
+//     underlyingMemory: flash0
+// }
+
+dma: DMA.RPDMA @ sysbus 0x50000000 {
+    numberOfChannels: 12;
+    address: 0x50000000
+}
+
+watchdog: Timers.RP2040Watchdog @ sysbus 0x400d8000 {
+    address: 0x400d8000;
+    clocks: clocks
+}
+
+piocpu0: CPU.RP2040PIOCPU @ sysbus
+    cpuType: "rp2350_pio"
+    address: 0x50200000
+    gpio: gpio
+    PerformanceInMips: 1
+    id: 0
+    clocks: clocks
+
+piocpu1: CPU.RP2040PIOCPU @ sysbus
+    cpuType: "rp2350_pio"
+    address: 0x50300000
+    gpio: gpio
+    PerformanceInMips: 1
+    id: 1
+    clocks: clocks
+
+piocpu2: CPU.RP2040PIOCPU @ sysbus
+    cpuType: "rp2350_pio"
+    address: 0x50400000
+    gpio: gpio
+    PerformanceInMips: 1
+    id: 1
+    clocks: clocks
+
+sio: Miscellaneous.RP2040SIO @ sysbus 0xd0000000 {
+    gpio: gpio;
+    gpioQspi: gpio_qspi;
+    address: 0xd0000000
+}
+sio:
+    Core0IRQ -> nvic0@15
+    Core1IRQ -> nvic1@16

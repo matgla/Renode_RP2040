@@ -1,6 +1,6 @@
-$global.TEST_FILE=$ORIGIN/../../../pico-examples/build/hello_world/serial/hello_serial.elf
+$global.TEST_FILE=$ORIGIN/../../../pico-examples/build_rp2350/hello_world/serial/hello_serial.elf
 
-include $ORIGIN/../../../prepare.resc
+include $ORIGIN/../../../prepare_rp2350.resc
 
 logLevel -1
 showAnalyzer sysbus.uart0

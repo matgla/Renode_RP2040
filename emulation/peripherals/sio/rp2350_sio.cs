@@ -20,6 +20,44 @@ using Antmicro.Renode.Peripherals.GPIOPort;
 
 namespace Antmicro.Renode.Peripherals.Miscellaneous
 {
+    class FifoStatus
+    {
+        public bool Roe { get; set; }
+        public bool Wof { get; set; }
+        public bool Rdy { get; set; }
+        public bool Vld { get; set; }
+    }
+
+    class Divider
+    {
+        public long Dividend { get; set; }
+        public long Divisor { get; set; }
+        public long Quotient { get; set; }
+        public long Remainder { get; set; }
+
+        public bool Ready { get; set; }
+        public bool Dirty { get; set; }
+
+        public void CalculateSigned()
+        {
+            if (Divisor != 0)
+            {
+                Quotient = Dividend / Divisor;
+                Remainder = Dividend % Divisor;
+            }
+            Ready = true;
+        }
+        public void CalculateUnsigned()
+        {
+            if (Divisor != 0)
+            {
+                Quotient = Dividend / Divisor;
+                Remainder = Dividend % Divisor;
+            }
+            Ready = true;
+        }
+    }
+
     [AllowedTranslations(AllowedTranslation.ByteToDoubleWord)]
     public class RP2040SIO : RP2040PeripheralBase, IKnownSize
     {

@@ -1,0 +1,7 @@
+using "../cores/rp2350a.repl"
+
+led: Miscellaneous.LED @ gpio 25
+
+gpio: 
+    25 -> led@0
+

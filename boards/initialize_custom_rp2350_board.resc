@@ -1,0 +1,12 @@
+$machine_name?="raspberry_pico_2"
+$visualization_path?=$ORIGIN/../visualization
+
+include $ORIGIN/../cores/initialize_peripherals.resc
+machine LoadPlatformDescription $platform_file
+sysbus LoadBinary $ORIGIN/../bootroms/rp2350/bootrom-combined.bin 0x00000000
+
+include $ORIGIN/../visualization/visualization.py 
+
+setVisualizationPath $visualization_path
+
+

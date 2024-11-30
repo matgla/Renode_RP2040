@@ -1,0 +1,17 @@
+$machine_name?="pico_tests"
+$board_initialization_file?=$ORIGIN/../boards/initialize_raspberry_pico2.resc
+
+path add $ORIGIN/..
+
+log "Loading board initialization file"
+include $board_initialization_file
+
+log "Loading firmware file"
+sysbus LoadELF $global.TEST_FILE
+
+sysbus.cpu0 VectorTableOffset 0x00000000
+sysbus.cpu1 VectorTableOffset 0x00000000
+
+machine StartGdbServer 3333 true sysbus.cpu0
+machine StartGdbServer 3333 true sysbus.cpu1
+
