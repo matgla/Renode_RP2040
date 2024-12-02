@@ -1,9 +1,18 @@
-import React from "react";
+import Widget from "./Widget.js";
+import ButtonImage from "../assets/button.svg";
 import "./Button.css";
 
-const Button = ({ onClick }) => {
+const Button = () => {
     return (
-        <button className="button" onClick={onClick}>Press me</button>
+        <Widget>
+            <div
+                className={`button`}
+            >
+                <img
+                    src={ButtonImage} alt="button" className='button-image' />
+            </div>
+        </Widget>
+
     )
 }
 

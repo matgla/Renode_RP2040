@@ -6,8 +6,7 @@ import './App.css';
 const App = () => {
   return (
     <div className='app'>
-      <Breadboard />
-      <Button onClick={() => console.log('button pressed')} />
+      <Breadboard gridRows={5} gridColumns={32} />
     </div>
   )
 }
