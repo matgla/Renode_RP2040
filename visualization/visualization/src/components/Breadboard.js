@@ -3,6 +3,7 @@ import './Breadboard.css';
 import breadboardImage from "../assets/breadboard.svg"
 import Led from "./Led.js";
 import Button from "./Button.js";
+import MCU from "./MCU.js";
 
 
 
@@ -25,6 +26,7 @@ const Breadboard = ({ gridColumns, gridRows }) => {
             <div className="grid">
                 <Led />
                 <Button />
+                <MCU />
             </div>
         </div>
     );
