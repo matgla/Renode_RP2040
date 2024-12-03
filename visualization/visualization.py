@@ -91,7 +91,7 @@ def mc_startVisualization(port):
     process = subprocess.Popen(command, 
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT)
+        stderr=subprocess.PIPE)
 
     print("Spawned process with PID: " + str(process.pid))
     
