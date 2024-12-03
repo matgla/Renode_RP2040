@@ -1,18 +1,11 @@
 import Widget from "./Widget.js"
-
-import LedImage from "../assets/led.svg";
-import "./Led.css";
+import { ReactComponent as LedImage } from "../assets/led.svg";
 
 const Led = () => {
     return (
         <Widget>
-            <div
-                className={`led`}
-            >
-                <img
-                    src={LedImage} alt="led" className='led-image' />
-            </div>
-        </Widget>
+            <LedImage />
+        </Widget >
     );
 }
 

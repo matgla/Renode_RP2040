@@ -1,4 +1,4 @@
-.mcu {
+.widget {
     position: relative;
     display: flex;
     align-items: center;
@@ -10,7 +10,7 @@
 }
 
 
-.mcu-image {
+.widget-image {
     width: 100%;
     height: 100%;
     object-fit: contain;

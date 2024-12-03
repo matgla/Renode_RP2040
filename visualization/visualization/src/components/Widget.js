@@ -1,24 +1,30 @@
 import React, { useState, useEffect, useRef } from "react";
 import Draggable from 'react-draggable';
+import "./Widget.css";
 
 const Widget = ({ children, width = 1, height = 1 }) => {
     const [position, setPosition] = useState({ x: 0, y: 0 });
     const [gridSize, setGridSize] = useState([25, 25])
-    const [gridPosition, setGridPosition] = useState({row: 1, column: 1})
-    const [gridDimension, setGridDimension] = useState({width: width, height: height})
-    const [rowSpan, setRowSpan] = useState(height);
+    const [gridPosition, setGridPosition] = useState({ row: 1, column: 1 })
+    const [gridDimension, setGridDimension] = useState({ width: width, height: height })
     const draggableRef = useRef(null);
-
-    const handleDrag = (e, data) => {
-        console.log("width: " + width);
+    const [initialized, setInitialized] = useState(false);
+    useEffect(() => {
         const gridSize = getGridSize();
         setGridSize([gridSize, gridSize]);
+        return () => {
+        };
+    }, [initialized]);
+
+    const handleDrag = (e, data) => {
+        const gridSize = getGridSize();
+        setGridSize([gridSize, gridSize]);
+
         const newPosition = {
             x: data.x,
             y: data.y
         };
         setPosition(newPosition);
-
         const newGridPosition = {
             column: Math.round(newPosition.x / gridSize) + 1,
             row: Math.round(newPosition.y / gridSize) + 1
@@ -36,6 +42,12 @@ const Widget = ({ children, width = 1, height = 1 }) => {
         const gridColumns = gridStyle.gridTemplateColumns.split(" ").length;
         const gridSize = gridElement.clientWidth / gridColumns;
         return gridSize;
+    }
+
+    const handleStop = (e, data) => {
+        const snappedX = Math.round(data.x / gridSize[0]) * gridSize[0];
+        const snappedY = Math.round(data.y / gridSize[0]) * gridSize[0];
+        setPosition({ x: snappedX, y: snappedY })
     }
 
     useEffect(() => {
@@ -59,6 +71,7 @@ const Widget = ({ children, width = 1, height = 1 }) => {
         <Draggable
             position={position}
             onDrag={handleDrag}
+            onStop={handleStop}
             grid={gridSize}
             onMouseDown={preventDefault}
             onDragStart={preventDefault}

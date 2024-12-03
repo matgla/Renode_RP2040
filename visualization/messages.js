@@ -19,21 +19,18 @@ function changeLedState(led, state, color = null) {
         circle.style.display = "none";
       }
     }
-    else if(circle)  {
+    else if (circle) {
       if (circle.style != null) {
         circle.style.display = "block";
       }
     }
-    if (color)
-    {
-    console.log(color, " is ")
+    if (color) {
+      console.log(color, " is ")
     }
-    if (circle && color != null)
-    {
+    if (circle && color != null) {
       console.log("Setting color: " + color)
       const bulb = circle.querySelector("circle");
-      if (bulb)
-      {
+      if (bulb) {
         bulb.style.fill = color;
       }
     }
@@ -59,7 +56,7 @@ function registerLed(name, state) {
       console.log("Adding led");
       changeLedState(led, state, getNextColor());
       var ledText = document.createElement("div");
-      ledText.innerHTML += name;  
+      ledText.innerHTML += name;
       ledContainer.appendChild(ledText)
       ledContainer.appendChild(led)
       document.getElementById("leds").appendChild(ledContainer);
@@ -77,20 +74,20 @@ function registerButton(name) {
   var button = document.createElement("div");
   button.className = "button";
   button.id = name;
-  
+
   fetch("./assets/button.svg")
     .then(response => response.text())
     .then(svgContent => {
       button.innerHTML = svgContent;
       var buttonText = document.createElement("div");
-      buttonText.innerHTML += name;  
+      buttonText.innerHTML += name;
       buttonsContainer.appendChild(buttonText);
       buttonsContainer.appendChild(button);
       document.getElementById("buttons").appendChild(buttonsContainer);
-   })
-   .catch(error => console.error("Error loading SVG: ", error));
-  
-  button.addEventListener('mousedown', function () {
+    })
+    .catch(error => console.error("Error loading SVG: ", error));
+
+  button.addEventListener('mousedown', function() {
     console.log("Button " + name + " pressed");
     let message = {
       "type": "action",
@@ -101,7 +98,7 @@ function registerButton(name) {
     sendMessage(message);
   });
 
-  button.addEventListener('mouseup', function () {
+  button.addEventListener('mouseup', function() {
     console.log("Button " + name + "released");
     let message = {
       "type": "action",
@@ -144,20 +141,20 @@ window.addEventListener('DOMContentLoaded', (event) => {
   let interactive = document.getElementsByClassName("interactive");
   ws = new WebSocket("ws://" + location.host + "/ws");
 
-  ws.onopen = function () {
+  ws.onopen = function() {
     console.log("WebSocket is open");
   }
 
-  ws.onmessage = function (e) {
+  ws.onmessage = function(e) {
     const obj = JSON.parse(e.data);
     processMessage(obj);
   }
 
-  ws.onclose = function () {
+  ws.onclose = function() {
     console.log("WebSocket is close")
   }
 
-  ws.onerror = function (e) {
+  ws.onerror = function(e) {
     console.log("WebSocket error:")
     console.log(e)
   }
