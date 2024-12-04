@@ -15,6 +15,9 @@ function getNextColor() {
 
 const Breadboard = ({ gridColumns, gridRows }) => {
     const [items, setItems] = useState([]);
+    const [buttons, setButtons] = useState([]);
+
+
     const itemsMap = useRef({})
     const registerRef = (name, element) => {
         console.log("Adding ", name)
@@ -41,22 +44,31 @@ const Breadboard = ({ gridColumns, gridRows }) => {
 
     useEffect(() => {
         if (!ws.current) {
-            ws.current = new WebSocket("ws://localhost:9123");
+            ws.current = new WebSocket("ws://" + window.location.host + "/ws");
             ws.current.onmessage = (event) => {
                 const msg = JSON.parse(event.data);
-                console.log("Message from server: ", msg);
                 if (msg.msg == "register") {
                     if (msg.peripheral_type == "led") {
                         if (!items.includes(msg.name)) {
                             setItems((prevItems) => [...prevItems, { id: msg.name, status: msg.status }])
                         }
                     }
+                    else if (msg.peripheral_type == "button") {
+                        if (!buttons.includes(msg.name)) {
+                            setButtons((prevItems) => [...prevItems, { id: msg.name }])
+                        }
+                    }
+                    return;
                 }
                 else if (msg.msg == "state_change") {
                     if (msg.peripheral_type == "led") {
                         changeLedState(msg.name, msg.state);
                     }
+                    return;
                 }
+
+
+                console.log("Unhandled message from server: ", msg);
             }
 
             ws.current.onerror = (error) => {
@@ -84,6 +96,10 @@ const Breadboard = ({ gridColumns, gridRows }) => {
                 {items.map((index) => (
                     <div key={index.id} ref={(el) => registerRef(index.id, el)}> <Led id={index.id} /> </div>
                 ))}
+                {buttons.map((index) => (
+                    <div key={index.id} ref={(el) => registerRef(index.id, el)}> <Button id={index.id} /> </div>
+                ))}
+
             </div>
         </div>
     );

@@ -153,3 +153,4 @@ def getMessage():
 
     print("Process IO has died: ")
     print(process.stdout.read())
+    print(process.stderr.read())

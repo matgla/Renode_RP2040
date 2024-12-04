@@ -1,9 +1,12 @@
 import sys
+import time
 import psutil
 import os
 import json
 import asyncio
 import websockets
+import aiohttp
+from aiohttp import web
 import argparse
 
 parser = argparse.ArgumentParser()
@@ -17,15 +20,32 @@ os.chdir(script_dir)
 parent_pid = psutil.Process(os.getpid()).ppid()
 
 
-leds = {"led0": False}
-buttons = []
+async def handle_root(request):
+    return web.FileResponse("index.html")
+
+
+app = web.Application()
+app.router.add_get("/", handle_root)
+app.router.add_static(
+    "/", path="./visualization/build/", name="static", show_index=True
+)
+
 clients = []
+
+
+def run_http_server():
+    runner = web.AppRunner(app)
+    return runner
+
+
+leds = {}
+buttons = []
 
 
 async def send_to_clients(msg):
     if clients:
         for ws in clients:
-            await ws.send(json.dumps(msg))
+            await ws.send_str(json.dumps(msg))
 
 
 async def register_device(msg):
@@ -44,7 +64,6 @@ async def state_change(msg):
 
 
 async def process_message(message, stop_event):
-    print("Processing ", message)
     if message["msg"] == "exit":
         stop_event.set()
         for ws in clients:
@@ -57,6 +76,49 @@ async def process_message(message, stop_event):
         await state_change(message)
 
 
+async def process_message_from_ws(msg):
+    sys.stdout.write(msg + "\n")
+    sys.stdout.flush()
+
+
+async def websocket_handler(request):
+    global ws
+    ws = web.WebSocketResponse()
+    await ws.prepare(request)
+
+    clients.append(ws)
+    for led, value in leds.items():
+        await ws.send_str(
+            json.dumps({
+                "msg": "register",
+                "peripheral_type": "led",
+                "name": led,
+                "state": value,
+            })
+        )
+
+    for button in buttons:
+        await ws.send_str(
+            json.dumps({"msg": "register", "peripheral_type": "button", "name": button})
+        )
+
+    try:
+        async for msg in ws:
+            if msg.type == aiohttp.WSMsgType.TEXT:
+                await process_message_from_ws(msg.data)
+            elif (
+                msg.type == aiohttp.WSMsgType.ERROR
+                or msg.type == aiohttp.WSMsgType.CLOSED
+            ):
+                clents.remove(ws)
+    finally:
+        clients.remove(ws)
+    return ws
+
+
+app.add_routes([web.get("/ws", websocket_handler)])
+
+
 async def check_parent(stop_event):
     while not stop_event.is_set() and psutil.pid_exists(parent_pid):
         loop = asyncio.get_event_loop()
@@ -67,50 +129,30 @@ async def check_parent(stop_event):
         except:
             if data.strip() == "quit":
                 stop_event.set()
-                return
+                for ws in clients:
+                    await ws.close()
 
     stop_event.set()
 
 
-async def websocket_handler(websocket):
-    clients.append(websocket)
-    print("Client connected")
-    for led, value in leds.items():
-        await websocket.send(
-            json.dumps({
-                "msg": "register",
-                "peripheral_type": "led",
-                "name": led,
-                "state": value,
-            })
-        )
-
-    for button in buttons:
-        await websocket.send(
-            json.dumps({"msg": "register", "peripheral_type": "button", "name": button})
-        )
-
-    try:
-        async for message in websocket:
-            print(message.data)
-    except websockets.ConnectionClosed:
-        clients.remove(websocket)
+async def start_http_server(runner, stop_event):
+    await runner.setup()
+    site = web.TCPSite(runner, "localhost", args.port)
+    await site.start()
+    await stop_event.wait()
+    await runner.cleanup()
 
 
 async def main():
     stop_event = asyncio.Event()
+    runner = run_http_server()
+    server_task = asyncio.create_task(start_http_server(runner, stop_event))
     parent_exists = asyncio.create_task(check_parent(stop_event))
-    server_task = await websockets.serve(websocket_handler, "localhost", 9123)
-
-    async def shutdown():
-        await stop_event.wait()
-        server_task.close()
-        await server_task.wait_closed()
-
     try:
-        await asyncio.gather(parent_exists, shutdown())
+        await asyncio.gather(server_task, parent_exists)
     except asyncio.CancelledError:
         pass
 
 
 asyncio.run(main())
+
