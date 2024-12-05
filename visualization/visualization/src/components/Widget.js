@@ -1,14 +1,21 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } from "react";
 import Draggable from 'react-draggable';
 import "./Widget.css";
 
-const Widget = ({ children, width = 1, height = 1 }) => {
+const Widget = forwardRef(({ children, width = 1, height = 1 }, ref) => {
     const [position, setPosition] = useState({ x: 0, y: 0 });
     const [gridSize, setGridSize] = useState([25, 25])
     const [gridPosition, setGridPosition] = useState({ row: 1, column: 1 })
     const [gridDimension, setGridDimension] = useState({ width: width, height: height })
     const draggableRef = useRef(null);
     const [initialized, setInitialized] = useState(false);
+
+    useImperativeHandle(ref, () => ({
+        getCoordinates() {
+            return gridPosition;
+        }
+    }))
+
     useEffect(() => {
         const gridSize = getGridSize();
         setGridSize([gridSize, gridSize]);
@@ -29,6 +36,7 @@ const Widget = ({ children, width = 1, height = 1 }) => {
             column: Math.round(newPosition.x / gridSize) + 1,
             row: Math.round(newPosition.y / gridSize) + 1
         }
+        console.log(newPosition);
         setGridPosition(newGridPosition);
     }
 
@@ -78,6 +86,7 @@ const Widget = ({ children, width = 1, height = 1 }) => {
         >
             <div ref={draggableRef}
                 style={{ cursor: 'pointer', gridRow: `1 / span ${gridDimension.height} `, gridColumn: `1 / span ${gridDimension.width}` }}
+                
                 onPointerDown={(e) => {
                     if (draggableRef.current) {
                         draggableRef.current.setPointerCapture(e.pointerId);
@@ -93,6 +102,6 @@ const Widget = ({ children, width = 1, height = 1 }) => {
             </div>
         </Draggable>
     );
-}
+});
 
 export default Widget;

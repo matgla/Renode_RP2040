@@ -1,6 +1,6 @@
 .breadboard {
     position: relative;
-    width: 80vw;
+    /* width: 80vw; */
     background-color: #f0f0f0;
     border: 1px solid #f00;
 }
@@ -22,4 +22,9 @@
     left: 1.65%;
     right: 3.2%;
     bottom: 22%;
+}
+
+.grid-item {
+    grid-row: 1;
+    grid-column: 1;
 }
