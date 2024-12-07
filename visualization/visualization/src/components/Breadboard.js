@@ -138,12 +138,12 @@ const Breadboard = forwardRef(({ gridColumns, gridRows, editWidget }, ref) => {
                 else if (msg.msg == "set_board_element") {
                     console.log("Element ", msg.name, " belongs to board");
                     if (Object.hasOwn(layoutMap.current, msg.name)) {
-                        delete layout.current[msg.name];
+                        delete layoutMap.current[msg.name];
                     }
-                    newLeds = leds.filter(item => item !== msg.name);
+                    const newLeds = leds.filter(item => item !== msg.name);
                     setLeds(newLeds);
 
-                    newButtons = buttons.filter(item => item !== msg.name);
+                    const newButtons = buttons.filter(item => item !== msg.name);
                     setButtons(newButtons);
                 }
 

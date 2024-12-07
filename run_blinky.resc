@@ -5,8 +5,5 @@ include $ORIGIN/run_firmware.resc
 logLevel -1 sysbus.gpio.led1
 logLevel -1 sysbus.gpio.led2
 
-machine StartGdbServer 3333 true sysbus.cpu0
-machine StartGdbServer 3333 true sysbus.cpu1
-
 startVisualization 1234
 visualizationLoadLayout $ORIGIN/blinky_layout.json

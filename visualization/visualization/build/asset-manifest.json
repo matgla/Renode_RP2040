@@ -1,0 +1,17 @@
+{
+  "files": {
+    "main.css": "/static/css/main.7bab5a1f.css",
+    "main.js": "/static/js/main.4eed8faa.js",
+    "static/media/Raspberry_Pi_Pico_top.png": "/static/media/Raspberry_Pi_Pico_top.e33f028f5df6fa7a8812.png",
+    "static/media/breadboard.svg": "/static/media/breadboard.b02ce936b8b548e20e199821ba9de7e1.svg",
+    "static/media/button.svg": "/static/media/button.355a8ce9d4cf317321a3978342d45a6b.svg",
+    "static/media/led.svg": "/static/media/led.af9aa24785412be850e812f429bfd727.svg",
+    "index.html": "/index.html",
+    "main.7bab5a1f.css.map": "/static/css/main.7bab5a1f.css.map",
+    "main.4eed8faa.js.map": "/static/js/main.4eed8faa.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.7bab5a1f.css",
+    "static/js/main.4eed8faa.js"
+  ]
+}
