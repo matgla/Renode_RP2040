@@ -4,51 +4,93 @@ using Antmicro.Renode.Logging;
 
 namespace Antmicro.Renode.Peripherals.Miscellaneous
 {
-    public class SegmentDisplay : IGPIOReceiver
+    public class SegmentDisplay : IPeripheral, IGPIOReceiver
     {
         public SegmentDisplay(int segments = 7, int cells = 1)
         {
             sync = new object();
             NumberOfSegments = segments;
             NumberOfCells = cells;
-            state = new bool[NumberOfSegments];
+            this.segments = new bool[NumberOfSegments];
+            this.cells = new bool[NumberOfCells];
+            Reset();
+        }
+
+        public void Reset()
+        {
+            for (int c = 0; c < NumberOfCells; ++c)
+            {
+                this.cells[c] = false;
+            }
+
+            for (int s = 0; s < NumberOfSegments; ++s)
+            {
+                this.segments[s] = false;
+            }
         }
 
         public void OnGPIO(int number, bool value)
         {
-            this.log(LogLevel.Error,  "On gpio: " + number);
             if (number >= NumberOfSegments + NumberOfCells)
             {
                 return;
-            } 
+            }
 
-           // State[number] = value;
+            // if cells change 
+            if (number < NumberOfCells)
+            {
+                SetCell(number, value);
+            }
+            else
+            {
+                SetSegment(number - NumberOfCells, value);
+            }
         }
 
-        public event Action<SegmentDisplay, bool[]> StateChanged;
-        public bool[] State 
-        {
-            get => state;
-            private set 
-            {
-                lock(sync)
-                {
-                    if (value == state)
-                    {
-                        return;
-                    }
+        public event Action<SegmentDisplay, bool[], bool[]> StateChanged;
 
-                    state = value;
-                    StateChanged?.Invoke(this, state);
-                    this.Log(LogLevel.Noisy, "SegmentDisplay state changed to: ");
+        public void SetSegment(int number, bool state)
+        {
+            lock (sync)
+            {
+                if (segments[number] != state)
+                {
+                    segments[number] = state;
+                    StateChanged?.Invoke(this, cells, segments);
+                    this.Log(LogLevel.Noisy, "Segment[{0}] state changed to: {1}", number, state);
                 }
             }
         }
+
+        public void SetCell(int number, bool state)
+        {
+            lock (sync)
+            {
+                if (cells[number] != state)
+                {
+                    cells[number] = state;
+                    StateChanged?.Invoke(this, cells, segments);
+                    this.Log(LogLevel.Noisy, "Cell[{0}] state changed to: {1}", number, state);
+                }
+            }
+        }
+
+        public bool[] Segments
+        {
+            get => segments;
+        }
+
+        public bool[] Cells
+        {
+            get => cells;
+        }
+
 
         public readonly int NumberOfSegments;
         public readonly int NumberOfCells;
 
         private readonly object sync;
-        private readonly bool[] state;
+        private bool[] segments;
+        private bool[] cells;
     }
 }

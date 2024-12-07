@@ -21,11 +21,13 @@ script_dir = os.path.dirname(os.path.abspath(__file__))
 import sys
 
 sys.path.append(script_dir)
-visualizationPath = None
 os.chdir(script_dir)
 
 from Antmicro.Renode.Peripherals.Miscellaneous import LED
 from Antmicro.Renode.Peripherals.Miscellaneous import Button
+
+import Antmicro.Renode.Peripherals.Miscellaneous
+
 from Antmicro.Renode.Core import MachineStateChangedEventArgs
 
 from threading import Thread
@@ -42,12 +44,29 @@ process = None
 layout = None
 
 
+def convert_to_array(o):
+    arr = []
+    for e in o:
+        arr.append(e)
+    return arr
+
+
 def led_state_change(led, state):
     sendMessage({
         "msg": "state_change",
         "peripheral_type": "led",
         "name": machine.GetLocalName(led),
         "state": state,
+    })
+
+
+def segment_display_state_changed(display, cells, segments):
+    sendMessage({
+        "msg": "state_change",
+        "peripheral_type": "segment_display",
+        "name": machine.GetLocalName(display),
+        "cells": convert_to_array(cells),
+        "segments": convert_to_array(segments),
     })
 
 
@@ -62,7 +81,6 @@ def process_message(msg):
 
 def mc_setVisualizationPath(path):
     print("Visualization will be served from: " + path)
-    visualizationPath = path
     os.chdir(path)
 
 
@@ -86,10 +104,16 @@ def mc_stopVisualization():
 
 
 def machine_state_changed(machine, state):
-    print("state: ", state)
     if state.CurrentState == MachineStateChangedEventArgs.State.Disposed:
         print("Dispose visualization")
         mc_stopVisualization()
+
+
+def machine_find_peripheral_type(machine, name):
+    for peri in machine.GetRegisteredPeripherals():
+        if name in str(peri.Type):
+            return peri.Type
+    return None
 
 
 def mc_startVisualization(port):
@@ -129,9 +153,22 @@ def mc_startVisualization(port):
             "msg": "register",
             "peripheral_type": "button",
             "name": machine.GetLocalName(button),
-            "state": led.State,
         })
         buttons[machine.GetLocalName(button)] = button
+
+    SegmentDisplay = machine_find_peripheral_type(
+        machine, "Miscellaneous.SegmentDisplay"
+    )
+    segmentDisplays = machine.GetPeripheralsOfType[SegmentDisplay]()
+    for display in segmentDisplays:
+        sendMessage({
+            "msg": "register",
+            "peripheral_type": "segment_display",
+            "name": machine.GetLocalName(display),
+            "segments": convert_to_array(display.Segments),
+            "cells": convert_to_array(display.Cells),
+        })
+        display.StateChanged += segment_display_state_changed
 
     if layout is not None:
         sendMessage({"msg": "load_layout", "file": layout})
@@ -153,9 +190,11 @@ def mc_visualizationLoadLayout(file):
 
     sendMessage({"msg": "load_layout", "file": layout})
 
+
 def mc_visualizationSetBoardElement(name):
     print("Setting board element: " + name)
     sendMessage({"msg": "set_board_element", "name": name})
+
 
 def sendMessage(message):
     global process

@@ -36,17 +36,21 @@ def run_http_server():
     runner = web.AppRunner(app)
     return runner
 
+
 leds = {}
 board_elements = []
 buttons = []
+segment_displays = {}
 layout = None
+
 
 async def set_board_element(msg):
     global board_elements
     global leds
     # for now, just remove, support in the next feature
     board_elements.append(msg["name"])
-    await send_to_clients(msg)    
+    await send_to_clients(msg)
+
 
 async def send_to_clients(msg):
     if clients:
@@ -55,8 +59,11 @@ async def send_to_clients(msg):
 
 
 async def register_device(msg):
+    global buttons
+    global leds
+    global segment_displays
     if msg["name"] in board_elements:
-        msg["msg"] = "register_board_element" 
+        msg["msg"] = "register_board_element"
 
     if msg["peripheral_type"] == "led":
         leds[msg["name"]] = msg["state"]
@@ -64,6 +71,11 @@ async def register_device(msg):
     if msg["peripheral_type"] == "button":
         buttons.append(msg["name"])
         await send_to_clients(msg)
+    if msg["peripheral_type"] == "segment_display":
+        segment_displays[msg["name"]] = {
+            "cells": msg["cells"],
+            "segments": msg["segments"],
+        }
 
 
 async def state_change(msg):
@@ -96,7 +108,6 @@ async def process_message(message, stop_event):
         raise RuntimeError("Unhandled message")
 
 
-
 async def process_message_from_ws(msg):
     sys.stdout.write(msg + "\n")
     sys.stdout.flush()
@@ -118,7 +129,7 @@ async def websocket_handler(request):
                     "state": value,
                 })
             )
- 
+
         else:
             await ws.send_str(
                 json.dumps({
@@ -132,14 +143,34 @@ async def websocket_handler(request):
     for button in buttons:
         if button in board_elements:
             await ws.send_str(
-                json.dumps({"msg": "register_board_element", "peripheral_type": "button", "name": button})
+                json.dumps({
+                    "msg": "register_board_element",
+                    "peripheral_type": "button",
+                    "name": button,
+                })
             )
-
 
         else:
             await ws.send_str(
-                json.dumps({"msg": "register", "peripheral_type": "button", "name": button})
+                json.dumps({
+                    "msg": "register",
+                    "peripheral_type": "button",
+                    "name": button,
+                })
             )
+
+    for display, value in segment_displays.items():
+        msg = {
+            "msg": "register",
+            "peripheral_type": "segment_display",
+            "segments": value["segments"],
+            "cells": value["cells"],
+            "name": display,
+        }
+        if display in board_elements:
+            msg["msg"] = "register_board_element"
+
+        await ws.send_str(json.dumps(msg))
 
     if layout is not None:
         await ws.send_str(json.dumps({"msg": "load_layout", "file": layout}))
@@ -152,7 +183,7 @@ async def websocket_handler(request):
                 msg.type == aiohttp.WSMsgType.ERROR
                 or msg.type == aiohttp.WSMsgType.CLOSED
             ):
-                clents.remove(ws)
+                clients.remove(ws)
     finally:
         clients.remove(ws)
     return ws

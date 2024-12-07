@@ -3,3 +3,7 @@ $global.FIRMWARE=$ORIGIN/clock
 include @run_firmware.resc
 
 logLevel -1 sysbus.gpio
+
+startVisualization 1234
+
+
