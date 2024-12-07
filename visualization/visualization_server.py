@@ -41,6 +41,11 @@ leds = {}
 buttons = []
 layout = None
 
+async def set_board_element(msg):
+    # for now, just remove, support in the next feature
+    if msg.name in leds:
+        del leds[msg.name]
+    await ws.send_str(json.dumps(msg))    
 
 async def send_to_clients(msg):
     if clients:
@@ -83,6 +88,9 @@ async def process_message(message, stop_event):
 
     if message["msg"] == "load_layout":
         await load_layout(message)
+
+    if message["msg"] == "set_board_element":
+        await set_board_element(message)
 
 
 async def process_message_from_ws(msg):

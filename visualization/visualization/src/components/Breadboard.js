@@ -135,6 +135,17 @@ const Breadboard = forwardRef(({ gridColumns, gridRows, editWidget }, ref) => {
                     loadLayoutFromObject(msg.file);
                     return;
                 }
+                else if (msg.msg == "set_board_element") {
+                    console.log("Element ", msg.name, " belongs to board");
+                    if (Object.hasOwn(layoutMap.current, msg.name)) {
+                        delete layout.current[msg.name];
+                    }
+                    newLeds = leds.filter(item => item !== msg.name);
+                    setLeds(newLeds);
+
+                    newButtons = buttons.filter(item => item !== msg.name);
+                    setButtons(newButtons);
+                }
 
                 console.log("Unhandled message from server: ", msg);
             }

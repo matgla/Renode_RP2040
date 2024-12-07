@@ -86,7 +86,9 @@ def mc_stopVisualization():
 
 
 def machine_state_changed(machine, state):
+    print("state: ", state)
     if state.CurrentState == MachineStateChangedEventArgs.State.Disposed:
+        print("Dispose visualization")
         mc_stopVisualization()
 
 
@@ -135,6 +137,7 @@ def mc_startVisualization(port):
         sendMessage({"msg": "load_layout", "file": layout})
 
     receiver = Thread(target=getMessage)
+    receiver.deamon = True
     close = False
     receiver.start()
 
@@ -148,6 +151,12 @@ def mc_visualizationLoadLayout(file):
         layout = json.load(f)
 
     sendMessage({"msg": "load_layout", "file": layout})
+
+def mc_visualizationSetLedOnBoard(name):
+    sendMessage({"msg": "set_board_element", "name": name})
+
+def mc_visualizationSetButtonOnBoard(name):
+    sendMessage({"msg": "set_board_element", "name": name})
 
 
 def sendMessage(message):
