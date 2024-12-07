@@ -111,6 +111,7 @@ const Breadboard = forwardRef(({ gridColumns, gridRows, editWidget }, ref) => {
             ws.current = new WebSocket("ws://" + window.location.host + "/ws");
             ws.current.onmessage = (event) => {
                 const msg = JSON.parse(event.data);
+                console.log(msg);
                 if (msg.msg == "register") {
                     if (msg.peripheral_type == "led") {
                         if (!leds.includes(msg.name)) {

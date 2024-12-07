@@ -143,21 +143,19 @@ def mc_startVisualization(port):
 
 
 def mc_visualizationLoadLayout(file):
+    print("Loading visualization layout from: " + file)
     global layout
     if not os.path.exists(file):
-        print("Layout file doesn't exists: ", file)
+        print("Layout file doesn't exists: " + file)
         return
     with open(file, "r") as f:
         layout = json.load(f)
 
     sendMessage({"msg": "load_layout", "file": layout})
 
-def mc_visualizationSetLedOnBoard(name):
+def mc_visualizationSetBoardElement(name):
+    print("Setting board element: " + name)
     sendMessage({"msg": "set_board_element", "name": name})
-
-def mc_visualizationSetButtonOnBoard(name):
-    sendMessage({"msg": "set_board_element", "name": name})
-
 
 def sendMessage(message):
     global process

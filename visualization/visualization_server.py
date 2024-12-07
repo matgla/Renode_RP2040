@@ -36,16 +36,17 @@ def run_http_server():
     runner = web.AppRunner(app)
     return runner
 
-
 leds = {}
+board_elements = []
 buttons = []
 layout = None
 
 async def set_board_element(msg):
+    global board_elements
+    global leds
     # for now, just remove, support in the next feature
-    if msg.name in leds:
-        del leds[msg.name]
-    await ws.send_str(json.dumps(msg))    
+    board_elements.append(msg["name"])
+    await send_to_clients(msg)    
 
 async def send_to_clients(msg):
     if clients:
@@ -54,6 +55,9 @@ async def send_to_clients(msg):
 
 
 async def register_device(msg):
+    if msg["name"] in board_elements:
+        msg["msg"] = "register_board_element" 
+
     if msg["peripheral_type"] == "led":
         leds[msg["name"]] = msg["state"]
         await send_to_clients(msg)
@@ -80,17 +84,17 @@ async def process_message(message, stop_event):
         for ws in clients:
             await ws.close()
 
-    if message["msg"] == "register":
+    elif message["msg"] == "register":
         await register_device(message)
-
-    if message["msg"] == "state_change":
+    elif message["msg"] == "state_change":
         await state_change(message)
-
-    if message["msg"] == "load_layout":
+    elif message["msg"] == "load_layout":
         await load_layout(message)
-
-    if message["msg"] == "set_board_element":
+    elif message["msg"] == "set_board_element":
         await set_board_element(message)
+    else:
+        raise RuntimeError("Unhandled message")
+
 
 
 async def process_message_from_ws(msg):
@@ -105,19 +109,37 @@ async def websocket_handler(request):
 
     clients.append(ws)
     for led, value in leds.items():
-        await ws.send_str(
-            json.dumps({
-                "msg": "register",
-                "peripheral_type": "led",
-                "name": led,
-                "state": value,
-            })
-        )
+        if led in board_elements:
+            await ws.send_str(
+                json.dumps({
+                    "msg": "register_board_element",
+                    "peripheral_type": "led",
+                    "name": led,
+                    "state": value,
+                })
+            )
+ 
+        else:
+            await ws.send_str(
+                json.dumps({
+                    "msg": "register",
+                    "peripheral_type": "led",
+                    "name": led,
+                    "state": value,
+                })
+            )
 
     for button in buttons:
-        await ws.send_str(
-            json.dumps({"msg": "register", "peripheral_type": "button", "name": button})
-        )
+        if button in board_elements:
+            await ws.send_str(
+                json.dumps({"msg": "register_board_element", "peripheral_type": "button", "name": button})
+            )
+
+
+        else:
+            await ws.send_str(
+                json.dumps({"msg": "register", "peripheral_type": "button", "name": button})
+            )
 
     if layout is not None:
         await ws.send_str(json.dumps({"msg": "load_layout", "file": layout}))

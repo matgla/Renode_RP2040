@@ -6,4 +6,5 @@ logLevel -1 sysbus.gpio.led1
 logLevel -1 sysbus.gpio.led2
 
 startVisualization 1234
+visualizationSetBoardElement led
 visualizationLoadLayout $ORIGIN/blinky_layout.json
