@@ -1,41 +1,79 @@
-import React, {useState } from "react";
-import Draggable from 'react-draggable';
-import "./Led.css";
-import LedImage from "../assets/led.svg";
+import Widget from "./Widget.js"
+import { ReactComponent as LedImage } from "../assets/led.svg";
+import { useEffect, useRef, forwardRef, useImperativeHandle, useState } from "react";
 
-const Led = ({gridRow, gridColumn, gridSize}) => {
-    const [isOn, setIsOn] = useState(false);
-    const [position, setPosition] = useState({x: 0, y: 0});
-    const toggle = () => {
-        setIsOn(!isOn);
+const Led = forwardRef(({ editWidget, name }, ref) => {
+    const child = useRef({});
+    const image = useRef({});
+    const [state, setState] = useState(false);
+    const [color, setColor] = useState(null);
+    useImperativeHandle(ref, () => ({
+        serialize() {
+            var obj = {
+                position: child.current.getCoordinates(),
+            };
+            if (color) {
+                obj.color = color;
+            }
+            return obj;
+        },
+
+        deserialize(data) {
+            if (data.color) {
+                setColor(data.color);
+            }
+            child.current.deserialize(data);
+        },
+
+        light(enable) {
+            setState(enable);
+        }
+    }));
+
+    useEffect(() => {
+        updateColor();
+        return () => {
+
+        };
+    }, [color, state]);
+
+    const onClickHandler = () => {
+        if (editWidget) {
+            editWidget.current.registerForColorChange(colorChange, name);
+        }
     }
 
-    const handleDrag = (e, data) => {
-        setPosition({x: data.x, y: data.y});
+    const updateColor = () => {
+        if (!color) {
+            return;
+        }
+        const on = image.current.querySelector("#On")
+        if (on) {
+            on.style.fill = color;
+            if (!state) {
+                on.style.display = "none";
+            }
+            else {
+                on.style.display = null;
+            }
+        }
+        const outline = image.current.querySelector("#Outline");
+        if (outline) {
+            outline.style.stroke = color;
+            outline.style.fill = color;
+        }
+
     }
 
-    const handleStop = (e, data) => {
-        const snappedX = Math.round(data.x / gridSize) * gridSize;
-        const snappedY = Math.round(data.y / gridSize) * gridSize;
-        setPosition({x: snappedX, y: snappedY });
+    const colorChange = (color) => {
+        setColor(color);
     }
 
     return (
-        <Draggable
-            position={position}
-            onDrag={handleDrag} 
-            onStop={handleStop}
-            grid={[gridSize, gridSize]}
-        >
-            <div 
-                className={`led ${isOn ? 'on' : ''}`} 
-                onClick={toggle}
-                style={{ gridRow: gridRow, gridColumn: gridColumn }}
-            >
-            <img src={LedImage} alt="led" className='led' />
-            </div>
-        </Draggable>
+        <Widget ref={child} onClick={onClickHandler} >
+            <LedImage ref={image} />
+        </Widget >
     );
-}
+});
 
 export default Led;

@@ -1,27 +1,28 @@
 .breadboard {
-    display: flex;
-    width: 100%;
-    height: 100%;
+    position: relative;
     background-color: #f0f0f0;
-    border: 1px solid #f00;
-    place-items: center;
-    justify-content: center;
-    align-items: center;
 }
 
 .breadboard-image {
-    width: 80%;
-    height: 80%;
-    object-fit: contain;
+    width: 100%;
+    height: 100%;
+    left: 0;
+    right: 0;
+    object-fit: cover;
 }
 
 .grid {
-    display: grid;
-    grid-template-rows: repeat(80, 1fr);
-    grid-template-columns: repeat(10, 1fr);
     position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
+    display: grid;
+    grid-template-rows: 2fr 2fr 4fr 2fr 2fr;
+    grid-template-columns: repeat(31, 1fr);
+    top: 20.5%;
+    left: 1.65%;
+    right: 3.2%;
+    bottom: 22%;
+}
+
+.grid-item {
+    grid-row: 1;
+    grid-column: 1;
 }

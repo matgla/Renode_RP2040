@@ -10,13 +10,16 @@
 #
 
 import clr
+
 clr.AddReference("Renode-peripherals")
 clr.AddReference("IronPython.StdLib")
 
 import os
+
 script_dir = os.path.dirname(os.path.abspath(__file__))
 
-import sys 
+import sys
+
 sys.path.append(script_dir)
 visualizationPath = None
 os.chdir(script_dir)
@@ -31,71 +34,83 @@ import subprocess
 import json
 
 
-close = False 
+close = False
 receiver = None
 machine = None
-buttons = {} 
+buttons = {}
+process = None
+layout = None
+
 
 def led_state_change(led, state):
     sendMessage({
         "msg": "state_change",
         "peripheral_type": "led",
         "name": machine.GetLocalName(led),
-        "state": state
-    }) 
+        "state": state,
+    })
+
 
 def process_message(msg):
     if msg["type"] == "action":
         if msg["target"] == "button":
             if msg["action"] == "press":
-                buttons[msg["name"]].Press() 
+                buttons[msg["name"]].Press()
             else:
                 buttons[msg["name"]].Release()
 
+
 def mc_setVisualizationPath(path):
-    print("Visualization will be served from: " + path) 
+    print("Visualization will be served from: " + path)
     visualizationPath = path
     os.chdir(path)
 
+
 def mc_stopVisualization():
     global process
-    global close 
+    global close
     global receiver
     print("Closing visualization")
-    if process is not None: 
-        sendMessage({
-            "msg": "exit"
-        })
+    if process is not None:
+        sendMessage({"msg": "exit"})
         process.wait()
 
     close = True
     print("Closing receiver thread")
-    if receiver is not None: 
+    if receiver is not None:
         receiver.join()
 
     print("Visualization was closed")
-    process = None 
+    process = None
     receiver = None
 
+
 def machine_state_changed(machine, state):
+    print("state: ", state)
     if state.CurrentState == MachineStateChangedEventArgs.State.Disposed:
+        print("Dispose visualization")
         mc_stopVisualization()
 
+
 def mc_startVisualization(port):
-    global process 
+    global process
     global machine
     global receiver
-    global close 
+    global close
 
+    if process is not None:
+        print(
+            "Visualization already started, use stopVisualization before starting next one"
+        )
+        return
     command = ["python3", script_dir + "/visualization_server.py", "--port", str(port)]
-    process = subprocess.Popen(command, 
-        stdin=subprocess.PIPE,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT)
+    process = subprocess.Popen(
+        command, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+    )
 
     print("Spawned process with PID: " + str(process.pid))
-    
-    emulation = Antmicro.Renode.Core.EmulationManager.Instance.CurrentEmulation 
+
+    emulation = Antmicro.Renode.Core.EmulationManager.Instance.CurrentEmulation
     machine = emulation.Machines[0]
     machine.StateChanged += machine_state_changed
     leds = machine.GetPeripheralsOfType[LED]()
@@ -105,7 +120,7 @@ def mc_startVisualization(port):
             "msg": "register",
             "peripheral_type": "led",
             "name": machine.GetLocalName(led),
-            "state": led.State
+            "state": led.State,
         })
     machine_buttons = machine.GetPeripheralsOfType[Button]()
     global buttons
@@ -114,20 +129,40 @@ def mc_startVisualization(port):
             "msg": "register",
             "peripheral_type": "button",
             "name": machine.GetLocalName(button),
-            "state": led.State
+            "state": led.State,
         })
         buttons[machine.GetLocalName(button)] = button
 
-    receiver = Thread(target = getMessage)
+    if layout is not None:
+        sendMessage({"msg": "load_layout", "file": layout})
+
+    receiver = Thread(target=getMessage)
+    receiver.deamon = True
     close = False
     receiver.start()
 
+
+def mc_visualizationLoadLayout(file):
+    print("Loading visualization layout from: " + file)
+    global layout
+    if not os.path.exists(file):
+        print("Layout file doesn't exists: " + file)
+        return
+    with open(file, "r") as f:
+        layout = json.load(f)
+
+    sendMessage({"msg": "load_layout", "file": layout})
+
+def mc_visualizationSetBoardElement(name):
+    print("Setting board element: " + name)
+    sendMessage({"msg": "set_board_element", "name": name})
 
 def sendMessage(message):
     global process
     if process.poll() is None:
         process.stdin.write(json.dumps(message) + "\n")
         process.stdin.flush()
+
 
 def getMessage():
     global process
@@ -136,7 +171,8 @@ def getMessage():
         try:
             process_message(json.loads(data.strip()))
         except:
-            continue 
-    
+            continue
+
     print("Process IO has died: ")
     print(process.stdout.read())
+    print(process.stderr.read())

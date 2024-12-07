@@ -1,0 +1,16 @@
+.widget {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-items: center;
+    height: 100%;
+    width: 100%;
+    cursor: pointer;
+    border: 1px solid #f00;
+}
+
+.widget-image {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}

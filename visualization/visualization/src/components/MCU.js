@@ -1,8 +1,9 @@
-import Widget from "./Widget.js";
-import ButtonImage from "../assets/button.svg";
+import Widget from "./Widget.js"
+
+import McuImage from "../assets/Raspberry_Pi_Pico_top.png";
 import { useRef, forwardRef, useImperativeHandle } from "react";
 
-const Button = forwardRef(({ onPress, onRelease }, ref) => {
+const MCU = forwardRef(({ }, ref) => {
     const child = useRef({});
     useImperativeHandle(ref, () => ({
         serialize() {
@@ -16,10 +17,11 @@ const Button = forwardRef(({ onPress, onRelease }, ref) => {
     }));
 
     return (
-        <Widget ref={child} onClick={onPress} onRelease={onRelease}>
-            <img src={ButtonImage} alt="button" className='widget-image' />
-        </Widget >
-    )
+        <Widget width={8} height={3} ref={child}>
+            <img style={{ marginTop: "-3px" }} src={McuImage} alt="mcu" className='widget-image' />
+        </Widget>
+    );
 });
 
-export default Button;
+export default MCU;
+
