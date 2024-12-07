@@ -6,13 +6,14 @@
     style="fill-rule:evenodd;clip-rule:evenodd;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:1.5;">
     <g>
         <g transform="matrix(1,0,0,1,0,0.440917)">
-            <circle cx="50.441" cy="49.559" r="45.503" style="stroke:black;stroke-width:1px;" />
+            <circle id="Outline" cx="50.441" cy="49.559" r="45.503"
+                style="stroke:black;stroke-width:3px;" />
         </g>
         <g transform="matrix(1.08176,0,0,1.08176,-19.0768,-5.45886)">
-            <circle cx="64.264" cy="50.86" r="36.133" style="fill:rgb(216,216,216);" />
+            <circle cx="64.264" cy="50.86" r="33.133" style="fill:rgb(216,216,216);" />
         </g>
     </g>
-    <g id="On" transform="matrix(1.08176,0,0,1.08176,-19.0768,-5.45886)">
-        <circle cx="64.264" cy="50.86" r="36.133" style="fill:rgb(255,0,0);" />
+    <g transform="matrix(1.08176,0,0,1.08176,-19.0768,-5.45886)">
+        <circle id="On" cx="64.264" cy="50.86" r="33.133" style="fill:rgb(255,0,0);" />
     </g>
 </svg>

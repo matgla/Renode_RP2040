@@ -39,6 +39,7 @@ receiver = None
 machine = None
 buttons = {}
 process = None
+layout = None
 
 
 def led_state_change(led, state):
@@ -130,9 +131,23 @@ def mc_startVisualization(port):
         })
         buttons[machine.GetLocalName(button)] = button
 
+    if layout is not None:
+        sendMessage({"msg": "load_layout", "file": layout})
+
     receiver = Thread(target=getMessage)
     close = False
     receiver.start()
+
+
+def mc_visualizationLoadLayout(file):
+    global layout
+    if not os.path.exists(file):
+        print("Layout file doesn't exists: ", file)
+        return
+    with open(file, "r") as f:
+        layout = json.load(f)
+
+    sendMessage({"msg": "load_layout", "file": layout})
 
 
 def sendMessage(message):

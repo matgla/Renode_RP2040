@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } f
 import Draggable from 'react-draggable';
 import "./Widget.css";
 
-const Widget = forwardRef(({ children, width = 1, height = 1 }, ref) => {
+const Widget = forwardRef(({ children, width = 1, height = 1, onClick = null, onRelease = null }, ref) => {
     const [position, setPosition] = useState({ x: 0, y: 0 });
     const [gridSize, setGridSize] = useState([25, 25])
     const [gridPosition, setGridPosition] = useState({ row: 1, column: 1 })
@@ -13,6 +13,12 @@ const Widget = forwardRef(({ children, width = 1, height = 1 }, ref) => {
     useImperativeHandle(ref, () => ({
         getCoordinates() {
             return gridPosition;
+        },
+        deserialize(data) {
+            const gridSize = getGridSize();
+            setGridSize([gridSize, gridSize]);
+            setGridPosition(data.position);
+            moveAccordingToGrid();
         }
     }))
 
@@ -23,6 +29,33 @@ const Widget = forwardRef(({ children, width = 1, height = 1 }, ref) => {
         };
     }, [initialized]);
 
+    useEffect(() => {
+        moveAccordingToGrid();
+    }, [gridPosition]);
+
+    const recalculateGrid = (newPosition) => {
+        const newGridPosition = {
+            column: Math.round(newPosition.x / gridSize[0]) + 1,
+            row: Math.round(newPosition.y / gridSize[0]) + 1
+        }
+        setGridPosition(newGridPosition);
+    }
+
+    const snapTo = (newPosition) => {
+        const snappedX = Math.round(newPosition.x / gridSize[0]) * gridSize[0];
+        const snappedY = Math.round(newPosition.y / gridSize[0]) * gridSize[0];
+        setPosition({ x: snappedX, y: snappedY })
+    }
+
+    const moveAccordingToGrid = () => {
+        const newPosition = {
+            x: (gridPosition.column - 1) * gridSize[0], y: (gridPosition.row - 1) * gridSize[0]
+        };
+
+        setPosition(newPosition);
+
+    }
+
     const handleDrag = (e, data) => {
         const gridSize = getGridSize();
         setGridSize([gridSize, gridSize]);
@@ -31,17 +64,17 @@ const Widget = forwardRef(({ children, width = 1, height = 1 }, ref) => {
             x: data.x,
             y: data.y
         };
+
         setPosition(newPosition);
-        const newGridPosition = {
-            column: Math.round(newPosition.x / gridSize) + 1,
-            row: Math.round(newPosition.y / gridSize) + 1
-        }
-        console.log(newPosition);
-        setGridPosition(newGridPosition);
+        recalculateGrid(newPosition);
     }
 
     const preventDefault = (e) => {
         e.preventDefault();
+    }
+
+    const onMouseClick = (e) => {
+        preventDefault(e);
     }
 
     const getGridSize = () => {
@@ -53,19 +86,14 @@ const Widget = forwardRef(({ children, width = 1, height = 1 }, ref) => {
     }
 
     const handleStop = (e, data) => {
-        const snappedX = Math.round(data.x / gridSize[0]) * gridSize[0];
-        const snappedY = Math.round(data.y / gridSize[0]) * gridSize[0];
-        setPosition({ x: snappedX, y: snappedY })
+        snapTo(data);
     }
 
     useEffect(() => {
         const handleResize = (e) => {
             const gridSize = getGridSize();
             setGridSize([gridSize, gridSize]);
-            const newPosition = {
-                x: (gridPosition.column - 1) * gridSize, y: (gridPosition.row - 1) * gridSize
-            };
-            setPosition(newPosition);
+            moveAccordingToGrid();
         };
 
         window.addEventListener('resize', handleResize);
@@ -81,18 +109,25 @@ const Widget = forwardRef(({ children, width = 1, height = 1 }, ref) => {
             onDrag={handleDrag}
             onStop={handleStop}
             grid={gridSize}
-            onMouseDown={preventDefault}
+            onMouseDown={onMouseClick}
             onDragStart={preventDefault}
+            onMouseUp={() => { console.log("Button released"); if (onRelease) onRelease(); }}
         >
             <div ref={draggableRef}
                 style={{ cursor: 'pointer', gridRow: `1 / span ${gridDimension.height} `, gridColumn: `1 / span ${gridDimension.width}` }}
-                
+
                 onPointerDown={(e) => {
+                    if (onClick) {
+                        onClick();
+                    }
                     if (draggableRef.current) {
                         draggableRef.current.setPointerCapture(e.pointerId);
                     }
                 }}
                 onPointerUp={(e) => {
+                    if (onRelease) {
+                        onRelease();
+                    }
                     if (draggableRef.current) {
                         draggableRef.current.releasePointerCapture(e.pointerId);
                     }

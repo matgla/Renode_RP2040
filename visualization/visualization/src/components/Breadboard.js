@@ -5,26 +5,25 @@ import Led from "./Led.js";
 import Button from "./Button.js";
 import MCU from "./MCU.js";
 
-const ledColors = ["red", "green", "blue", "orange", "pink"];
-var i = 0;
-
-function getNextColor() {
-    const colorIndex = i++ % ledColors.length;
-    return ledColors[colorIndex];
-}
-
-const Breadboard = forwardRef(({ gridColumns, gridRows }, ref) => {
+const Breadboard = forwardRef(({ gridColumns, gridRows, editWidget }, ref) => {
     const [leds, setLeds] = useState([]);
     const [buttons, setButtons] = useState([]);
 
     const itemsMap = useRef({});
     const layoutMap = useRef({});
+    const layoutCache = useRef();
 
     const registerRef = (name, element) => {
         itemsMap.current[name] = element;
     }
     const registerLayoutElement = (name, element) => {
-        layoutMap.current[name] = element;
+        if (!Object.hasOwn(layoutMap.current, name)) {
+            layoutMap.current[name] = element;
+            // if there is layout re render it 
+            if (layoutCache.current) {
+                loadLayoutFromObject(layoutCache.current);
+            }
+        }
     }
     const ws = useRef(null);
 
@@ -47,7 +46,7 @@ const Breadboard = forwardRef(({ gridColumns, gridRows }, ref) => {
             buttons.forEach((button) => {
                 board.buttons[button.id] = layoutMap.current[button.id].serialize();
             });
- 
+
             layout.boards.push(board)
             // create file in browser
             const json = JSON.stringify(layout, null, 2);
@@ -64,24 +63,47 @@ const Breadboard = forwardRef(({ gridColumns, gridRows }, ref) => {
             // clean up "a" element & remove ObjectURL
             document.body.removeChild(link);
             URL.revokeObjectURL(href);
+        },
+        loadLayout(layout) {
+            loadLayoutFromObject(layout);
         }
     }));
 
-    const changeLedState = (name, state) => {
-        const svg = itemsMap.current[name].querySelector("svg");
-        if (svg) {
-            const circle = svg.querySelector("#On");
-            if (circle && !state) {
-                if (circle.style != null) {
-                    circle.style.display = "none";
+    const loadLayoutFromObject = (layout) => {
+        console.log("Loading layout from file");
+        layoutCache.current = layout;
+        for (const board of layout.boards) {
+            for (const mcu in board.mcus) {
+                if (Object.hasOwn(layoutMap.current, mcu)) {
+                    layoutMap.current[mcu].deserialize(board.mcus[mcu]);
                 }
             }
-            else if (circle) {
-                if (circle.style != null) {
-                    circle.style.display = "block";
+            for (const led in board.leds) {
+                if (Object.hasOwn(layoutMap.current, led)) {
+                    layoutMap.current[led].deserialize(board.leds[led]);
+                }
+            }
+            for (const button in board.buttons) {
+                if (Object.hasOwn(layoutMap.current, button)) {
+                    layoutMap.current[button].deserialize(board.buttons[button]);
                 }
             }
         }
+
+    }
+
+    const changeLedState = (name, state) => {
+        if (Object.hasOwn(layoutMap.current, name)) {
+            layoutMap.current[name].light(state);
+        }
+    }
+
+    const handleButtonPress = (name) => {
+        ws.current.send(JSON.stringify({ type: "action", target: "button", action: "press", name: name }));
+    }
+
+    const handleButtonRelease = (name) => {
+        ws.current.send(JSON.stringify({ type: "action", target: "button", action: "release", name: name }));
     }
 
     useEffect(() => {
@@ -108,6 +130,11 @@ const Breadboard = forwardRef(({ gridColumns, gridRows }, ref) => {
                     }
                     return;
                 }
+                else if (msg.msg == "load_layout") {
+                    console.log("Loaded layout from file: ", msg.file)
+                    loadLayoutFromObject(msg.file);
+                    return;
+                }
 
                 console.log("Unhandled message from server: ", msg);
             }
@@ -122,25 +149,32 @@ const Breadboard = forwardRef(({ gridColumns, gridRows }, ref) => {
             }
 
             return () => {
-                //     ws.current.close();
-                //     ws.current = null;
             }
         }
     }, []);
 
 
     return (
-        <div className='breadboard'>
+        <div className='breadboard' style={{ minWidth: "600px" }}>
             <img src={breadboardImage} alt="Breadboard" className='breadboard-image' />
             <div className="grid">
                 <MCU id="mcu" className="gridItem" ref={(el) => registerLayoutElement("mcu", el)} />
                 {leds.map((index) => (
-                    <div className="grid-item" key={index.id} ref={(el) => registerRef(index.id, el)}> <Led id={index.id} ref={(el) => registerLayoutElement(index.id, el)} /> </div>
+                    <div className="grid-item" key={index.id} ref={(el) => registerRef(index.id, el)}> <Led id={index.id} ref={(el) => registerLayoutElement(index.id, el)} editWidget={editWidget} name={index.id} /> </div>
                 ))}
                 {buttons.map((index) => (
-                    <div className="grid-item" key={index.id} ref={(el) => registerRef(index.id, el)}> <Button id={index.id} ref={(el) => registerLayoutElement(index.id, el)} /> </div>
+                    <div className="grid-item" key={index.id} ref={(el) => registerRef(index.id, el)}>
+                        <Button id={index.id} ref={(el) => registerLayoutElement(index.id, el)}
+                            onPress={() => {
+                                handleButtonPress(index.id);
+                            }}
+                            onRelease={() => {
+                                handleButtonRelease(index.id);
+                            }}
+                        /> </div>
                 ))}
             </div>
+
         </div>
     );
 });

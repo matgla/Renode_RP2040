@@ -1,8 +1,6 @@
 .breadboard {
     position: relative;
-    /* width: 80vw; */
     background-color: #f0f0f0;
-    border: 1px solid #f00;
 }
 
 .breadboard-image {

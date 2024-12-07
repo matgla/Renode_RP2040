@@ -8,6 +8,7 @@ import websockets
 import aiohttp
 from aiohttp import web
 import argparse
+from pathlib import Path
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--port", type=int, help="Server Port", required=True)
@@ -15,7 +16,7 @@ args, _ = parser.parse_known_args()
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(script_dir)
-os.chdir(script_dir)
+os.chdir(Path(script_dir) / "visualization" / "build")
 
 parent_pid = psutil.Process(os.getpid()).ppid()
 
@@ -26,9 +27,7 @@ async def handle_root(request):
 
 app = web.Application()
 app.router.add_get("/", handle_root)
-app.router.add_static(
-    "/", path="./visualization/build/", name="static", show_index=True
-)
+app.router.add_static("/", path=".", name="static", show_index=True)
 
 clients = []
 
@@ -40,6 +39,7 @@ def run_http_server():
 
 leds = {}
 buttons = []
+layout = None
 
 
 async def send_to_clients(msg):
@@ -63,6 +63,12 @@ async def state_change(msg):
         await send_to_clients(msg)
 
 
+async def load_layout(msg):
+    global layout
+    layout = msg["file"]
+    await send_to_clients(msg)
+
+
 async def process_message(message, stop_event):
     if message["msg"] == "exit":
         stop_event.set()
@@ -74,6 +80,9 @@ async def process_message(message, stop_event):
 
     if message["msg"] == "state_change":
         await state_change(message)
+
+    if message["msg"] == "load_layout":
+        await load_layout(message)
 
 
 async def process_message_from_ws(msg):
@@ -101,6 +110,9 @@ async def websocket_handler(request):
         await ws.send_str(
             json.dumps({"msg": "register", "peripheral_type": "button", "name": button})
         )
+
+    if layout is not None:
+        await ws.send_str(json.dumps({"msg": "load_layout", "file": layout}))
 
     try:
         async for msg in ws:
@@ -155,4 +167,3 @@ async def main():
 
 
 asyncio.run(main())
-

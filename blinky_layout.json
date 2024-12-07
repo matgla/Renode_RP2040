@@ -1,0 +1,45 @@
+{
+  "boards": [
+    {
+      "mcus": {
+        "mcu": {
+          "position": {
+            "column": 10,
+            "row": 2
+          }
+        }
+      },
+      "leds": {
+        "led": {
+          "position": {
+            "column": 14,
+            "row": 1
+          },
+          "color": "#e91e63"
+        },
+        "led1": {
+          "position": {
+            "column": 12,
+            "row": 1
+          },
+          "color": "#3f51b5"
+        },
+        "led2": {
+          "position": {
+            "column": 10,
+            "row": 1
+          },
+          "color": "#607d8b"
+        }
+      },
+      "buttons": {
+        "button": {
+          "position": {
+            "column": 10,
+            "row": 6
+          }
+        }
+      }
+    }
+  ]
+}
