@@ -75,12 +75,17 @@ async def register_device(msg):
         segment_displays[msg["name"]] = {
             "cells": msg["cells"],
             "segments": msg["segments"],
+            "colon": msg["colon"],
         }
 
 
 async def state_change(msg):
     if msg["peripheral_type"] == "led":
         leds[msg["name"]] = msg["state"]
+        await send_to_clients(msg)
+    if msg["peripheral_type"] == "segment_display":
+        segment_displays[msg["name"]]["segments"] = msg["segments"]
+        segment_displays[msg["name"]]["cells"] = msg["cells"]
         await send_to_clients(msg)
 
 
@@ -166,6 +171,7 @@ async def websocket_handler(request):
             "segments": value["segments"],
             "cells": value["cells"],
             "name": display,
+            "colon": value["colon"],
         }
         if display in board_elements:
             msg["msg"] = "register_board_element"

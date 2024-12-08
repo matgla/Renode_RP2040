@@ -1,5 +1,5 @@
 import Widget from "./Widget.js";
-import ButtonImage from "../assets/button.svg";
+import { ReactComponent as ButtonImage } from "../assets/button.svg";
 import { useRef, forwardRef, useImperativeHandle } from "react";
 
 const Button = forwardRef(({ onPress, onRelease }, ref) => {
@@ -16,8 +16,8 @@ const Button = forwardRef(({ onPress, onRelease }, ref) => {
     }));
 
     return (
-        <Widget ref={child} onClick={onPress} onRelease={onRelease}>
-            <img src={ButtonImage} alt="button" className='widget-image' />
+        <Widget ref={child} onClick={onPress} onRelease={onRelease} width={2} height={2}>
+            <ButtonImage className='widget-image' />
         </Widget >
     )
 });

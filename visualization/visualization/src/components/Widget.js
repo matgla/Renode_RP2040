@@ -104,38 +104,49 @@ const Widget = forwardRef(({ children, width = 1, height = 1, onClick = null, on
     }, [position]);
 
     return (
-        <Draggable
-            position={position}
-            onDrag={handleDrag}
-            onStop={handleStop}
-            grid={gridSize}
-            onMouseDown={onMouseClick}
-            onDragStart={preventDefault}
-            onMouseUp={() => { console.log("Button released"); if (onRelease) onRelease(); }}
+        <div
+            className="grid-item"
+            style={{
+                display: "flex",
+                gridRow: `1 / span ${gridDimension.height} `,
+                gridColumn: `1 / span ${gridDimension.width}`,
+                minWidth: "0",
+                minHeight: "0",
+            }}
         >
-            <div ref={draggableRef}
-                style={{ cursor: 'pointer', gridRow: `1 / span ${gridDimension.height} `, gridColumn: `1 / span ${gridDimension.width}` }}
-
-                onPointerDown={(e) => {
-                    if (onClick) {
-                        onClick();
-                    }
-                    if (draggableRef.current) {
-                        draggableRef.current.setPointerCapture(e.pointerId);
-                    }
-                }}
-                onPointerUp={(e) => {
-                    if (onRelease) {
-                        onRelease();
-                    }
-                    if (draggableRef.current) {
-                        draggableRef.current.releasePointerCapture(e.pointerId);
-                    }
-                }}
+            <Draggable
+                position={position}
+                onDrag={handleDrag}
+                onStop={handleStop}
+                grid={gridSize}
+                onMouseDown={onMouseClick}
+                onDragStart={preventDefault}
+                onMouseUp={() => { console.log("Button released"); if (onRelease) onRelease(); }}
             >
-                {children}
-            </div>
-        </Draggable>
+                <div ref={draggableRef}
+                    style={{ cursor: 'pointer' }}
+
+                    onPointerDown={(e) => {
+                        if (onClick) {
+                            onClick();
+                        }
+                        if (draggableRef.current) {
+                            draggableRef.current.setPointerCapture(e.pointerId);
+                        }
+                    }}
+                    onPointerUp={(e) => {
+                        if (onRelease) {
+                            onRelease();
+                        }
+                        if (draggableRef.current) {
+                            draggableRef.current.releasePointerCapture(e.pointerId);
+                        }
+                    }}
+                >
+                    {children}
+                </div>
+            </Draggable>
+        </div>
     );
 });
 

@@ -6,11 +6,12 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
 {
     public class SegmentDisplay : IPeripheral, IGPIOReceiver
     {
-        public SegmentDisplay(int segments = 7, int cells = 1)
+        public SegmentDisplay(int segments = 7, int cells = 1, int colon = 0)
         {
             sync = new object();
             NumberOfSegments = segments;
             NumberOfCells = cells;
+            Colon = colon;
             this.segments = new bool[NumberOfSegments];
             this.cells = new bool[NumberOfCells];
             Reset();
@@ -88,6 +89,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
 
         public readonly int NumberOfSegments;
         public readonly int NumberOfCells;
+        public readonly int Colon;
 
         private readonly object sync;
         private bool[] segments;

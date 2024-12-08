@@ -14,12 +14,12 @@
 .grid {
     position: absolute;
     display: grid;
-    grid-template-rows: 2fr 2fr 4fr 2fr 2fr;
-    grid-template-columns: repeat(31, 1fr);
+    grid-template-rows: 2fr 2fr 2fr 2fr 2fr 2fr 2fr 2fr 2fr 2fr 2fr 2fr;
+    grid-template-columns: repeat(62, 1fr);
     top: 20.5%;
     left: 1.65%;
     right: 3.2%;
-    bottom: 22%;
+    bottom: 24%;
 }
 
 .grid-item {

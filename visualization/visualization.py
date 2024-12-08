@@ -167,6 +167,7 @@ def mc_startVisualization(port):
             "name": machine.GetLocalName(display),
             "segments": convert_to_array(display.Segments),
             "cells": convert_to_array(display.Cells),
+            "colon": display.Colon,
         })
         display.StateChanged += segment_display_state_changed
 

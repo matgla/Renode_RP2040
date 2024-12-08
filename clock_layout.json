@@ -1,0 +1,36 @@
+{
+  "boards": [
+    {
+      "mcus": {
+        "mcu": {
+          "position": {
+            "column": 49,
+            "row": 4
+          }
+        }
+      },
+      "leds": {
+        "led": {
+          "position": {
+            "column": 57,
+            "row": 1
+          }
+        },
+        "led1": {
+          "position": {
+            "column": 60,
+            "row": 1
+          }
+        }
+      },
+      "buttons": {
+        "button": {
+          "position": {
+            "column": 44,
+            "row": 11
+          }
+        }
+      }
+    }
+  ]
+}

@@ -4,19 +4,18 @@ import breadboardImage from "../assets/breadboard.svg"
 import Led from "./Led.js";
 import Button from "./Button.js";
 import MCU from "./MCU.js";
+import SegmentDisplay from "./SegmentDisplay.js";
 
-const Breadboard = forwardRef(({ gridColumns, gridRows, editWidget }, ref) => {
+const Breadboard = forwardRef(({ editWidget }, ref) => {
     const [leds, setLeds] = useState([]);
     const [buttons, setButtons] = useState([]);
+    const [segmentDisplays, setSegmentDisplays] = useState([]);
 
-    const itemsMap = useRef({});
     const layoutMap = useRef({});
     const layoutCache = useRef();
 
-    const registerRef = (name, element) => {
-        itemsMap.current[name] = element;
-    }
     const registerLayoutElement = (name, element) => {
+        console.log("Register: ", name)
         if (!Object.hasOwn(layoutMap.current, name)) {
             layoutMap.current[name] = element;
             // if there is layout re render it 
@@ -98,6 +97,13 @@ const Breadboard = forwardRef(({ gridColumns, gridRows, editWidget }, ref) => {
         }
     }
 
+    const changeSegmentDisplayState = (name, cells, segments) => {
+        if (Object.hasOwn(layoutMap.current, name)) {
+            layoutMap.current[name].changeState(cells, segments);
+        }
+    }
+
+
     const handleButtonPress = (name) => {
         ws.current.send(JSON.stringify({ type: "action", target: "button", action: "press", name: name }));
     }
@@ -111,25 +117,36 @@ const Breadboard = forwardRef(({ gridColumns, gridRows, editWidget }, ref) => {
             ws.current = new WebSocket("ws://" + window.location.host + "/ws");
             ws.current.onmessage = (event) => {
                 const msg = JSON.parse(event.data);
-                console.log(msg);
                 if (msg.msg == "register") {
                     if (msg.peripheral_type == "led") {
                         if (!leds.includes(msg.name)) {
-                            setLeds((prevLeds) => [...prevLeds, { id: msg.name, status: msg.status }])
+                            setLeds((prevLeds) => [...prevLeds, { id: msg.name, status: msg.status }]);
                         }
+                        return;
                     }
                     else if (msg.peripheral_type == "button") {
                         if (!buttons.includes(msg.name)) {
-                            setButtons((prevLeds) => [...prevLeds, { id: msg.name }])
+                            setButtons((prevLeds) => [...prevLeds, { id: msg.name }]);
                         }
+                        return;
                     }
-                    return;
+                    else if (msg.peripheral_type == "segment_display") {
+                        if (!segmentDisplays.includes(msg.name)) {
+                            console.log("Adding segment display: ", msg.name);
+                            setSegmentDisplays((prev) => [...prev, { id: msg.name, segments: msg.segments, cells: msg.cells, colon: msg.colon }]);
+                        }
+                        return;
+                    }
                 }
                 else if (msg.msg == "state_change") {
                     if (msg.peripheral_type == "led") {
                         changeLedState(msg.name, msg.state);
+                        return;
                     }
-                    return;
+                    else if (msg.peripheral_type == "segment_display") {
+                        changeSegmentDisplayState(msg.name, msg.cells, msg.segments);
+                        return;
+                    }
                 }
                 else if (msg.msg == "load_layout") {
                     console.log("Loaded layout from file: ", msg.file)
@@ -146,6 +163,7 @@ const Breadboard = forwardRef(({ gridColumns, gridRows, editWidget }, ref) => {
 
                     const newButtons = buttons.filter(item => item !== msg.name);
                     setButtons(newButtons);
+                    return;
                 }
 
                 console.log("Unhandled message from server: ", msg);
@@ -171,11 +189,16 @@ const Breadboard = forwardRef(({ gridColumns, gridRows, editWidget }, ref) => {
             <img src={breadboardImage} alt="Breadboard" className='breadboard-image' />
             <div className="grid">
                 <MCU id="mcu" className="gridItem" ref={(el) => registerLayoutElement("mcu", el)} />
-                {leds.map((index) => (
-                    <div className="grid-item" key={index.id} ref={(el) => registerRef(index.id, el)}> <Led id={index.id} ref={(el) => registerLayoutElement(index.id, el)} editWidget={editWidget} name={index.id} /> </div>
-                ))}
-                {buttons.map((index) => (
-                    <div className="grid-item" key={index.id} ref={(el) => registerRef(index.id, el)}>
+                {
+                    leds.map((index) => (
+                        <Led id={index.id}
+                            ref={(el) => registerLayoutElement(index.id, el)}
+                            editWidget={editWidget} name={index.id}
+                        />
+                    ))
+                }
+                {
+                    buttons.map((index) => (
                         <Button id={index.id} ref={(el) => registerLayoutElement(index.id, el)}
                             onPress={() => {
                                 handleButtonPress(index.id);
@@ -183,11 +206,27 @@ const Breadboard = forwardRef(({ gridColumns, gridRows, editWidget }, ref) => {
                             onRelease={() => {
                                 handleButtonRelease(index.id);
                             }}
-                        /> </div>
-                ))}
+                        />
+                    ))
+                }
+                {
+                    segmentDisplays.map((index) => (
+                        <SegmentDisplay id={index.id}
+                            ref={(el) => registerLayoutElement(index.id, el)}
+                            editWidget={editWidget}
+                            name={index.id}
+                            style={{
+                                display: "flex"
+                            }}
+                            segments={index.segments}
+                            cells={index.cells}
+                            colon={index.colon}
+                        />
+                    ))
+                }
             </div>
 
-        </div>
+        </div >
     );
 });
 

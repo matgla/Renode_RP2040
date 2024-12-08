@@ -70,8 +70,8 @@ const Led = forwardRef(({ editWidget, name }, ref) => {
     }
 
     return (
-        <Widget ref={child} onClick={onClickHandler} >
-            <LedImage ref={image} />
+        <Widget ref={child} onClick={onClickHandler} width={2} height={2}>
+            <LedImage ref={image} className="widget-image" />
         </Widget >
     );
 });

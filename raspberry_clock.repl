@@ -4,7 +4,8 @@ led1: Miscellaneous.LED @ gpio 0
 
 segment_display: Miscellaneous.SegmentDisplay @ gpio 1 {
     cells: 4;
-    segments: 8
+    segments: 8;
+    colon: 2
 }
 
 gpio: 
