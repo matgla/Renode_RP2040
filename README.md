@@ -117,8 +117,15 @@ inside renode console:
 ```
 and open localhost:8080 in your web browser.
 
-Current visualization is ugly, but it works!
+Layouts are defined by user and can be saved in JSON file with `save` button inside `layout` section. 
 
+Loading is supported from website or with `visualizationLoadLayout @path_to_file` command. 
+
+Elements on PCB can be marked as board elements with `visualizationSetBoardElement <name>` command. 
+But they are not rendered yet. This is planned feature. 
+
+Example GUI may look like shown below: 
+![gui](./images/gui_example.png)
 
 # Multi Node simulation. 
 Many RP2040 simulators may interwork together. I am using that possibility in full MSPC simulation. To interwork between them GPIOConnector may be used, please check existing usage (`simulation` directory):
