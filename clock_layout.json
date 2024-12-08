@@ -10,17 +10,12 @@
         }
       },
       "leds": {
-        "led": {
-          "position": {
-            "column": 57,
-            "row": 1
-          }
-        },
         "led1": {
           "position": {
             "column": 60,
             "row": 1
-          }
+          },
+          "color": "#8bc34a"
         }
       },
       "buttons": {
@@ -29,6 +24,15 @@
             "column": 44,
             "row": 11
           }
+        }
+      },
+      "segmentDisplays": {
+        "segment_display": {
+          "position": {
+            "column": 2,
+            "row": 6
+          },
+          "color": "#03a9f4"
         }
       }
     }

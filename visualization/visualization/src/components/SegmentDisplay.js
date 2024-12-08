@@ -4,38 +4,45 @@ import { ReactComponent as SegmentColonImage } from "../assets/7segment_separato
 import { forwardRef, useImperativeHandle, useRef, useState, useEffect } from "react";
 import { ReactComponent as LedImage } from "../assets/led.svg";
 
-const SegmentDisplay = forwardRef(({ cells, segments, colon, editWidget, name }, ref) => {
+const SegmentDisplay = forwardRef(({ cells, colon, editWidget, name }, ref) => {
     const child = useRef({});
     const cellsRefs = useRef([]);
     const colonRef = useRef(null);
-    const [color, setColor] = useState("#ff2020");
-    const [offColor] = useState("#606060");
+    var [color, setColor] = useState("#ff2020");
+    const [offColor] = useState("#404040");
 
     const mapping = ["A", "B", "C", "D", "E", "F", "G", "DP"];
     var previousCells = [true, true, true, true];
     const timeouts = Array(cells.length).fill(null);
+
+    useEffect(() => {
+        return () => {
+
+        };
+    }, [color, colonRef, cellsRefs, child]);
 
     useImperativeHandle(ref, () => ({
         serialize() {
             var obj = {
                 position: child.current.getCoordinates()
             };
+            if (color) {
+                obj.color = color;
+            }
             return obj;
         },
         deserialize(data) {
             child.current.deserialize(data);
+            if (data.color) {
+                color = data.color;
+                setColor(color);
+            }
+
         },
         changeState(cells, segments) {
             changeCells(cells, segments);
         }
     }));
-
-    useEffect(() => {
-        updateColor();
-        return () => {
-
-        };
-    }, [color]);
 
     const changeCells = (cells, segments) => {
         for (var i = 0; i < cells.length; ++i) {
@@ -85,14 +92,9 @@ const SegmentDisplay = forwardRef(({ cells, segments, colon, editWidget, name },
         }
     }
 
-    const updateColor = () => {
-        if (!color) {
-            return;
-        }
-    }
-
-    const colorChange = (color) => {
-        setColor(color);
+    const colorChange = (newColor) => {
+        color = newColor;
+        setColor(newColor);
     }
 
     const setCellColor = (cell, color) => {
@@ -115,11 +117,18 @@ const SegmentDisplay = forwardRef(({ cells, segments, colon, editWidget, name },
 
 
     const registerCell = (element, index) => {
+        if (!element) {
+            return;
+        }
         cellsRefs.current[index] = element;
         setCellColor(cellsRefs.current[index], offColor);
     }
 
     const registerColon = (element) => {
+        if (!element) {
+            return;
+        }
+
         colonRef.current = element;
 
         setColonColor(colonRef.current, offColor);

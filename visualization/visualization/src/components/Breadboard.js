@@ -46,6 +46,11 @@ const Breadboard = forwardRef(({ editWidget }, ref) => {
                 board.buttons[button.id] = layoutMap.current[button.id].serialize();
             });
 
+            board.segmentDisplays = {};
+            segmentDisplays.forEach((display) => {
+                board.segmentDisplays[display.id] = layoutMap.current[display.id].serialize();
+            });
+
             layout.boards.push(board)
             // create file in browser
             const json = JSON.stringify(layout, null, 2);
@@ -85,6 +90,11 @@ const Breadboard = forwardRef(({ editWidget }, ref) => {
             for (const button in board.buttons) {
                 if (Object.hasOwn(layoutMap.current, button)) {
                     layoutMap.current[button].deserialize(board.buttons[button]);
+                }
+            }
+            for (const display in board.segmentDisplays) {
+                if (Object.hasOwn(layoutMap.current, display)) {
+                    layoutMap.current[display].deserialize(board.segmentDisplays[display]);
                 }
             }
         }
