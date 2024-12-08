@@ -6,7 +6,8 @@ const Led = forwardRef(({ editWidget, name }, ref) => {
     const child = useRef({});
     const image = useRef({});
     const [state, setState] = useState(false);
-    const [color, setColor] = useState(null);
+    var [color, setColor] = useState(null);
+
     useImperativeHandle(ref, () => ({
         serialize() {
             var obj = {
@@ -20,6 +21,7 @@ const Led = forwardRef(({ editWidget, name }, ref) => {
 
         deserialize(data) {
             if (data.color) {
+                color = data.color;
                 setColor(data.color);
             }
             child.current.deserialize(data);
@@ -65,13 +67,14 @@ const Led = forwardRef(({ editWidget, name }, ref) => {
 
     }
 
-    const colorChange = (color) => {
-        setColor(color);
+    const colorChange = (newColor) => {
+        color = newColor;
+        setColor(newColor);
     }
 
     return (
-        <Widget ref={child} onClick={onClickHandler} >
-            <LedImage ref={image} />
+        <Widget ref={child} onClick={onClickHandler} width={2} height={2}>
+            <LedImage ref={image} className="widget-image" />
         </Widget >
     );
 });

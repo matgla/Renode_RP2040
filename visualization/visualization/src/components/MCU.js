@@ -17,8 +17,8 @@ const MCU = forwardRef(({ }, ref) => {
     }));
 
     return (
-        <Widget width={8} height={3} ref={child}>
-            <img style={{ marginTop: "-3px" }} src={McuImage} alt="mcu" className='widget-image' />
+        <Widget width={15} height={6} ref={child}>
+            <img src={McuImage} alt="mcu" className='widget-image' />
         </Widget>
     );
 });
