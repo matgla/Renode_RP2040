@@ -127,6 +127,10 @@ But they are not rendered yet. This is planned feature.
 Example GUI may look like shown below: 
 ![gui](./images/gui_example.png)
 
+## Known bugs 
+There is a bug that sometimes 7-segment display is not rendered correctly. 
+Zooming or refreshing browser seems to fix the problem as a workaround.
+
 # Multi Node simulation. 
 Many RP2040 simulators may interwork together. I am using that possibility in full MSPC simulation. To interwork between them GPIOConnector may be used, please check existing usage (`simulation` directory):
  [MSPC Board Simulation](https://github.com/matgla/mspc-south-bridge/) 
