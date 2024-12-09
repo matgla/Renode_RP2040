@@ -59,12 +59,11 @@ const SegmentDisplay = forwardRef(({ cells, segments, colon, editWidget, name },
 
             if (!cells[i]) {
                 changeSegments(cellsRefs.current[i], segments);
-            } else if (timeouts[i] !== 0) {
+            } else if (timeouts[i] === null) {
                 const cellId = i;
                 timeouts[i] = setTimeout(() => {
-                    console.log("timeout: ", cellId);
                     setCellColor(cellsRefs.current[cellId], offColor);
-                }, 100);
+                }, 200);
             }
         }
         previousCells = cells.slice();
