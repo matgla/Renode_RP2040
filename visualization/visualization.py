@@ -159,17 +159,18 @@ def mc_startVisualization(port):
     SegmentDisplay = machine_find_peripheral_type(
         machine, "Miscellaneous.SegmentDisplay"
     )
-    segmentDisplays = machine.GetPeripheralsOfType[SegmentDisplay]()
-    for display in segmentDisplays:
-        sendMessage({
-            "msg": "register",
-            "peripheral_type": "segment_display",
-            "name": machine.GetLocalName(display),
-            "segments": convert_to_array(display.Segments),
-            "cells": convert_to_array(display.Cells),
-            "colon": display.Colon,
-        })
-        display.StateChanged += segment_display_state_changed
+    if SegmentDisplay is not None:
+        segmentDisplays = machine.GetPeripheralsOfType[SegmentDisplay]()
+        for display in segmentDisplays:
+            sendMessage({
+                "msg": "register",
+                "peripheral_type": "segment_display",
+                "name": machine.GetLocalName(display),
+                "segments": convert_to_array(display.Segments),
+                "cells": convert_to_array(display.Cells),
+                "colon": display.Colon,
+            })
+            display.StateChanged += segment_display_state_changed
 
     if layout is not None:
         sendMessage({"msg": "load_layout", "file": layout})
