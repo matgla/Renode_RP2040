@@ -160,23 +160,22 @@ def mc_startVisualization(port):
         machine, "Miscellaneous.SegmentDisplay"
     )
     if SegmentDisplay is not None:
-        segmentDisplays = machine.GetPeripheralsOfType[SegmentDisplay]()
-        for display in segmentDisplays:
-            sendMessage({
-                "msg": "register",
-                "peripheral_type": "segment_display",
-                "name": machine.GetLocalName(display),
-                "segments": convert_to_array(display.Segments),
-                "cells": convert_to_array(display.Cells),
-                "colon": display.Colon,
-            })
-            display.StateChanged += segment_display_state_changed
+    segmentDisplays = machine.GetPeripheralsOfType[SegmentDisplay]()
+    for display in segmentDisplays:
+        sendMessage({
+            "msg": "register",
+            "peripheral_type": "segment_display",
+            "name": machine.GetLocalName(display),
+            "segments": convert_to_array(display.Segments),
+            "cells": convert_to_array(display.Cells),
+            "colon": display.Colon,
+        })
+        display.StateChanged += segment_display_state_changed
 
     if layout is not None:
         sendMessage({"msg": "load_layout", "file": layout})
 
     receiver = Thread(target=getMessage)
-    receiver.deamon = True
     close = False
     receiver.start()
 
