@@ -55,4 +55,3 @@ EnsureTypeIsLoaded "Antmicro.Renode.Peripherals.Miscellaneous.SegmentDisplay"
 include $ORIGIN/../emulation/peripherals/psm/rp2040_psm.cs
 
 
-include $ORIGIN/../emulation/externals/segment_display_tester_keywords.cs
