@@ -13,9 +13,24 @@ using Antmicro.Renode.Peripherals.Bus;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Diagnostics;
+using System.Collections;
 
 namespace Antmicro.Renode.Peripherals.CPU
 {
+
+    public static class PioSimPathExtension
+    {
+        public static void CreateSegmentDisplayTester(this Emulation emulation, string name)
+        {
+            var piosimPath = new PioSimPath();
+            emulation.ExternalsManager.AddExternal(piosimPath, name);
+        }
+    }
+
+    public class PioSimPath : IExternal
+    {
+        public string path;
+    }
     // parts of this class can be left unmodified;
     // to integrate an external simulator you need to
     // look for comments in the code below
@@ -23,10 +38,24 @@ namespace Antmicro.Renode.Peripherals.CPU
     {
         private static string GetSourceFileDirectory([CallerFilePath] string sourceFilePath = "")
         {
+            // Retrieve all environment variables
+            IDictionary environmentVariables = Environment.GetEnvironmentVariables();
+
+            // Print each environment variable and its value
+            foreach (DictionaryEntry entry in environmentVariables)
+            {
+
+                Logger.Log(LogLevel.Error, "file: {0}: {1}", entry.Key, entry.Value);
+            }
             return Path.GetDirectoryName(sourceFilePath);
         }
 
-        private static string GetPioSimLibraryPath()
+        private static string GetPioSimPath()
+        {
+            return Path.GetFullPath(GetSourceFileDirectory() + "/../../../piosim/");
+        }
+
+        private static string GetPioSimLibraryPath(string basepath)
         {
             string libraryName;
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -43,14 +72,25 @@ namespace Antmicro.Renode.Peripherals.CPU
             {
                 libraryName = "libpiosim.so";
             }
-            return Path.GetFullPath(GetSourceFileDirectory() + "/../../../piosim/" + libraryName);
+            return Path.GetFullPath(basepath + "/" + libraryName);
         }
 
-        public RP2040PIOCPU(string cpuType, IMachine machine, ulong address, GPIOPort.RP2040GPIO gpio, uint id, RP2040Clocks clocks, Endianess endianness = Endianess.LittleEndian, CpuBitness bitness = CpuBitness.Bits32)
+        public RP2040PIOCPU(string cpuType, IMachine machine, ulong address, GPIOPort.RP2040GPIO gpio, uint id, RP2040Clocks clocks,
+            Endianess endianness = Endianess.LittleEndian, CpuBitness bitness = CpuBitness.Bits32)
             : base(id + 100, cpuType, machine, endianness, bitness)
         {
             pioId = (int)id;
-            string libraryFile = GetPioSimLibraryPath();
+            // Get the directory of the executing assembly 
+            string piosimPath = "";
+            if (EmulationManager.Instance.CurrentEmulation.ExternalsManager.TryGetByName("piosim_path", out PioSimPath result))
+            {
+                piosimPath = result.path;
+            }
+            else
+            {
+                piosimPath = GetPioSimPath();
+            }
+            string libraryFile = GetPioSimLibraryPath(piosimPath);
             binder = new NativeBinder(this, libraryFile);
             machine.GetSystemBus(this).Register(this, new BusRangeRegistration(new Antmicro.Renode.Core.Range(address, (ulong)Size)));
             this.gpio = gpio;

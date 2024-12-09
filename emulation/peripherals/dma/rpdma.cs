@@ -11,7 +11,6 @@ using System.Linq;
 
 using Antmicro.Renode.Core;
 using Antmicro.Renode.Logging;
-using Antmicro.Renode.Peripherals.Bus;
 using Antmicro.Renode.Core.Structure.Registers;
 using Antmicro.Renode.Utilities;
 using System;
@@ -24,7 +23,6 @@ namespace Antmicro.Renode.Peripherals.DMA
   // data for CRC may be lost after DMA peripheral to peripheral operation 
   // 
   // basically is copy of DmaEngine with CRC calculation injected 
-
   public class RPDMA : RP2040PeripheralBase, IGPIOReceiver, IKnownSize, INumberedGPIOOutput
   {
     private enum DREQ

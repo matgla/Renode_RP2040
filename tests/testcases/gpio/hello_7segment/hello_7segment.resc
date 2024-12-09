@@ -1,0 +1,8 @@
+$global.TEST_FILE=$ORIGIN/../../../pico-examples/build/gpio/hello_7segment/hello_7segment.elf
+$machine_name="pico_tests"
+$platform_file=$ORIGIN/raspberry_7segment.repl
+
+include $ORIGIN/../../../prepare.resc
+
+showAnalyzer sysbus.uart0
+

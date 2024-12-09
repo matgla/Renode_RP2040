@@ -6,6 +6,8 @@ path add $ORIGIN/..
 log "Loading board initialization file"
 include $board_initialization_file
 
+include $ORIGIN/testers/load_testers.resc
+
 log "Loading firmware file"
 sysbus LoadELF $global.TEST_FILE
 

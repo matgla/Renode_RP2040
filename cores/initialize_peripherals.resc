@@ -1,4 +1,4 @@
-mach create $machine_name 
+mach create $machine_name
 
 include $ORIGIN/../emulation/externals/w25q16.cs
 
@@ -29,6 +29,11 @@ include $ORIGIN/../emulation/peripherals/gpio/rp2040_qspi_pads.cs
 
 
 include $ORIGIN/../emulation/peripherals/pio/rp2040_pio.cs
+EnsureTypeIsLoaded "Antmicro.Renode.Peripherals.CPU.PioSimPathExtension"
+emulation CreateSegmentDisplayTester "piosim_path"
+piosim_path path $ORIGIN/../piosim
+
+
 include $ORIGIN/../emulation/peripherals/spi/rp2040_spi.cs
 EnsureTypeIsLoaded "Antmicro.Renode.Peripherals.SPI.PL022"
 include $ORIGIN/../emulation/peripherals/spi/rp2040_xip_ssi.cs
@@ -48,8 +53,13 @@ include $ORIGIN/../emulation/peripherals/watchdog/rp2040_watchdog.cs
 include $ORIGIN/../emulation/peripherals/i2c/rp2040_i2c.cs
 
 include $ORIGIN/../emulation/externals/pcf8523.cs
+
+include $ORIGIN/../emulation/externals/i_segment_display.cs
+EnsureTypeIsLoaded "Antmicro.Renode.Peripherals.Miscellaneous.ISegmentDisplay"
+
 include $ORIGIN/../emulation/externals/segment_display.cs
 EnsureTypeIsLoaded "Antmicro.Renode.Peripherals.Miscellaneous.SegmentDisplay"
 
 
 include $ORIGIN/../emulation/peripherals/psm/rp2040_psm.cs
+
