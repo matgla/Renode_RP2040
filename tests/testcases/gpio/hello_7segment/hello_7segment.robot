@@ -10,4 +10,5 @@ Library         ${CURDIR}/DisplayTester.py
 *** Test Cases ***
 Run successfully 'hello_7segment' example
     Execute Command             include @${CURDIR}/hello_7segment.resc
-    HelloKeyword
+    Execute Command             RegisterDisplayTester "display_tester" sysbus.gpio.segment_display 5 
+    Execute Command             WaitForSequence "display_tester" "${CURDIR}/sequence.json" 40

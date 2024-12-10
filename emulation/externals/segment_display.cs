@@ -4,7 +4,7 @@ using Antmicro.Renode.Logging;
 
 namespace Antmicro.Renode.Peripherals.Miscellaneous
 {
-    public class SegmentDisplay : IPeripheral, IGPIOReceiver
+    public class SegmentDisplay : ISegmentDisplay, IGPIOReceiver
     {
         public SegmentDisplay(int segments = 7, int cells = 1, int colon = 0)
         {
@@ -48,7 +48,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             }
         }
 
-        public event Action<SegmentDisplay, bool[], bool[]> StateChanged;
+        public event Action<ISegmentDisplay, bool[], bool[]> StateChanged;
 
         public void SetSegment(int number, bool state)
         {

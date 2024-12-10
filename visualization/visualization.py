@@ -105,7 +105,6 @@ def mc_stopVisualization():
 
 def machine_state_changed(machine, state):
     if state.CurrentState == MachineStateChangedEventArgs.State.Disposed:
-        print("Dispose visualization")
         mc_stopVisualization()
 
 
