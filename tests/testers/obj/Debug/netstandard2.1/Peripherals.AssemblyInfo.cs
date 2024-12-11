@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Peripherals")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+2e244903df8dc6d14b828c09bca50b10b215e456")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+fb412249eec9fdfa804a3b7d7ae04137f27c75bb")]
 [assembly: System.Reflection.AssemblyProductAttribute("Peripherals")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Peripherals")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

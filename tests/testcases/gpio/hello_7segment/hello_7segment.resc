@@ -3,7 +3,6 @@ $machine_name="pico_tests"
 $platform_file=$ORIGIN/raspberry_7segment.repl
 
 include $ORIGIN/../../../prepare.resc
-include $ORIGIN/test.py
 
 showAnalyzer sysbus.uart0
 

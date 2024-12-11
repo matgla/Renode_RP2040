@@ -1,1 +1,1 @@
-include $ORIGIN/segment_display_tester.cs
+include $ORIGIN/segment_display_tester.py

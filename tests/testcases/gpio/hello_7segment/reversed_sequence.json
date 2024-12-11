@@ -14,42 +14,7 @@
   "filtering_time": 0.001,
   "sequence": [
     {
-      "value": "0",
-      "time": 0.250,
-      "tolerance": 0.1
-    },
-    {
-      "value": "1",
-      "time": 0.250,
-      "tolerance": 0.1
-    },
-    {
-      "value": "2",
-      "time": 0.250,
-      "tolerance": 0.1
-    },
-    {
-      "value": "3",
-      "time": 0.250,
-      "tolerance": 0.1
-    },
-    {
-      "value": "4",
-      "time": 0.250,
-      "tolerance": 0.1
-    },
-    {
-      "value": "5",
-      "time": 0.250,
-      "tolerance": 0.1
-    },
-    {
-      "value": "6",
-      "time": 0.250,
-      "tolerance": 0.1
-    },
-    {
-      "value": "7",
+      "value": "9",
       "time": 0.250,
       "tolerance": 0.1
     },
@@ -59,7 +24,37 @@
       "tolerance": 0.1
     },
     {
-      "value": "9",
+      "value": "7",
+      "time": 0.250,
+      "tolerance": 0.1
+    },
+    {
+      "value": "6",
+      "time": 0.250,
+      "tolerance": 0.1
+    },
+    {
+      "value": "5",
+      "time": 0.250,
+      "tolerance": 0.1
+    },
+    {
+      "value": "4",
+      "time": 0.250,
+      "tolerance": 0.1
+    },
+    {
+      "value": "3",
+      "time": 0.250,
+      "tolerance": 0.1
+    },
+    {
+      "value": "2",
+      "time": 0.250,
+      "tolerance": 0.1
+    },
+    {
+      "value": "1",
       "time": 0.250,
       "tolerance": 0.1
     },
@@ -69,7 +64,12 @@
       "tolerance": 0.1
     },
     {
-      "value": "1",
+      "value": "9",
+      "time": 0.250,
+      "tolerance": 0.1
+    },
+    {
+      "value": "8",
       "time": 0.250,
       "tolerance": 0.1
     }

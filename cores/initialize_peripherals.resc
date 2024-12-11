@@ -29,6 +29,11 @@ include $ORIGIN/../emulation/peripherals/gpio/rp2040_qspi_pads.cs
 
 
 include $ORIGIN/../emulation/peripherals/pio/rp2040_pio.cs
+EnsureTypeIsLoaded "Antmicro.Renode.Peripherals.CPU.PioSimPathExtension"
+emulation CreateSegmentDisplayTester "piosim_path"
+piosim_path path $ORIGIN/../piosim
+
+
 include $ORIGIN/../emulation/peripherals/spi/rp2040_spi.cs
 EnsureTypeIsLoaded "Antmicro.Renode.Peripherals.SPI.PL022"
 include $ORIGIN/../emulation/peripherals/spi/rp2040_xip_ssi.cs
