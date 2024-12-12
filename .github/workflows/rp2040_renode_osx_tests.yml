@@ -6,7 +6,7 @@ on:
 jobs:
   osx_rp2040_tests:
     name: "Renode MacOS"
-    runs-on: macos-14 
+    runs-on: macos-15 
     steps:
       - uses: actions/checkout@v3
         with:
@@ -26,6 +26,10 @@ jobs:
         shell: bash
         run: |
           pip3 install --break-system-packages -r /Applications/Renode.app/Contents/MacOS/tests/requirements.txt
+      - name: Install MacOS mono 
+        shell: bash
+        run: |
+          brew install mono-mdk
       - uses: actions/download-artifact@v4
         with:
           name: pico-examples 

@@ -4,7 +4,7 @@ import { ReactComponent as SegmentColonImage } from "../assets/7segment_separato
 import { forwardRef, useImperativeHandle, useRef, useState, useEffect } from "react";
 import { ReactComponent as LedImage } from "../assets/led.svg";
 
-const SegmentDisplay = forwardRef(({ cells, colon, editWidget, name }, ref) => {
+const SegmentDisplay = forwardRef(({ cells, segments, colon, editWidget, name }, ref) => {
     const child = useRef({});
     const cellsRefs = useRef([]);
     const colonRef = useRef(null);
@@ -12,14 +12,15 @@ const SegmentDisplay = forwardRef(({ cells, colon, editWidget, name }, ref) => {
     const [offColor] = useState("#404040");
 
     const mapping = ["A", "B", "C", "D", "E", "F", "G", "DP"];
-    var previousCells = [true, true, true, true];
-    const timeouts = Array(cells.length).fill(null);
+    var previousCells = Array(cells.length == 0 ? 1 : cells.length).fill(true);
+    const timeouts = Array(cells.length == 0 ? 1 : cells.length).fill(null);
+    var previousSegments = segments.slice();
 
     useEffect(() => {
         return () => {
 
         };
-    }, [color, colonRef, cellsRefs, child]);
+    }, [colonRef, cellsRefs, child]);
 
     useImperativeHandle(ref, () => ({
         serialize() {
@@ -40,28 +41,30 @@ const SegmentDisplay = forwardRef(({ cells, colon, editWidget, name }, ref) => {
 
         },
         changeState(cells, segments) {
+            if (!cells || cells.length == 0) {
+                cells = [false];
+            }
             changeCells(cells, segments);
         }
     }));
 
     const changeCells = (cells, segments) => {
         for (var i = 0; i < cells.length; ++i) {
-            if (previousCells[i] == cells[i]) {
-                continue;
-            }
             if (timeouts[i]) {
-                clearTimeout(timeouts[i]);
-                timeouts[i] = null;
+                if (previousCells[i] !== cells[i]) {
+                    clearTimeout(timeouts[i]);
+                    timeouts[i] = null;
+                }
             }
 
             if (!cells[i]) {
                 changeSegments(cellsRefs.current[i], segments);
-
-            } else {
-                var cell = cellsRefs.current[i];
-                timeouts[i] = setTimeout(() => setCellColor(cell, offColor), 100);
+            } else if (timeouts[i] === null) {
+                const cellId = i;
+                timeouts[i] = setTimeout(() => {
+                    setCellColor(cellsRefs.current[cellId], offColor);
+                }, 200);
             }
-
         }
         previousCells = cells.slice();
     }
@@ -136,7 +139,7 @@ const SegmentDisplay = forwardRef(({ cells, colon, editWidget, name }, ref) => {
 
     return (
         <Widget
-            width={cells.length + 1}
+            width={cells.length == 0 ? 1 : cells.length + colon == 0 ? 0 : 1}
             height={4}
             ref={child}
             onClick={onClickHandler}
@@ -145,6 +148,13 @@ const SegmentDisplay = forwardRef(({ cells, colon, editWidget, name }, ref) => {
                 display: "flex",
                 flexDirection: "row"
             }}>
+                {
+                    ((!cells || cells.length == 0) && <SegmentDisplayImage
+                        className="widget-item"
+                        id={0}
+                        ref={(el) => registerCell(el, 0)}
+                    />)
+                }
                 {
                     cells.slice(0, colon).map((_, index) => (
                         <SegmentDisplayImage
@@ -161,7 +171,7 @@ const SegmentDisplay = forwardRef(({ cells, colon, editWidget, name }, ref) => {
                     cells.slice(colon).map((_, index) => (
                         <SegmentDisplayImage
                             className="widget-item"
-                            id={index.id}
+                            id={index + colon}
                             ref={(el) => registerCell(el, colon + index)}
                         />
                     ))

@@ -105,7 +105,6 @@ def mc_stopVisualization():
 
 def machine_state_changed(machine, state):
     if state.CurrentState == MachineStateChangedEventArgs.State.Disposed:
-        print("Dispose visualization")
         mc_stopVisualization()
 
 
@@ -176,7 +175,6 @@ def mc_startVisualization(port):
         sendMessage({"msg": "load_layout", "file": layout})
 
     receiver = Thread(target=getMessage)
-    receiver.deamon = True
     close = False
     receiver.start()
 

@@ -1,0 +1,4 @@
+include $ORIGIN/hello_7segment.resc
+
+startVisualization 1234
+visualizationLoadLayout $ORIGIN/layout.json

@@ -15,13 +15,12 @@ Run successfully 'onboard_temperature' example
     Create Terminal Tester      sysbus.uart0
 
     Execute Command           sysbus.adc SetOnboardTemperature 27.8
-    ${l}     Wait For Next Line On Uart    timeout=1
+    ${l}     Wait For Next Line On Uart    timeout=2
     @{elements}     Split String     ${l.line}
     Should Be Equal As Numbers With Tolerance    ${elements}[3]   27.8   0.1 
 
     Execute Command           sysbus.adc SetOnboardTemperature 40.2
-    Wait For Line On Uart     40        timeout=2
-    ${l}     Wait For Next Line On Uart    timeout=1
+    ${l}     Wait For Next Line On Uart    timeout=2
     @{elements}     Split String     ${l.line}
     Should Be Equal As Numbers With Tolerance    ${elements}[3]   40.2   0.1 
 

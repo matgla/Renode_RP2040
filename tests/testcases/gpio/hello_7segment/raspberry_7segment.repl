@@ -1,0 +1,16 @@
+using "../../../../cores/rp2040.repl"
+
+
+segment_display: Miscellaneous.SegmentDisplay @ gpio 1 {
+    cells: 0;
+    segments: 7;
+    colon: 0;
+    filteringTime: 0.001
+}
+
+gpio: 
+    [2-8] -> segment_display@[0-6]
+
+
+button: Miscellaneous.Button @ gpio 9 
+    -> gpio@9

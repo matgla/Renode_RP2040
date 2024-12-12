@@ -1,19 +1,23 @@
 using System;
 using Antmicro.Renode.Core;
 using Antmicro.Renode.Logging;
+using Antmicro.Renode.Utilities;
+using System.Threading;
 
 namespace Antmicro.Renode.Peripherals.Miscellaneous
 {
-    public class SegmentDisplay : IPeripheral, IGPIOReceiver
+    public class SegmentDisplay : ISegmentDisplay, IGPIOReceiver
     {
-        public SegmentDisplay(int segments = 7, int cells = 1, int colon = 0)
+        public SegmentDisplay(IMachine machine, int segments = 7, int cells = 1, int colon = 0, float? filteringTime = null)
         {
             sync = new object();
             NumberOfSegments = segments;
             NumberOfCells = cells;
+            this.filteringTime = filteringTime;
             Colon = colon;
             this.segments = new bool[NumberOfSegments];
             this.cells = new bool[NumberOfCells];
+            this.machine = machine;
             Reset();
         }
 
@@ -28,6 +32,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             {
                 this.segments[s] = false;
             }
+            timeoutStarted = false;
         }
 
         public void OnGPIO(int number, bool value)
@@ -48,31 +53,43 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             }
         }
 
-        public event Action<SegmentDisplay, bool[], bool[]> StateChanged;
+        public event Action<ISegmentDisplay, bool[], bool[]> StateChanged;
 
         public void SetSegment(int number, bool state)
         {
+            bool stateChanged = false;
+
             lock (sync)
             {
                 if (segments[number] != state)
                 {
                     segments[number] = state;
-                    StateChanged?.Invoke(this, cells, segments);
-                    this.Log(LogLevel.Noisy, "Segment[{0}] state changed to: {1}", number, state);
+                    stateChanged = true;
                 }
             }
+
+            if (stateChanged)
+            {
+                TriggerStateChange();
+            }
+
         }
 
         public void SetCell(int number, bool state)
         {
+            bool stateChanged = false;
             lock (sync)
             {
                 if (cells[number] != state)
                 {
                     cells[number] = state;
-                    StateChanged?.Invoke(this, cells, segments);
-                    this.Log(LogLevel.Noisy, "Cell[{0}] state changed to: {1}", number, state);
+                    stateChanged = true;
                 }
+            }
+
+            if (stateChanged)
+            {
+                TriggerStateChange();
             }
         }
 
@@ -91,8 +108,44 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
         public readonly int NumberOfCells;
         public readonly int Colon;
 
+        private void TriggerStateChange()
+        {
+            // if filtering time is set 
+            // code will filter out events that occured in time less than filteringTime 
+            // this is needed to filter out fast switching changes on GPIO to be visible as single shot 
+            if (filteringTime != null)
+            {
+                lock (sync)
+                {
+                    if (timeoutStarted)
+                    {
+                        return;
+                    }
+                    timeoutStarted = true;
+                }
+                System.Threading.Timer timer = null;
+                timer = new System.Threading.Timer((t) =>
+                {
+                    lock (sync)
+                    {
+                        StateChanged?.Invoke(this, cells, segments);
+                        timeoutStarted = false;
+                    }
+                    timer.Dispose();
+                }, null, (int)(filteringTime.Value * 1000), System.Threading.Timeout.Infinite);
+            }
+            else
+            {
+                StateChanged?.Invoke(this, cells, segments);
+            }
+
+        }
+
         private readonly object sync;
         private bool[] segments;
         private bool[] cells;
+        private float? filteringTime;
+        private IMachine machine;
+        private bool timeoutStarted;
     }
 }

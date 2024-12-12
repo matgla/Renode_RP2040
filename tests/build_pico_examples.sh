@@ -1,16 +1,17 @@
-#!/bin/sh
+#!/bin/bash
 START=`pwd`
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+echo "Using script directory: $SCRIPT_DIR"
 
 cd $SCRIPT_DIR
-revision=`cat ./pico_examples_revision`
+revision=`cat $SCRIPT_DIR/pico_examples_revision`
 echo "Using Pico Examples revision: $revision"
 
 if [ ! -d pico-examples ]; then
     git clone https://github.com/raspberrypi/pico-examples.git
     git checkout $value
     for i in pico_examples_patches/*.patch; do
-        cd pico-examples 
+        cd pico-examples
         git am < ../${i}
         cd ..
     done
