@@ -26,10 +26,10 @@ jobs:
         shell: bash
         run: |
           pip3 install --break-system-packages -r /Applications/Renode.app/Contents/MacOS/tests/requirements.txt
-      - name: Install Renode Test 
+      - name: Install MacOS mono 
         shell: bash
         run: |
-          brew install mono
+          brew install mono-mdk
       - uses: actions/download-artifact@v4
         with:
           name: pico-examples 
