@@ -17,7 +17,7 @@ There is predefined Raspberry Pico board description in: 'boards/raspberry_pico.
 | **IRQ**  | $${\color{yellow}✓}$$ | Propagation from some peripherals is implemented |
 | **DMA**  | $${\color{green}✓}$$  | DMA implemented with ringing and control blocks support |
 | **Clocks** | $${\color{yellow}✓}$$ | Clocks are mostly just stubs, but with tree propagation, but virtual time is always correct | 
-| **GPIO** | $${\color{green}✓}$$ | Pins manipulation implemented, with interrupts support. PIO may needs to be manually reevaluated due to CPU emulation (it's not step by step). Look for RP2040_SPI (PL022) peripheral as an example. Statuses may not be adequate to simplify simulation for now . |
+| **GPIO** | $${\color{green}✓}$$ | Pins manipulation implemented, with interrupts support. PIO may needs to be manually reevaluated due to CPU emulation (it's not step by step). Look for RP2040_SPI (PL022) peripheral as an example. Statuses may not be adequate to simplify simulation for now . |readm
 | **XOSC** |  $${\color{green}✓}$$  | |
 | **ROSC** | $${\color{green}✓}$$  | |
 | **PLL** | $${\color{green}✓}$$  | |
@@ -48,7 +48,7 @@ Due to that PIO is modelled as additional CPU.
 Renode executes more than 1 step at once on given CPU, so manual synchronization is necessary in some cases, like interworking between SPI and PIO. 
 
 > [!IMPORTANT]
-> For Windows piosim.dll is delivered in piosim/redist directory
+> For Windows piosim.dll must be compiled inside msys environment:
 > If you want to modify you have to setup msys environment with mingw-gcc and mingw-make.
 > Exactly the same as for Verilator modules: [CoSimulation Renode](https://renode.readthedocs.io/en/latest/tutorials/co-simulating-custom-hdl.html).
 > Otherwise expect segmentation faults or Renode crashing on reading file header.
@@ -147,7 +147,10 @@ You can check example usages inside tests/pio/pio_blink/pio_blink.resc or tests/
 # Renode Version
 
 This respository is highly coupled with Renode version. 
-Use this repository with Renode **1.15.3**
+Use this repository with stable Renode **1.15.3**
+
+On linux only mono version is supported. 
+For some reason dotnet version reports problems with IronPython, but it may be issue visible only on my machine.
 
 # Testing 
 I am testing simulator code using official pico-examples and some custom made build on top of pico-examples. For more informations look at pico_example_patches. Current tests list with statuses: 
@@ -203,8 +206,8 @@ I am testing simulator code using official pico-examples and some custom made bu
 | Example | Passed |
 | :---: | :---:    |
 | [dht_sensor](https://github.com/raspberrypi/pico-examples/tree/master/gpio/dht_sensor) | $${\color{red}✗}$$ |
-| [hello_7segment](https://github.com/raspberrypi/pico-examples/tree/master/gpio/hello_7segment) | $${\color{red}✗}$$ |
-| [hello_gpio_irq](https://github.com/raspberrypi/pico-examples/tree/master/gpio/hello_gpio_irq) | $${\color{red}✗}$$ |
+| [hello_7segment](https://github.com/raspberrypi/pico-examples/tree/master/gpio/hello_7segment) | $${\color{green}✓}$$ |
+| [hello_gpio_irq](https://github.com/raspberrypi/pico-examples/tree/master/gpio/hello_gpio_irq) | $${\color{green}✓}$$ |
 
 ## Hello World
 
