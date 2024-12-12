@@ -1,5 +1,0 @@
-is_global = true
-build_property.RootNamespace = Peripherals2
-build_property.ProjectDir = /home/mateusz/repos/Renode_RP2040/
-build_property.EnableComHosting = 
-build_property.EnableGeneratedComInterfaceComImportInterop = 

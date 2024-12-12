@@ -11,3 +11,4 @@ report.html
 mono_crash*
 .DS_Store
 venv
+obj/
