@@ -39,7 +39,7 @@ jobs:
         shell: bash
         if: steps.pico-examples-cache.outputs.cache-hit != 'true'
         run: |
-          pacman -S --noconfirm ninja
+          pacman -Sy --noconfirm ninja
           cd tests && ./build_pico_examples.sh
 
       - uses: actions/upload-artifact@v4
