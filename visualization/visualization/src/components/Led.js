@@ -6,7 +6,7 @@ const Led = forwardRef(({ editWidget, name }, ref) => {
     const child = useRef({});
     const image = useRef({});
     const [state, setState] = useState(false);
-    var [color, setColor] = useState(null);
+    var [color, setColor] = useState("#ff0000");
 
     useImperativeHandle(ref, () => ({
         serialize() {
