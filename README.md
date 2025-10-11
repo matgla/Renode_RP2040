@@ -1,4 +1,4 @@
-# Renode RP2040 Simulation (**WIP**)
+# Renode RP2040 Simulation (**WIP** and **Frozen (lack of time)**)
 
 > [!CAUTION]
 > **_work in progress_** - it may contains bugs or incorrect simulators behaviour.
