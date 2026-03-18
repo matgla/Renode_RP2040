@@ -25,8 +25,8 @@ jobs:
         shell: pwsh
         run: | 
           choco install wget
-          wget https://github.com/renode/renode/releases/download/v1.15.3/renode_1.15.3.zip 
-          Expand-Archive '.\renode_1.15.3.zip' -DestinationPath .
+          wget https://github.com/renode/renode/releases/download/v1.16.1/renode-1.16.1.windows-portable-dotnet.zip 
+          Expand-Archive '.\renode-1.16.1.windows-portable-dotnet.zip' -DestinationPath .
 
       - uses: actions/download-artifact@v4
         with:
@@ -39,8 +39,8 @@ jobs:
           cache: 'pip' # caching pip dependencies
       - run: | 
           pip install psutil 
-          pip install -r renode_1.15.3/tests/requirements.txt 
-          $env:PATH += ";" + (Get-Item .).FullName + "\renode_1.15.3\bin"
+          pip install -r renode-1.16.1.windows-portable-dotnet/tests/requirements.txt 
+          $env:PATH += ";" + (Get-Item .).FullName + "\renode-1.16.1.windows-portable-dotnet\bin"
           python3 tests/run_tests.py -r 3 -f tests/tests.yaml -j 0
       - uses: actions/upload-artifact@v4
         if: always()
