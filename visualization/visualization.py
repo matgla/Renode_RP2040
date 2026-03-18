@@ -11,8 +11,7 @@
 
 import clr
 
-clr.AddReference("Renode-peripherals")
-clr.AddReference("IronPython.StdLib")
+clr.AddReference("Infrastructure")
 
 import os
 

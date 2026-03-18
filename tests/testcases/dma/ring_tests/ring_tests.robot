@@ -24,8 +24,8 @@ Run successfully 'ring_tests' example
     Wait For Line On Uart       Ring on peripheral write     timeout=1
     
     ${l}    Wait For Next Line On Uart      timeout=1
-    LOG   ${l.line}
-    Should Be Equal As Strings   ${l.line}   ac
+    LOG   ${l['Line']}
+    Should Be Equal As Strings   ${l['Line']}   ac
 
     Wait For Line On Uart       Ring to data from peripheral read     timeout=1
     Wait For Line On Uart       Received data from uart: [0, 0, 0, 0, 0, 1         timeout=1

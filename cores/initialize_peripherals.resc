@@ -54,6 +54,8 @@ include $ORIGIN/../emulation/peripherals/i2c/rp2040_i2c.cs
 
 include $ORIGIN/../emulation/externals/pcf8523.cs
 
+include $ORIGIN/../emulation/externals/bmp280.cs
+
 include $ORIGIN/../emulation/externals/i_segment_display.cs
 EnsureTypeIsLoaded "Antmicro.Renode.Peripherals.Miscellaneous.ISegmentDisplay"
 

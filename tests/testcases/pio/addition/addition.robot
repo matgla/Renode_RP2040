@@ -14,7 +14,7 @@ Run successfully 'pio_addition' example
     Wait For Line On Uart       Doing some random additions:
     FOR  ${i}  IN RANGE  10
     ${p}    Wait For Next Line On Uart    
-    @{words} =  Split String    ${p.line}           
+    @{words} =  Split String    ${p['Line']}           
     ${result}  evaluate  ${words}[0] + ${words}[2] 
     Should Be Equal As Numbers  ${result}  ${words}[4]
     END

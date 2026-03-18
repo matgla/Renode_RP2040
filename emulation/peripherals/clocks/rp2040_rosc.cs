@@ -60,7 +60,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             this.stable = false;
             this.badwrite = false;
             this.dormant = 0x77616b65;
-            this.count = new LimitTimer(machine.ClockSource, (long)Frequency, this, "XOSC_COUNT", direction: Direction.Descending, enabled: false, workMode: WorkMode.OneShot, eventEnabled: true, autoUpdate: true);
+            this.count = new LimitTimer(machine.ClockSource, Frequency, this, "XOSC_COUNT", direction: Direction.Descending, enabled: false, workMode: WorkMode.OneShot, eventEnabled: true, autoUpdate: true);
             this.stagesUsed = 8;
             this.random = new Random();
             DefineRegisters();
@@ -68,7 +68,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
         }
 
         // don't ask, it's my magical equation for ROSC frequency
-        // not really reallistic 
+        // not really reallistic
         UInt64 CalculateFrequencyStage(UInt64 freq, UInt32 value)
         {
             double delay = 1.024 + ((double)((0.0005 * (double)value - 7) / (0.6 * (double)value + 3) / 7.2));
@@ -80,10 +80,10 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             // In reality it's non linear and with not fully characterized frequencies per setting (vary on external conditions)
             // I simplified that for simulation purposes
             // 6.5 MHz by default for div 16, 12 MHz max, 1.8 MHz min
-            // 1.8 MHz - 12 MHz during startup 
+            // 1.8 MHz - 12 MHz during startup
 
             // don't ask, it's my magical equation for ROSC frequency
-            // not really reallistic 
+            // not really reallistic
             Frequency = (ulong)((double)3.5 * 498ul * 1000000);
 
             for (int i = 0; i < stagesUsed; ++i)

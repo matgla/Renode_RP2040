@@ -15,7 +15,7 @@ using Antmicro.Renode.Peripherals.Timers;
 namespace Antmicro.Renode.Peripherals.Miscellaneous
 {
 
-    public class RP2040XOSC : RP2040PeripheralBase 
+    public class RP2040XOSC : RP2040PeripheralBase
     {
         private enum Registers
         {
@@ -36,7 +36,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             this.dormant = 0x77616b65;
             this.x4 = false;
             this.delay = 0xc4;
-            this.count = new LimitTimer(machine.ClockSource, (long)Frequency, this, "XOSC_COUNT", direction: Direction.Descending, enabled: false, workMode: WorkMode.OneShot, eventEnabled: true, autoUpdate: true);
+            this.count = new LimitTimer(machine.ClockSource, Frequency, this, "XOSC_COUNT", direction: Direction.Descending, enabled: false, workMode: WorkMode.OneShot, eventEnabled: true, autoUpdate: true);
 
             DefineRegisters();
         }

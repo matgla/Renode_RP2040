@@ -16,7 +16,7 @@ Run successfully 'flash_program' example
     ${generatedData}    Create List
     FOR     ${repeat}    IN RANGE     16 
         ${l}    Wait For Next Line On Uart   timeout=1 
-        @{samples}    Split String   ${l.line}
+        @{samples}    Split String   ${l['Line']}
         Append To List   ${generatedData}    @{samples}    
     END
     
@@ -32,7 +32,7 @@ Run successfully 'flash_program' example
     ${finalData}    Create List
     FOR     ${repeat}    IN RANGE     16 
         ${l}    Wait For Next Line On Uart   timeout=1 
-        @{samples}    Split String   ${l.line}
+        @{samples}    Split String   ${l['Line']}
         Append To List   ${finalData}    @{samples}    
     END
 

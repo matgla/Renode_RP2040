@@ -17,6 +17,10 @@ using System.Collections;
 
 namespace Antmicro.Renode.Peripherals.CPU
 {
+    // Delegate types for native PIO simulator bindings
+    public delegate void ActionInt32(int arg);
+    public delegate uint FuncInt32UInt32UInt32(int arg1, uint arg2);
+    public delegate void ActionInt32UInt32UInt32(int arg1, uint arg2, uint arg3);
 
     public static class PioSimPathExtension
     {
@@ -325,13 +329,13 @@ namespace Antmicro.Renode.Peripherals.CPU
         private ActionInt32 PioDeinitialize;
 
         [Import]
-        private FuncUInt32Int32UInt32 PioExecute;
+        private FuncInt32UInt32UInt32 PioExecute;
 
         [Import]
         private ActionInt32UInt32UInt32 PioWriteMemory;
 
         [Import]
-        private FuncUInt32Int32UInt32 PioReadMemory;
+        private FuncInt32UInt32UInt32 PioReadMemory;
     }
 }
 

@@ -15,8 +15,8 @@ Run successfully 'hello_48MHz' example
     Wait For Line On Uart           Hello, world!           timeout=1
     Wait For Line On Uart           pll_sys${SPACE} = 125000kHz    timeout=1 
     Wait For Line On Uart           pll_usb${SPACE} = 48000kHz     timeout=1 
-    ${l}    Wait For Next Line On Uart                      timeout=1 
-    ${rosc_freq}=    Evaluate    int(re.search("\\d+","${l.line}")[0])     modules=re
+    ${l['Line']}    Wait For Next Line On Uart                      timeout=1 
+    ${rosc_freq}=    Evaluate    int(re.search("\\d+","${l['Line']}")[0])     modules=re
     Should Be True      ${rosc_freq} <= 13000 and ${rosc_freq} >= 1000
     Wait For Line On Uart           clk_sys${SPACE} = 125000kHz     timeout=1 
     Wait For Line On Uart           clk_peri = 125000kHz     timeout=1 
@@ -26,8 +26,8 @@ Run successfully 'hello_48MHz' example
 
     Wait For Line On Uart           pll_sys${SPACE} = 125000kHz    timeout=1 
     Wait For Line On Uart           pll_usb${SPACE} = 48000kHz     timeout=1 
-    ${l}    Wait For Next Line On Uart                      timeout=1 
-    ${rosc_freq}=    Evaluate    int(re.search("\\d+","${l.line}")[0])     modules=re
+    ${l['Line']}    Wait For Next Line On Uart                      timeout=1 
+    ${rosc_freq}=    Evaluate    int(re.search("\\d+","${l['Line']}")[0])     modules=re
     Should Be True      ${rosc_freq} <= 13000 and ${rosc_freq} >= 1000
     Wait For Line On Uart           clk_sys${SPACE} = 48000kHz     timeout=1 
     Wait For Line On Uart           clk_peri = 48000kHz     timeout=1 

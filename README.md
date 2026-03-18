@@ -27,7 +27,7 @@ There is predefined Raspberry Pico board description in: 'boards/raspberry_pico.
 | **USB** | $${\color{red}✗}$$  |  |
 | **UART** | $${\color{green}✓}$$  | Reimplemented PL011 to support DREQ generation for DMA and PIO interworking (in the future, not done yet) |
 | **SPI** |  $${\color{yellow}✓}$$ | Clock configuration not yet supported. Only master mode implemented with only one mode. Interworking with PIO is implemented! |
-| **I2C** |  $${\color{red}✗}$$  |  |
+| **I2C** |  $${\color{green}✓}$$  | Master mode, interrupts, DMA support |
 | **PWM** |  $${\color{red}✗}$$  |  |
 | **Timers** | $${\color{yellow}✓}$$  | Alarms implemented, but not all registers |
 | **Watchdog** | $${\color{green}✓}$$  | fully implemented, but tick generator is stubbed with just LimitTimer |
@@ -153,7 +153,35 @@ On linux only mono version is supported.
 For some reason dotnet version reports problems with IronPython, but it may be issue visible only on my machine.
 
 # Testing 
-I am testing simulator code using official pico-examples and some custom made build on top of pico-examples. For more informations look at pico_example_patches. Current tests list with statuses: 
+I am testing simulator code using official pico-examples and some custom made build on top of pico-examples. For more informations look at pico_example_patches. Current tests list with statuses:
+
+## Test Setup
+
+Tests require Python dependencies to be installed. The recommended way is to use a virtual environment:
+
+```bash
+# Setup virtual environment and install dependencies
+./setup_venv.sh
+
+# Run tests
+./run_tests.sh
+```
+
+Alternatively, you can manually set up the environment:
+
+```bash
+# Create virtual environment
+python3 -m venv venv
+
+# Activate it
+source venv/bin/activate
+
+# Install dependencies
+pip install -r tests/requirements.txt
+
+# Run tests
+./run_tests.sh
+``` 
 
 ## ADC
 | Example | Passed |

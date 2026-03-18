@@ -17,7 +17,7 @@ Run successfully 'microphone_adc' example
     Wait For Line On Uart     Beep boop, listening...    timeout=1
     FOR    ${counter}    IN RANGE    20
         ${l}     Wait For Next Line On Uart      timeout=1
-        Should Be Equal As Numbers With Tolerance     ${l.line}    ${counter} * 0.1      0.01 
+        Should Be Equal As Numbers With Tolerance     ${l['Line']}    ${counter} * 0.1      0.01 
     END
 
 

@@ -1,0 +1,13 @@
+using "../../../../boards/raspberry_pico.repl"
+
+// I2C devices for bus scan testing
+// These devices will respond to I2C address probes
+
+// PCF8523 RTC at address 0x68 (real device with full implementation)
+pcf8523: I2C.PCF8523 @ i2c0 0x68
+
+// Additional PCF8523 devices at different addresses for bus scan testing
+// These are the same type of device at different addresses to simulate multiple devices
+i2c_device_20: I2C.PCF8523 @ i2c0 0x20
+i2c_device_36: I2C.PCF8523 @ i2c0 0x36
+i2c_device_50: I2C.PCF8523 @ i2c0 0x50

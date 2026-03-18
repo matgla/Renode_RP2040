@@ -16,7 +16,7 @@ Run successfully 'ssi_dma' example
     Wait For Line On Uart       DMA finished     timeout=5
     # Transfer speed in simulation is not accurate
     ${l}  Wait For Next Line On Uart        timeout=1
-    @{words}=  Split String    ${l.line}
+    @{words}=  Split String    ${l['Line']}
     Should Be Equal As Strings  ${words}[0]   Transfer
     Should Be Equal As Strings  ${words}[1]   speed:
     Should Be True		${words}[2]>50	

@@ -1,0 +1,3 @@
+using "../../../../boards/raspberry_pico.repl"
+
+bmp280: I2C.BMP280 @ i2c0 0x76

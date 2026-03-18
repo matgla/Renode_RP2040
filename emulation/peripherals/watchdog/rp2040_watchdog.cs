@@ -60,7 +60,7 @@ namespace Antmicro.Renode.Peripherals.Timers
             this.Log(LogLevel.Debug, "Changed frequency to: {0}", newFrequency);
 
             this.Log(LogLevel.Debug, "Enabled: " + timer.Enabled + ", timer limit: " + timer.Limit + ", timer value: " + timer.Value);
-            timer.Frequency = newFrequency;
+            timer.Frequency = (ulong)newFrequency;
         }
         private void DefineRegisters()
         {
