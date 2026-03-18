@@ -59,12 +59,12 @@ namespace Antmicro.Renode.Peripherals.Memory
             machine.SystemBus.WriteQuadWord(address + (ulong)offset, value);
         }
 
-        public byte[] ReadBytes(long offset, int count, IPeripheral context)
+        public byte[] ReadBytes(long offset, int count, IPeripheral context = null)
         {
             return machine.SystemBus.ReadBytes(address + (ulong)offset, count);
         }
 
-        public void WriteBytes(long offset, byte[] data, int startingIndex, int count, IPeripheral context)
+        public void WriteBytes(long offset, byte[] data, int startingIndex, int count, IPeripheral context = null)
         {
             machine.SystemBus.WriteBytes(data, address + (ulong)offset, startingIndex, count);
         }

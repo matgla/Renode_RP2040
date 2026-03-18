@@ -95,7 +95,7 @@ This repository contains a **RP2040 MCU simulation** for the [Renode](https://gi
 
 ### Prerequisites
 
-- **Renode Version**: 1.15.3 (highly coupled, use exactly this version)
+- **Renode Version**: 1.16.0 (highly coupled, use exactly this version)
 - **.NET SDK**: For building C# peripherals (optional for normal use)
 - **Python 3**: For tests and visualization
 - **CMake + GCC**: For building PIO simulator from source (optional)

@@ -3,7 +3,7 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
     <PlatformTarget>x64</PlatformTarget>
-    <RenodePath>/opt/renode-1.15.3.linux-portable/bin</RenodePath>
+    <RenodePath>/opt/renode/bin</RenodePath>
   </PropertyGroup>
 
   <ItemGroup>
