@@ -7,22 +7,29 @@ jobs:
   build_pico_examples:
     name: "Renode Linux"
     runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/matgla/yasldtoolchain:0.4.1
-      credentials:
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0
+      - name: Install Ubuntu dependencies
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            binutils-arm-none-eabi \
+            gcc-arm-none-eabi \
+            libnewlib-arm-none-eabi \
+            libstdc++-arm-none-eabi-newlib \
+            ninja-build \
+            python3-pip \
+            wget
       - name: Create GIT Identity
-        shell: bash 
-        run: | 
+        shell: bash
+        run: |
           git config --global user.email "you@example.com" && git config --global user.name "Your Name"
       - uses: actions/download-artifact@v4
         with:
-          name: pico-examples 
+          name: pico-examples
           path: tests/pico-examples/build
       - name: Download Renode
         shell: bash
@@ -48,5 +55,5 @@ jobs:
           path: |
             logs/*
             snapshots/*
-          
+
 

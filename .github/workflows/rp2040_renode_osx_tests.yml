@@ -6,33 +6,33 @@ on:
 jobs:
   osx_rp2040_tests:
     name: "Renode MacOS"
-    runs-on: macos-15 
+    runs-on: macos-15
     steps:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0
       - name: Create GIT Identity
-        shell: bash 
-        run: | 
-          git config --global user.email "you@example.com" && git config --global user.name "Your Name"
-      - name: Install Renode 
-        shell: bash 
+        shell: bash
         run: |
-          wget https://github.com/renode/renode/releases/download/v1.16.1/renode_1.16.1.dmg 
-          hdiutil attach renode_1.16.1.dmg 
+          git config --global user.email "you@example.com" && git config --global user.name "Your Name"
+      - name: Install Renode
+        shell: bash
+        run: |
+          wget https://github.com/renode/renode/releases/download/v1.16.1/renode_1.16.1.dmg
+          hdiutil attach renode_1.16.1.dmg
           cp -r /Volumes/renode_1.16.1/Renode.app /Applications
           hdiutil detach /Volumes/renode_1.16.1
-      - name: Install Renode Test 
+      - name: Install Renode Test
         shell: bash
         run: |
           pip3 install --break-system-packages -r /Applications/Renode.app/Contents/MacOS/tests/requirements.txt
-      - name: Install MacOS mono 
+      - name: Install MacOS mono
         shell: bash
         run: |
           brew install mono-mdk
       - uses: actions/download-artifact@v4
         with:
-          name: pico-examples 
+          name: pico-examples
           path: tests/pico-examples/build
       - name: Run tests
         shell: bash
@@ -49,4 +49,4 @@ jobs:
             logs/*
             snapshots/*
 
-        
+

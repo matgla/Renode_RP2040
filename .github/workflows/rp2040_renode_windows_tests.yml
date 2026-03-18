@@ -9,37 +9,37 @@ jobs:
     runs-on: windows-2022
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Create GIT Identity
-        shell: cmd 
-        run: | 
-          git config --global user.email "you@example.com" 
+        shell: cmd
+        run: |
+          git config --global user.email "you@example.com"
           git config --global user.name "Your Name"
-      
+
       - name: Print Environment
         run: |
           echo github.event.action: ${{ github.event.action }}
           echo github.event_name: ${{ github.event_name }}
-      
+
       - name: Download Renode
         shell: pwsh
-        run: | 
+        run: |
           choco install wget
-          wget https://github.com/renode/renode/releases/download/v1.16.1/renode-1.16.1.windows-portable-dotnet.zip 
+          wget https://github.com/renode/renode/releases/download/v1.16.1/renode-1.16.1.windows-portable-dotnet.zip
           Expand-Archive '.\renode-1.16.1.windows-portable-dotnet.zip' -DestinationPath .
 
       - uses: actions/download-artifact@v4
         with:
-          name: pico-examples 
+          name: pico-examples
           path: tests/pico-examples/build
-      - name: Execute Tests 
+      - name: Execute Tests
         uses: actions/setup-python@v5
         with:
           python-version: '3.13'
           cache: 'pip' # caching pip dependencies
-      - run: | 
-          pip install psutil 
-          pip install -r renode-1.16.1.windows-portable-dotnet/tests/requirements.txt 
+      - run: |
+          pip install psutil
+          pip install -r renode-1.16.1.windows-portable-dotnet/tests/requirements.txt
           $env:PATH += ";" + (Get-Item .).FullName + "\renode-1.16.1.windows-portable-dotnet\bin"
           python3 tests/run_tests.py -r 3 -f tests/tests.yaml -j 0
       - uses: actions/upload-artifact@v4

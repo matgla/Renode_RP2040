@@ -10,15 +10,22 @@ jobs:
   build_pico_examples:
     name: "Renode Build Pico Examples"
     runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/matgla/yasldtoolchain:0.4.1
-      credentials:
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0
+      - name: Install Ubuntu dependencies
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            binutils-arm-none-eabi \
+            cmake \
+            gcc-arm-none-eabi \
+            libnewlib-arm-none-eabi \
+            libstdc++-arm-none-eabi-newlib \
+            ninja-build \
+            python3-pip
       - name: Validate PioSim
         run: |
           pip3 install --break-system-packages requests 
@@ -39,7 +46,6 @@ jobs:
         shell: bash
         if: steps.pico-examples-cache.outputs.cache-hit != 'true'
         run: |
-          pacman -Sy --noconfirm ninja
           cd tests && ./build_pico_examples.sh
 
       - uses: actions/upload-artifact@v4
