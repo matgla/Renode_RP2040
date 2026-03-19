@@ -13,6 +13,42 @@ VENV_PYTHON="$VENV_DIR/bin/python3"
 SKIP_BUILD=0
 JOBS=""
 
+# Cleanup function to kill lingering dotnet processes
+cleanup() {
+    local exit_code=$?
+    echo ""
+    echo "Cleaning up lingering processes..."
+    
+    # Find and kill dotnet processes started by this script's tests
+    # We use pgrep to find dotnet processes and check if they're related to renode
+    if command -v pkill &> /dev/null; then
+        # Kill dotnet processes that match renode patterns
+        pkill -f "dotnet.*renode" 2>/dev/null || true
+        pkill -f "renode.*dotnet" 2>/dev/null || true
+        # Also kill any dotnet processes that may be test-related
+        pkill -f "dotnet.*RobotFramework" 2>/dev/null || true
+    fi
+    
+    # Additional cleanup using ps and grep for more targeted killing
+    if command -v ps &> /dev/null; then
+        # Get dotnet process IDs and kill them
+        ps aux | grep -E "dotnet.*renode|renode.*dotnet" | grep -v grep | awk '{print $2}' | while read pid; do
+            if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
+                echo "Killing lingering dotnet process: $pid"
+                kill -TERM "$pid" 2>/dev/null || true
+                sleep 0.5
+                kill -KILL "$pid" 2>/dev/null || true
+            fi
+        done 2>/dev/null || true
+    fi
+    
+    echo "Cleanup complete."
+    exit $exit_code
+}
+
+# Set trap to ensure cleanup runs on script exit (normal or error)
+trap cleanup EXIT INT TERM
+
 # Parse arguments
 while [[ $# -gt 0 ]]; do
     case $1 in

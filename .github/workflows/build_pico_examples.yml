@@ -1,4 +1,4 @@
-name: Renode RP2040 - Build Pico Examples 
+name: Renode RP2040 - Build Pico Examples
 
 on:
   push:
@@ -28,17 +28,17 @@ jobs:
             python3-pip
       - name: Validate PioSim
         run: |
-          pip3 install --break-system-packages requests 
-          python3 piosim/fetch_piosim.py --verify 
+          pip3 install --break-system-packages requests
+          python3 piosim/fetch_piosim.py --verify
       - name: Create GIT Identity
-        shell: bash 
-        run: | 
+        shell: bash
+        run: |
           git config --global user.email "you@example.com" && git config --global user.name "Your Name"
-     
-      - name: Configure cache for Pico Examples 
+
+      - name: Configure cache for Pico Examples
         id: pico-examples-cache
         uses: actions/cache@v4
-        with: 
+        with:
           path: pico-examples
           key: pico-examples-key-${{ hashFiles('tests/pico_examples_revision')}}-${{ hashFiles('pico_example_patches/**.patch')}}
 
@@ -50,9 +50,9 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: pico-examples 
+          name: pico-examples
           path: tests/pico-examples/build
-  
+
   run_linux_tests:
     name: Renode Linux Tests
     needs: [build_pico_examples]

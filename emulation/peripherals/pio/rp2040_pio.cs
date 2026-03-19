@@ -13,7 +13,6 @@ using Antmicro.Renode.Peripherals.Bus;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Diagnostics;
-using System.Collections;
 
 namespace Antmicro.Renode.Peripherals.CPU
 {
@@ -42,15 +41,6 @@ namespace Antmicro.Renode.Peripherals.CPU
     {
         private static string GetSourceFileDirectory([CallerFilePath] string sourceFilePath = "")
         {
-            // Retrieve all environment variables
-            IDictionary environmentVariables = Environment.GetEnvironmentVariables();
-
-            // Print each environment variable and its value
-            foreach (DictionaryEntry entry in environmentVariables)
-            {
-
-                Logger.Log(LogLevel.Error, "file: {0}: {1}", entry.Key, entry.Value);
-            }
             return Path.GetDirectoryName(sourceFilePath);
         }
 
@@ -84,7 +74,7 @@ namespace Antmicro.Renode.Peripherals.CPU
             : base(id + 100, cpuType, machine, endianness, bitness)
         {
             pioId = (int)id;
-            // Get the directory of the executing assembly 
+            // Get the directory of the executing assembly
             string piosimPath = "";
             if (EmulationManager.Instance.CurrentEmulation.ExternalsManager.TryGetByName("piosim_path", out PioSimPath result))
             {

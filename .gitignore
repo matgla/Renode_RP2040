@@ -19,3 +19,5 @@ test_output.log
 # Test output directory
 output/
 emulation/bin
+tmp/
+profiling/

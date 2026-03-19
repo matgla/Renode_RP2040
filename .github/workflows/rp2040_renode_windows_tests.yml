@@ -39,9 +39,9 @@ jobs:
           cache: 'pip' # caching pip dependencies
       - run: |
           pip install psutil
-          pip install -r renode-1.16.1.windows-portable-dotnet/tests/requirements.txt
-          $env:PATH += ";" + (Get-Item .).FullName + "\renode-1.16.1.windows-portable-dotnet\bin"
-          python3 tests/run_tests.py -r 3 -f tests/tests.yaml -j 0
+          pip install -r renode_1.16.1-dotnet_portable/tests/requirements.txt
+          $RENODE_DIR = (Get-Item .).FullName + "\renode_1.16.1-dotnet_portable"
+          python3 tests/run_tests.py -r 3 -f tests/tests.yaml -j 0 -e "$RENODE_DIR\renode-test.bat"
       - uses: actions/upload-artifact@v4
         if: always()
         with:

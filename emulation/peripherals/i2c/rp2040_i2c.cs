@@ -132,6 +132,9 @@ namespace Antmicro.Renode.Peripherals.I2C
             IRQ.Unset();
             DmaTransmitRequest.Unset();
             DmaReceiveRequest.Unset();
+            irqState = false;
+            dmaTransmitRequestState = false;
+            dmaReceiveRequestState = false;
 
             // Release bus lines
             ReleaseBusLines();
@@ -909,37 +912,35 @@ namespace Antmicro.Renode.Peripherals.I2C
         {
             // Calculate masked interrupt status
             uint maskedStatus = rawIntrStat & (uint)~intrMask.Value;
-
-            if (maskedStatus != 0)
-            {
-                IRQ.Set();
-            }
-            else
-            {
-                IRQ.Unset();
-            }
+            SetSignal(IRQ, ref irqState, maskedStatus != 0);
         }
 
         private void UpdateDreqSignals()
         {
             // Transmit DREQ: Trigger when TX FIFO level below threshold
-            if (dmaTxEnable.Value && (ulong)txFifo.Count <= dmaTxThreshold.Value)
-            {
-                DmaTransmitRequest.Set();
-            }
-            else
-            {
-                DmaTransmitRequest.Unset();
-            }
+            SetSignal(DmaTransmitRequest, ref dmaTransmitRequestState,
+                dmaTxEnable.Value && (ulong)txFifo.Count <= dmaTxThreshold.Value);
 
             // Receive DREQ: Trigger when RX FIFO level above threshold
-            if (dmaRxEnable.Value && (ulong)rxFifo.Count > dmaRxThreshold.Value)
+            SetSignal(DmaReceiveRequest, ref dmaReceiveRequestState,
+                dmaRxEnable.Value && (ulong)rxFifo.Count > dmaRxThreshold.Value);
+        }
+
+        private void SetSignal(GPIO signal, ref bool currentState, bool newState)
+        {
+            if (currentState == newState)
             {
-                DmaReceiveRequest.Set();
+                return;
+            }
+
+            currentState = newState;
+            if (newState)
+            {
+                signal.Set();
             }
             else
             {
-                DmaReceiveRequest.Unset();
+                signal.Unset();
             }
         }
 
@@ -1469,6 +1470,9 @@ namespace Antmicro.Renode.Peripherals.I2C
         // Bus line control state
         private bool sdaDrivenLow;
         private bool sclDrivenLow;
+        private bool irqState;
+        private bool dmaTransmitRequestState;
+        private bool dmaReceiveRequestState;
 
         // Interrupts
         private uint rawIntrStat;

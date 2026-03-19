@@ -2,7 +2,7 @@
 
 import os
 from pathlib import Path
-from subprocess import run
+from subprocess import run, Popen, PIPE
 from argparse import ArgumentParser
 import sys
 import shutil
@@ -12,6 +12,45 @@ from collections import deque
 import multiprocessing
 import time
 import subprocess
+import signal
+import psutil
+
+
+def kill_process_tree(pid, including_parent=True):
+    """Kill a process and all its children."""
+    try:
+        parent = psutil.Process(pid)
+        children = parent.children(recursive=True)
+        
+        # Kill children first
+        for child in children:
+            try:
+                child.terminate()
+            except psutil.NoSuchProcess:
+                pass
+        
+        # Wait for children to terminate
+        gone, alive = psutil.wait_procs(children, timeout=3)
+        
+        # Force kill any remaining children
+        for child in alive:
+            try:
+                child.kill()
+            except psutil.NoSuchProcess:
+                pass
+        
+        # Kill parent if requested
+        if including_parent:
+            try:
+                parent.terminate()
+                parent.wait(timeout=3)
+            except (psutil.NoSuchProcess, psutil.TimeoutExpired):
+                try:
+                    parent.kill()
+                except psutil.NoSuchProcess:
+                    pass
+    except psutil.NoSuchProcess:
+        pass
 
 
 def get_physical_cores():
@@ -83,8 +122,8 @@ def load_tests(script_dir, test_file):
     return tests_to_run
 
 
-def run_test(command, test, retries, output_dir=None):
-    """Run a single test with retries."""
+def run_test(command, test, retries, output_dir=None, timeout=300):
+    """Run a single test with retries and proper process cleanup."""
     # Pass current environment to subprocess
     env = os.environ.copy()
 
@@ -92,30 +131,85 @@ def run_test(command, test, retries, output_dir=None):
     output_buffer = []
     attempts = 0
     test_start = time.time()
+    processes_to_cleanup = []
 
-    for attempt in range(1, retries + 1):
-        attempts = attempt
-        cmd = [command, test]
-        if output_dir:
-            cmd.extend(['-r', output_dir])
+    try:
+        for attempt in range(1, retries + 1):
+            attempts = attempt
+            cmd = [command, test]
+            if output_dir:
+                cmd.extend(['-r', output_dir])
 
-        # Capture output to avoid interleaving
-        result = run(cmd, env=env, capture_output=True, text=True)
+            # Use Popen for better process control
+            process = Popen(cmd, env=env, stdout=PIPE, stderr=PIPE, text=True)
+            processes_to_cleanup.append(process.pid)
+            
+            try:
+                stdout, stderr = process.communicate(timeout=timeout)
+                
+                if stdout:
+                    output_buffer.append(stdout)
+                if stderr:
+                    output_buffer.append(stderr)
 
-        if result.stdout:
-            output_buffer.append(result.stdout)
-        if result.stderr:
-            output_buffer.append(result.stderr)
-
-        if result.returncode == 0:
-            passed = True
-            break
+                if process.returncode == 0:
+                    passed = True
+                    break
+            except subprocess.TimeoutExpired:
+                # Test timed out - kill the process tree
+                print(f"Test {test} timed out after {timeout}s, killing process tree...", flush=True)
+                kill_process_tree(process.pid)
+                output_buffer.append(f"TIMEOUT: Test exceeded {timeout} seconds")
+                try:
+                    stdout, stderr = process.communicate(timeout=5)
+                    if stdout:
+                        output_buffer.append(stdout)
+                    if stderr:
+                        output_buffer.append(stderr)
+                except subprocess.TimeoutExpired:
+                    process.kill()
+            finally:
+                # Ensure process is cleaned up from our tracking list
+                if process.pid in processes_to_cleanup:
+                    processes_to_cleanup.remove(process.pid)
+                
+                # Double-check the process is really gone
+                if process.poll() is None:
+                    try:
+                        kill_process_tree(process.pid)
+                    except:
+                        pass
+    finally:
+        # Final cleanup - ensure no lingering processes from this test
+        for pid in processes_to_cleanup:
+            try:
+                kill_process_tree(pid)
+            except:
+                pass
 
     elapsed = time.time() - test_start
     return passed, test, output_buffer, elapsed, attempts
 
 
 def main():
+    # Global set to track all spawned process IDs for cleanup
+    spawned_pids = set()
+    
+    def signal_handler(signum, frame):
+        """Handle signals by cleaning up all spawned processes."""
+        print(f"\nReceived signal {signum}, cleaning up processes...", flush=True)
+        # Kill all tracked processes
+        for pid in list(spawned_pids):
+            try:
+                kill_process_tree(pid)
+            except:
+                pass
+        sys.exit(128 + signum)
+    
+    # Register signal handlers
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
+
     parser = ArgumentParser()
     parser.add_argument("-f", "--file", help="Path to yaml file with tests")
     parser.add_argument("-r", "--retry", type=int, default=1, help="Number of retries of tests if failed")
@@ -123,6 +217,7 @@ def main():
     parser.add_argument("-j", "--threads", type=int, default=None, help="Number of parallel jobs for tests (0 for sequential, default is physical CPU cores)")
     parser.add_argument("-o", "--output", default=None, help="Output directory for test results")
     parser.add_argument("-v", "--verbose", action="store_true", help="Verbose output")
+    parser.add_argument("-t", "--timeout", type=int, default=300, help="Timeout per test in seconds (default: 300)")
 
     args, _ = parser.parse_known_args()
 
@@ -184,7 +279,7 @@ def main():
                 started_tests += 1
                 active_jobs = len(futures) + 1
                 print(f">>> [{started_tests}/{len(tests_to_run)}] Starting test (active {active_jobs}/{thread_count}): {test_path}", flush=True)
-                future = executor.submit(run_test, str(runner), test_path, args.retry, output_dir)
+                future = executor.submit(run_test, str(runner), test_path, args.retry, output_dir, args.timeout)
                 futures[future] = test_path
 
             # Submit initial batch up to max_workers
@@ -220,7 +315,7 @@ def main():
         # Sequential execution
         for index, test in enumerate(tests_to_run, start=1):
             print(f">>> [{index}/{len(tests_to_run)}] Starting test: {test}", flush=True)
-            passed, test_name, output_buffer, elapsed, attempts = run_test(str(runner), test, args.retry, output_dir)
+            passed, test_name, output_buffer, elapsed, attempts = run_test(str(runner), test, args.retry, output_dir, args.timeout)
             status = "PASS" if passed else "FAIL"
             print(f"<<< [{status}] {test_name} ({elapsed:.2f}s, attempts={attempts})", flush=True)
 

@@ -1,5 +1,7 @@
 *** Settings ***
 
+Resource        ${CURDIR}/../../common.resource
+
 Suite Setup     Setup
 Suite Teardown  Teardown
 Test Teardown   Test Teardown
@@ -10,6 +12,6 @@ Run successfully 'blink' example
     Execute Command             include @${CURDIR}/blink.resc
     Execute Command             logLevel -1
     Create LED Tester           sysbus.gpio.led
-    Assert LED Is Blinking      testDuration=2  onDuration=0.25  tolerance=0.05  offDuration=0.25
+    Assert LED Is Blinking      testDuration=2  onDuration=0.25  offDuration=0.25  tolerance=0.05
 
-    
+
