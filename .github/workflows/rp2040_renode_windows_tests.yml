@@ -37,13 +37,17 @@ jobs:
         with:
           python-version: '3.13'
           cache: 'pip' # caching pip dependencies
-      - run: |
-          pip install -r tests/requirements.txt
+      - shell: pwsh
+        run: |
+          # `renode-test.bat` uses `py -3` internally on Windows, so install and
+          # query packages with the same interpreter to avoid site-packages mismatches.
+          py -3 -m pip install -r tests/requirements.txt
           $RENODE_DIR = (Get-Item .).FullName + "\renode_1.16.1-dotnet_portable"
           # Get Python site-packages path and set PYTHONPATH for Renode to find modules
-          $SITE_PACKAGES = python3 -c "import site; print(site.getsitepackages()[0])"
+          $SITE_PACKAGES = py -3 -c "import site; print(site.getsitepackages()[0])"
           $env:PYTHONPATH = "$SITE_PACKAGES"
-          python3 tests/run_tests.py -r 3 -f tests/tests.yaml -j 0 -e "$RENODE_DIR\renode-test.bat"
+          py -3 -c "import sys, psutil; print(sys.executable); print(psutil.__file__)"
+          py -3 tests/run_tests.py -r 3 -f tests/tests.yaml -j 0 -e "$RENODE_DIR\renode-test.bat"
       - uses: actions/upload-artifact@v4
         if: always()
         with:

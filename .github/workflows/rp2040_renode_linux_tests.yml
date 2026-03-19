@@ -34,9 +34,9 @@ jobs:
       - name: Download Renode
         shell: bash
         run: |
-          wget https://github.com/renode/renode/releases/download/v1.16.1/renode-1.16.1.linux-portable-dotnet.tar.gz
+          wget https://github.com/renode/renode/releases/download/v1.16.1/renode-1.16.1.linux-portable.tar.gz
           mkdir -p renode
-          tar -xzf renode-1.16.1.linux-portable-dotnet.tar.gz -C renode --strip-components=1
+          tar -xzf renode-1.16.1.linux-portable.tar.gz -C renode --strip-components=1
       - name: Install Renode Test Requirements
         shell: bash
         run: |
