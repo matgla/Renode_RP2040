@@ -227,14 +227,14 @@ public class RP2040XXX : RP2040PeripheralBase, IRP2040Peripheral
         registers = CreateRegisters();
         // Register XOR/SET/CLEAR aliases are handled by base class
     }
-    
+
     private DoubleWordRegisterCollection CreateRegisters()
     {
         var registersMap = new Dictionary<long, DoubleWordRegister>();
         // Define registers here
         return new DoubleWordRegisterCollection(this, registersMap);
     }
-    
+
     public override void Reset()
     {
         base.Reset();
@@ -260,7 +260,7 @@ emulation SetGlobalQuantum "0.000001"
 ## Common Issues
 
 1. **Segmentation faults on Windows**: Ensure `piosim.dll` is compiled in MSYS environment with matching compiler
-2. **IronPython errors with .NET version**: Use the mono version of Renode 1.16.1 on Linux
+2. **IronPython errors with .NET version**: Use Renode 1.16.1 `linux-portable.tar.gz` on Linux instead of the dotnet portable build
 3. **PIO sync issues**: Manual reevaluation may be needed - look at SPI/PIO interworking examples
 4. **7-segment display rendering**: Sometimes requires refresh/zoom in visualization
 

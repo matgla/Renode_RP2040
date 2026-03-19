@@ -31,14 +31,18 @@ jobs:
         with:
           name: pico-examples
           path: tests/pico-examples/build
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
       - name: Download Renode
         shell: bash
         run: |
-          # This project is coupled to Renode 1.16.1, and Linux tests are more
-          # reliable with the Mono portable build than the dotnet portable one.
-          wget https://github.com/renode/renode/releases/download/v1.16.1/renode-1.16.1.linux-portable-mono.tar.gz
+          # Match the local working setup more closely: Renode 1.16.1 running on
+          # the host .NET runtime instead of a bundled portable runtime.
+          wget https://github.com/renode/renode/releases/download/v1.16.1/renode-1.16.1.linux-dotnet.tar.gz
           mkdir -p renode
-          tar -xzf renode-1.16.1.linux-portable-mono.tar.gz -C renode --strip-components=1
+          tar -xzf renode-1.16.1.linux-dotnet.tar.gz -C renode --strip-components=1
       - name: Install Renode Test Requirements
         shell: bash
         run: |
@@ -46,6 +50,7 @@ jobs:
       - name: Build & Execute Tests
         shell: bash
         run: |
+          dotnet --info
           export PATH=$PATH:$PWD/renode:$PWD/renode/tests
           # Set PYTHONPATH so Renode can find installed Python packages
           export PYTHONPATH=$(python3 -c "import site; print(site.getsitepackages()[0])")

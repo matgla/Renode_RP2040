@@ -149,7 +149,7 @@ You can check example usages inside tests/pio/pio_blink/pio_blink.resc or tests/
 This respository is highly coupled with Renode version.
 Use this repository with stable Renode **1.16.1**.
 
-On Linux, use the **mono** build.
+On Linux, use the `linux-portable.tar.gz` package rather than the dotnet portable build.
 For some reason dotnet version reports problems with IronPython, but it may be issue visible only on my machine.
 
 # Testing
