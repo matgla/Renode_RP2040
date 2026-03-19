@@ -34,9 +34,11 @@ jobs:
       - name: Download Renode
         shell: bash
         run: |
-          wget https://github.com/renode/renode/releases/download/v1.16.1/renode-1.16.1.linux-portable.tar.gz
+          # This project is coupled to Renode 1.16.1, and Linux tests are more
+          # reliable with the Mono portable build than the dotnet portable one.
+          wget https://github.com/renode/renode/releases/download/v1.16.1/renode-1.16.1.linux-portable-mono.tar.gz
           mkdir -p renode
-          tar -xzf renode-1.16.1.linux-portable.tar.gz -C renode --strip-components=1
+          tar -xzf renode-1.16.1.linux-portable-mono.tar.gz -C renode --strip-components=1
       - name: Install Renode Test Requirements
         shell: bash
         run: |

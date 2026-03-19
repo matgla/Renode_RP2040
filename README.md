@@ -147,9 +147,9 @@ You can check example usages inside tests/pio/pio_blink/pio_blink.resc or tests/
 # Renode Version
 
 This respository is highly coupled with Renode version.
-Use this repository with stable Renode **1.16.0**
+Use this repository with stable Renode **1.16.1**.
 
-On linux only mono version is supported.
+On Linux, use the **mono** build.
 For some reason dotnet version reports problems with IronPython, but it may be issue visible only on my machine.
 
 # Testing

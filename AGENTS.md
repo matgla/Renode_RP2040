@@ -95,7 +95,7 @@ This repository contains a **RP2040 MCU simulation** for the [Renode](https://gi
 
 ### Prerequisites
 
-- **Renode Version**: 1.16.0 (highly coupled, use exactly this version)
+- **Renode Version**: 1.16.1 (highly coupled, use exactly this version)
 - **.NET SDK**: For building C# peripherals (optional for normal use)
 - **Python 3**: For tests and visualization
 - **CMake + GCC**: For building PIO simulator from source (optional)
@@ -260,7 +260,7 @@ emulation SetGlobalQuantum "0.000001"
 ## Common Issues
 
 1. **Segmentation faults on Windows**: Ensure `piosim.dll` is compiled in MSYS environment with matching compiler
-2. **IronPython errors with .NET version**: Use mono version of Renode on Linux
+2. **IronPython errors with .NET version**: Use the mono version of Renode 1.16.1 on Linux
 3. **PIO sync issues**: Manual reevaluation may be needed - look at SPI/PIO interworking examples
 4. **7-segment display rendering**: Sometimes requires refresh/zoom in visualization
 
