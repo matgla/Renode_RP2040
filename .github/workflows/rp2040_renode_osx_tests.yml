@@ -25,7 +25,7 @@ jobs:
       - name: Install Renode Test
         shell: bash
         run: |
-          pip3 install --break-system-packages -r /Applications/Renode.app/Contents/MacOS/tests/requirements.txt
+          pip3 install --break-system-packages -r tests/requirements.txt
       - name: Install MacOS mono
         shell: bash
         run: |
@@ -38,7 +38,8 @@ jobs:
         shell: bash
         run: |
           export PATH=$PATH:/Applications/Renode.app/Contents/MacOS/tests
-          pip3 install psutil --break-system-packages
+          # Set PYTHONPATH so Renode can find installed Python packages
+          export PYTHONPATH=$(python3 -c "import site; print(site.getsitepackages()[0])")
           python3 ./tests/run_tests.py -r 3 -f tests/tests.yaml -j 0
       - uses: actions/upload-artifact@v4
         if: always()
