@@ -47,6 +47,10 @@ jobs:
         shell: bash
         run: |
           pip3 install -r tests/requirements.txt
+      - name: Build RP2040 peripherals DLL
+        shell: bash
+        run: |
+          dotnet build ./emulation/Peripherals.csproj -c Release /p:RenodePath="$PWD/renode/bin"
       - name: Build & Execute Tests
         shell: bash
         run: |

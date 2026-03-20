@@ -30,10 +30,18 @@ jobs:
         shell: bash
         run: |
           brew install mono-mdk
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
       - uses: actions/download-artifact@v4
         with:
           name: pico-examples
           path: tests/pico-examples/build
+      - name: Build RP2040 peripherals DLL
+        shell: bash
+        run: |
+          dotnet build ./emulation/Peripherals.csproj -c Release /p:RenodePath="/Applications/Renode.app/Contents/MacOS"
       - name: Run tests
         shell: bash
         run: |
