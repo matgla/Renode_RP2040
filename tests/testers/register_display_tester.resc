@@ -4,9 +4,25 @@
 include $ORIGIN/segment_display_tester.py
 
 macro RegisterDisplayTester
-    python "segment_display_tester.mc_RegisterDisplayTester('$1', '$2')"
+    python "segment_display_tester.mc_RegisterSegmentDisplayTester('$1', '$2')"
 end
 
-macro WaitForSequence
-    python "segment_display_tester.mc_WaitForSequence('$1', '$2', $3)"
+macro GetDisplayRowData
+    python "segment_display_tester.mc_GetDisplayRowData('$1', $2)"
+end
+
+macro GetAllDisplayData
+    python "segment_display_tester.mc_GetAllDisplayData('$1')"
+end
+
+macro IsDisplayEnabled
+    python "segment_display_tester.mc_IsDisplayEnabled('$1')"
+end
+
+macro GetDimmingLevel
+    python "segment_display_tester.mc_GetDimmingLevel('$1')"
+end
+
+macro WaitForDisplayData
+    python "segment_display_tester.mc_WaitForDisplayData('$1', $2, $3)"
 end

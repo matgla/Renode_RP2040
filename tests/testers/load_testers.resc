@@ -1,1 +1,2 @@
 include $ORIGIN/segment_display_tester.py
+include $ORIGIN/i2c_capture_tester.resc

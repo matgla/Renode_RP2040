@@ -1,5 +1,6 @@
 *** Settings ***
 
+Resource        ../../../common.resource
 Suite Setup     Setup
 Suite Teardown  Teardown
 Test Teardown   Test Teardown
@@ -7,13 +8,51 @@ Test Timeout    60 seconds
 
 *** Test Cases ***
 Run successfully 'ht16k33_i2c' example
-    # NOTE: This test is a placeholder. The HT16K33 emulation is implemented
-    # but the I2C capture tester needs additional work to verify I2C commands.
-    # The HT16K33 peripheral is registered at sysbus.i2c0.ht16k33 (address 0x70).
-    Execute Command             include @${CURDIR}/ht16k33_i2c.resc
+    Load HT16K33 Test Platform
+    Register HT16K33 Sniffer
 
     Create Terminal Tester      sysbus.uart0
 
-    # Wait for the welcome message
-    # The firmware prints "Welcome to HT33k16!" on startup
     Wait For Line On Uart       Welcome to HT33k16!               timeout=5
+    HT16K33 Should Receive Write    [["0x21"]]    HT16K33 should receive the system run command
+    HT16K33 Should Receive Write    [["0xA0"]]    HT16K33 should receive the row/int configuration command
+    HT16K33 Should Receive Write    [["0x81"]]    HT16K33 should receive the display enable command
+    HT16K33 Should Receive Write    [["0x00", "0x36", "0x28"]]    HT16K33 should receive a display payload for the first character of the welcome scroll    5
+    HT16K33 Should Capture Display Payload
+
+    Log                         HT16K33 I2C test completed successfully with verified I2C traffic
+
+*** Keywords ***
+Load HT16K33 Test Platform
+    Run Setup Command    mach create "pico_tests"    Creating test machine    15 seconds
+    Run Setup Command    include @${CURDIR}/../../../../cores/load_peripherals.py    Loading core peripherals    15 seconds
+    Run Setup Command    machine LoadPlatformDescription @${CURDIR}/raspberry_pico_with_ht16k33.repl    Loading HT16K33 platform description
+    Run Setup Command    sysbus LoadELF @${CURDIR}/../../../../bootroms/rp2040/b2.elf    Loading RP2040 bootrom
+    Run Setup Command    include @${CURDIR}/../../../testers/i2c_capture_tester.py    Loading I2C sniffer helper
+    Run Setup Command    sysbus LoadELF @${CURDIR}/../../../pico-examples/build/i2c/ht16k33_i2c/ht16k33_i2c.elf    Loading HT16K33 firmware
+    Run Setup Command    sysbus.cpu0 VectorTableOffset 0x00000000    Setting CPU0 vector table
+    Run Setup Command    sysbus.cpu1 VectorTableOffset 0x00000000    Setting CPU1 vector table
+
+Run Setup Command
+    [Arguments]    ${command}    ${label}    ${timeout}=10 seconds
+    [Timeout]    ${timeout}
+    Log    ${label}
+    Execute Command             ${command}
+
+Register HT16K33 Sniffer
+    [Timeout]    10 seconds
+    Log    Registering and clearing HT16K33 sniffer
+    Execute Command             python "mc_RegisterI2CCaptureTester('ht16k33_sniffer', 'sysbus.i2c0.ht16k33')"
+    Execute Command             python "mc_ClearI2CCapturedData('ht16k33_sniffer')"
+
+HT16K33 Should Receive Write
+    [Arguments]    ${expected_data}    ${message}    ${timeout}=2
+    [Timeout]    10 seconds
+    Log    Waiting for HT16K33 write: ${expected_data}
+    ${python_expected_data}=    Replace String    ${expected_data}    "    '
+    Execute Command             python "mc_AssertI2CData('ht16k33_sniffer', ${python_expected_data}, ${timeout})"
+
+HT16K33 Should Capture Display Payload
+    [Timeout]    10 seconds
+    Log    Reading captured HT16K33 writes
+    Execute Command             python "mc_AssertAnyCapturedWriteLength('ht16k33_sniffer', 3)"

@@ -44,3 +44,4 @@
 - testcases/i2c/bus_scan/bus_scan.robot
 - testcases/i2c/pcf8523_i2c/pcf8523_i2c.robot
 - testcases/i2c/bmp280_i2c/bmp280_i2c.robot
+- testcases/i2c/ht16k33_i2c/ht16k33_i2c.robot

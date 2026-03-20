@@ -78,4 +78,4 @@ echo "Found $NUM_TESTS matching test(s):"
 echo "$MATCHING_TESTS"
 echo ""
 
-$PYTHON_CMD -u ./tests/run_tests.py -r 3 -f "$TEMP_TEST_LIST" -o "$OUTPUT_DIR" -j 1
+$PYTHON_CMD -u ./tests/run_tests.py -r 1 -f "$TEMP_TEST_LIST" -o "$OUTPUT_DIR" -j 1
