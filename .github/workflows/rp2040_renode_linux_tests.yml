@@ -31,6 +31,10 @@ jobs:
         with:
           name: pico-examples
           path: tests/pico-examples/build
+      - uses: actions/download-artifact@v4
+        with:
+          name: peripherals-dll
+          path: emulation/bin/Release/netstandard2.1
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
@@ -47,10 +51,6 @@ jobs:
         shell: bash
         run: |
           pip3 install -r tests/requirements.txt
-      - name: Build RP2040 peripherals DLL
-        shell: bash
-        run: |
-          dotnet build ./emulation/Peripherals.csproj -c Release /p:RenodePath="$PWD/renode/bin"
       - name: Build & Execute Tests
         shell: bash
         run: |

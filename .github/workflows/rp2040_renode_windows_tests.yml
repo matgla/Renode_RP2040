@@ -32,22 +32,21 @@ jobs:
         with:
           name: pico-examples
           path: tests/pico-examples/build
+      - uses: actions/download-artifact@v4
+        with:
+          name: peripherals-dll
+          path: emulation/bin/Release/netstandard2.1
       - name: Execute Tests
         uses: actions/setup-python@v5
         with:
           python-version: '3.13'
           cache: 'pip' # caching pip dependencies
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '10.0.x'
       - shell: pwsh
         run: |
           # `renode-test.bat` uses `py -3` internally on Windows, so install and
           # query packages with the same interpreter to avoid site-packages mismatches.
           py -3 -m pip install -r tests/requirements.txt
           $RENODE_DIR = (Get-Item .).FullName + "\renode_1.16.1-dotnet_portable"
-          dotnet build .\emulation\Peripherals.csproj -c Release /p:RenodePath="$RENODE_DIR"
           # Get Python site-packages path and set PYTHONPATH for Renode to find modules
           $SITE_PACKAGES = py -3 -c "import site; print(site.getsitepackages()[0])"
           $env:PYTHONPATH = "$SITE_PACKAGES"
