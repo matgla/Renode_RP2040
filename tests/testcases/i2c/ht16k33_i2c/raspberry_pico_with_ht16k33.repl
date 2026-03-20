@@ -1,0 +1,3 @@
+using "../../../../boards/raspberry_pico.repl"
+
+ht16k33: I2C.HT16K33 @ i2c0 0x70

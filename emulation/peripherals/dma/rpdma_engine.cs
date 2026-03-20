@@ -107,7 +107,7 @@ namespace Antmicro.Renode.Peripherals.DMA
       var sourceAddress = request.request.Source.Address ?? 0;
       var whatIsAtSource = sysbus.WhatIsAt(sourceAddress, context);
       var isSourceContinuousMemory = (whatIsAtSource == null || whatIsAtSource.Peripheral is MappedMemory) // Not a peripheral
-                                                  && readLengthInBytes == request.request.SourceIncrementStep; // Consistent memory region
+                                                  && (ulong)readLengthInBytes == request.request.SourceIncrementStep; // Consistent memory region
       if (!request.request.Source.Address.HasValue)
       {
         // request array based copy
@@ -230,7 +230,7 @@ namespace Antmicro.Renode.Peripherals.DMA
       var destinationAddress = request.request.Destination.Address ?? 0;
       var whatIsAtDestination = sysbus.WhatIsAt(destinationAddress);
       var isDestinationContinuousMemory = (whatIsAtDestination == null || whatIsAtDestination.Peripheral is MappedMemory) // Not a peripheral
-                                                  && readLengthInBytes == request.request.DestinationIncrementStep;  // Consistent memory region
+                                                  && (ulong)readLengthInBytes == request.request.DestinationIncrementStep;  // Consistent memory region
       if (!request.request.Destination.Address.HasValue)
       {
         // request array based copy
@@ -254,7 +254,8 @@ namespace Antmicro.Renode.Peripherals.DMA
             // Source         |  A  |  B  |  C  |  D  |
             // Destination    |  A  |  A  |  A  |  A  |
             var chunkStartOffset = 0UL;
-            var chunk = buffer.Take(writeLengthInBytes).ToArray();
+            var chunk = new byte[writeLengthInBytes];
+            Array.Copy(buffer, 0, chunk, 0, writeLengthInBytes);
             while (chunkStartOffset < (ulong)request.request.Size)
             {
               var writeAddress = destinationAddress + chunkStartOffset;
@@ -285,7 +286,9 @@ namespace Antmicro.Renode.Peripherals.DMA
           // Destination    |  D  |     |     |     |
           var skipCount = (request.request.Size == writeLengthInBytes) ? 0 : request.request.Size - writeLengthInBytes;
           DebugHelper.Assert((skipCount + request.request.Size) <= buffer.Length);
-          sysbus.WriteBytes(buffer.Skip(skipCount).ToArray(), destinationAddress + writeOffset, context: context);
+          var lastUnit = new byte[writeLengthInBytes];
+          Array.Copy(buffer, skipCount, lastUnit, 0, writeLengthInBytes);
+          sysbus.WriteBytes(lastUnit, destinationAddress + writeOffset, context: context);
         }
       }
       else if (whatIsAtDestination != null)
@@ -342,10 +345,8 @@ namespace Antmicro.Renode.Peripherals.DMA
       int transferred = 0;
       while (transferred < size)
       {
-        int chunkSize = size - transferred > ringSize ? ringSize : size - transferred;
-        var chunk = new byte[chunkSize];
-        sysbus.ReadBytes(sourceAddress, chunkSize, chunk, 0, context: context);
-        Array.Copy(chunk, 0, buffer, transferred, chunkSize);
+        int chunkSize = Math.Min(size - transferred, ringSize);
+        sysbus.ReadBytes(sourceAddress, chunkSize, buffer, transferred, context: context);
         transferred += chunkSize;
       }
       return size % ringSize;
@@ -362,7 +363,7 @@ namespace Antmicro.Renode.Peripherals.DMA
       int transferred = 0;
       while (transferred < size)
       {
-        int chunkSize = size - transferred > ringSize ? ringSize : size - transferred;
+        int chunkSize = Math.Min(size - transferred, ringSize);
         var chunk = new byte[chunkSize];
         Array.Copy(buffer, transferred, chunk, 0, chunkSize);
         sysbus.WriteBytes(chunk, destinationAddress, context: context);

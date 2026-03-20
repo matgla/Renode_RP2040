@@ -6,6 +6,10 @@ path add $ORIGIN/..
 log "Loading board initialization file"
 include $board_initialization_file
 
+# Set relaxed default quantum for faster simulation
+# Tests that need tighter synchronization override this
+emulation SetGlobalQuantum "0.0001"
+
 include $ORIGIN/testers/load_testers.resc
 
 log "Loading firmware file"
@@ -16,4 +20,3 @@ sysbus.cpu1 VectorTableOffset 0x00000000
 
 # machine StartGdbServer 3333 true sysbus.cpu0
 # machine StartGdbServer 3333 true sysbus.cpu1
-

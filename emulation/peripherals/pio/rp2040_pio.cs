@@ -13,10 +13,13 @@ using Antmicro.Renode.Peripherals.Bus;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Diagnostics;
-using System.Collections;
 
 namespace Antmicro.Renode.Peripherals.CPU
 {
+    // Delegate types for native PIO simulator bindings
+    public delegate void ActionInt32(int arg);
+    public delegate uint FuncInt32UInt32UInt32(int arg1, uint arg2);
+    public delegate void ActionInt32UInt32UInt32(int arg1, uint arg2, uint arg3);
 
     public static class PioSimPathExtension
     {
@@ -38,15 +41,6 @@ namespace Antmicro.Renode.Peripherals.CPU
     {
         private static string GetSourceFileDirectory([CallerFilePath] string sourceFilePath = "")
         {
-            // Retrieve all environment variables
-            IDictionary environmentVariables = Environment.GetEnvironmentVariables();
-
-            // Print each environment variable and its value
-            foreach (DictionaryEntry entry in environmentVariables)
-            {
-
-                Logger.Log(LogLevel.Error, "file: {0}: {1}", entry.Key, entry.Value);
-            }
             return Path.GetDirectoryName(sourceFilePath);
         }
 
@@ -80,7 +74,7 @@ namespace Antmicro.Renode.Peripherals.CPU
             : base(id + 100, cpuType, machine, endianness, bitness)
         {
             pioId = (int)id;
-            // Get the directory of the executing assembly 
+            // Get the directory of the executing assembly
             string piosimPath = "";
             if (EmulationManager.Instance.CurrentEmulation.ExternalsManager.TryGetByName("piosim_path", out PioSimPath result))
             {
@@ -151,7 +145,7 @@ namespace Antmicro.Renode.Peripherals.CPU
                 newPerformance = 1;
             }
             this.PerformanceInMips = newPerformance;
-            this.Log(LogLevel.Debug, "Changing clock frequency to: " + newPerformance + " MIPS");
+            this.Log(LogLevel.Debug, "Changing clock frequency to: {0} MIPS", newPerformance);
         }
 
         public override void Start()
@@ -325,13 +319,13 @@ namespace Antmicro.Renode.Peripherals.CPU
         private ActionInt32 PioDeinitialize;
 
         [Import]
-        private FuncUInt32Int32UInt32 PioExecute;
+        private FuncInt32UInt32UInt32 PioExecute;
 
         [Import]
         private ActionInt32UInt32UInt32 PioWriteMemory;
 
         [Import]
-        private FuncUInt32Int32UInt32 PioReadMemory;
+        private FuncInt32UInt32UInt32 PioReadMemory;
     }
 }
 

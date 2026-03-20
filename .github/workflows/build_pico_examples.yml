@@ -1,4 +1,4 @@
-name: Renode RP2040 - Build Pico Examples 
+name: Renode RP2040 - Build Pico Examples
 
 on:
   push:
@@ -10,43 +10,68 @@ jobs:
   build_pico_examples:
     name: "Renode Build Pico Examples"
     runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/matgla/yasldtoolchain:0.4.1
-      credentials:
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0
+      - name: Install Ubuntu dependencies
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            binutils-arm-none-eabi \
+            cmake \
+            gcc-arm-none-eabi \
+            libnewlib-arm-none-eabi \
+            libstdc++-arm-none-eabi-newlib \
+            ninja-build \
+            python3-pip
       - name: Validate PioSim
         run: |
-          pip3 install --break-system-packages requests 
-          python3 piosim/fetch_piosim.py --verify 
+          pip3 install --break-system-packages requests
+          python3 piosim/fetch_piosim.py --verify
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
       - name: Create GIT Identity
-        shell: bash 
-        run: | 
+        shell: bash
+        run: |
           git config --global user.email "you@example.com" && git config --global user.name "Your Name"
-     
-      - name: Configure cache for Pico Examples 
+      - name: Download Renode
+        shell: bash
+        run: |
+          wget https://github.com/renode/renode/releases/download/v1.16.1/renode-1.16.1.linux-dotnet.tar.gz
+          mkdir -p renode
+          tar -xzf renode-1.16.1.linux-dotnet.tar.gz -C renode --strip-components=1
+      - name: Build RP2040 peripherals DLL
+        shell: bash
+        run: |
+          dotnet build ./emulation/Peripherals.csproj -c Release /p:RenodePath="$PWD/renode/bin"
+
+      - name: Configure cache for Pico Examples
         id: pico-examples-cache
         uses: actions/cache@v4
-        with: 
-          path: pico-examples
-          key: pico-examples-key-${{ hashFiles('tests/pico_examples_revision')}}-${{ hashFiles('pico_example_patches/**.patch')}}
+        with:
+          path: tests/pico-examples/build
+          key: pico-examples-build-${{ hashFiles('tests/pico_examples_revision', 'tests/pico_examples_patches/*.patch', 'tests/build_pico_examples.sh') }}
 
       - name: Build Pico Examples
         shell: bash
         if: steps.pico-examples-cache.outputs.cache-hit != 'true'
         run: |
-          pacman -Sy --noconfirm ninja
           cd tests && ./build_pico_examples.sh
 
       - uses: actions/upload-artifact@v4
         with:
-          name: pico-examples 
+          name: pico-examples
           path: tests/pico-examples/build
-  
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: peripherals-dll
+          path: emulation/bin/Release/netstandard2.1/Peripherals.dll
+
   run_linux_tests:
     name: Renode Linux Tests
     needs: [build_pico_examples]
@@ -71,3 +96,6 @@ jobs:
       - uses: GeekyEggo/delete-artifact@v5.1.0
         with:
           name: pico-examples
+      - uses: GeekyEggo/delete-artifact@v5.1.0
+        with:
+          name: peripherals-dll

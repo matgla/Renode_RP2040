@@ -8,5 +8,9 @@ sysbus LoadELF $global.FIRMWARE
 sysbus.cpu0 VectorTableOffset 0x00000000
 sysbus.cpu1 VectorTableOffset 0x00000000
 
+# Load visualization for interactive use
+include $ORIGIN/visualization/visualization.py
+setVisualizationPath $visualization_file
+
 
 

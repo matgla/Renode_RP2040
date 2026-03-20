@@ -8,7 +8,7 @@ Test Timeout    100 seconds
 *** Test Cases ***
 Run successfully 'hello_resus' example
     Execute Command             include @${CURDIR}/hello_resus.resc
-    Execute Command             logLevel -1
+
 
     Create Terminal Tester      sysbus.uart0
 

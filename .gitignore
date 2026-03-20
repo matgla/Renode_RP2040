@@ -12,3 +12,12 @@ mono_crash*
 .DS_Store
 venv
 obj/
+__pycache__/
+output.xml
+test_output.log
+
+# Test output directory
+output/
+emulation/bin
+tmp/
+profiling/

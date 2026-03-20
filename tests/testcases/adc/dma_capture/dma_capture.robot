@@ -12,7 +12,7 @@ Test Timeout        1000 seconds
 *** Test Cases ***
 Run successfully 'dma_capture' example
     Execute Command    include @${CURDIR}/dma_capture.resc
-    Execute Command    logLevel -1
+
 
     Create Terminal Tester    sysbus.uart0
 
@@ -23,7 +23,7 @@ Run successfully 'dma_capture' example
     ${allSamples}    Create List
     FOR    ${repeat}    IN RANGE    10
         ${l}    Wait For Next Line On Uart    timeout=1
-        ${data}    Replace String    ${l.line}    ${space}    ${empty}
+        ${data}    Replace String    ${l['Line']}    ${space}    ${empty}
         @{samples}    Split String    ${data}    ,
         @{samples}    Evaluate    [x for x in @{samples} if x]
         Append To List    ${allSamples}    @{samples}

@@ -12,7 +12,7 @@ Run successfully 'button' example
     Create LED Tester           sysbus.gpio.led  defaultTimeout=4 
     
     Start Emulation 
-    Sleep                3s 
+    Sleep                1s 
     Execute Command      sysbus.gpio.button Press
     Assert LED State     true 
     Execute Command      sysbus.gpio.button Release 

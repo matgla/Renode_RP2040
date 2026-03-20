@@ -9,25 +9,25 @@ Currently supported peripherals described in peripherals section.
 It is a framework to build your own board level simulations that uses RP2040.
 There is predefined Raspberry Pico board description in: 'boards/raspberry_pico.repl'
 
-# Supported Peripherals And Hardware 
+# Supported Peripherals And Hardware
 
 |    Peripheral   |  Supported    | Known Limitations  |
 |       :---:     |     :---:     |       :---:        |
 |    **SIO**      |      $${\color{yellow}✓}$$       | Partially supported (multicore, dividers), limitations to be filled when known                 |
 | **IRQ**  | $${\color{yellow}✓}$$ | Propagation from some peripherals is implemented |
 | **DMA**  | $${\color{green}✓}$$  | DMA implemented with ringing and control blocks support |
-| **Clocks** | $${\color{yellow}✓}$$ | Clocks are mostly just stubs, but with tree propagation, but virtual time is always correct | 
-| **GPIO** | $${\color{green}✓}$$ | Pins manipulation implemented, with interrupts support. PIO may needs to be manually reevaluated due to CPU emulation (it's not step by step). Look for RP2040_SPI (PL022) peripheral as an example. Statuses may not be adequate to simplify simulation for now . |readm
+| **Clocks** | $${\color{yellow}✓}$$ | Clocks are mostly just stubs, but with tree propagation, but virtual time is always correct |
+| **GPIO** | $${\color{green}✓}$$ | Pins manipulation implemented, with interrupts support. PIO may needs to be manually reevaluated due to CPU emulation (it's not step by step). Look for RP2040_SPI (PL022) peripheral as an example. Statuses may not be adequate to simplify simulation for now. |
 | **XOSC** |  $${\color{green}✓}$$  | |
 | **ROSC** | $${\color{green}✓}$$  | |
 | **PLL** | $${\color{green}✓}$$  | |
 | **SysConfig** | $${\color{red}✗}$$  | |
-| **SysInfo** | $${\color{red}✗}$$  | | 
+| **SysInfo** | $${\color{red}✗}$$  | |
 | **PIO** |  $${\color{yellow}✓}$$  | Manual reevaluation may be neccessary to synchronize PIO together with actions on MCU. IRQ and DMA not yet supported |
 | **USB** | $${\color{red}✗}$$  |  |
 | **UART** | $${\color{green}✓}$$  | Reimplemented PL011 to support DREQ generation for DMA and PIO interworking (in the future, not done yet) |
 | **SPI** |  $${\color{yellow}✓}$$ | Clock configuration not yet supported. Only master mode implemented with only one mode. Interworking with PIO is implemented! |
-| **I2C** |  $${\color{red}✗}$$  |  |
+| **I2C** |  $${\color{green}✓}$$  | Master mode, interrupts, DMA support |
 | **PWM** |  $${\color{red}✗}$$  |  |
 | **Timers** | $${\color{yellow}✓}$$  | Alarms implemented, but not all registers |
 | **Watchdog** | $${\color{green}✓}$$  | fully implemented, but tick generator is stubbed with just LimitTimer |
@@ -41,11 +41,11 @@ There is predefined Raspberry Pico board description in: 'boards/raspberry_pico.
 
 
 
-# How PIO simulation works 
+# How PIO simulation works
 
-PIO is implemented as external simulator written in C++: `piosim` directory. Decision was made due to performance issues with C# implementation. 
-Due to that PIO is modelled as additional CPU. 
-Renode executes more than 1 step at once on given CPU, so manual synchronization is necessary in some cases, like interworking between SPI and PIO. 
+PIO is implemented as external simulator written in C++: `piosim` directory. Decision was made due to performance issues with C# implementation.
+Due to that PIO is modelled as additional CPU.
+Renode executes more than 1 step at once on given CPU, so manual synchronization is necessary in some cases, like interworking between SPI and PIO.
 
 > [!IMPORTANT]
 > For Windows piosim.dll must be compiled inside msys environment:
@@ -56,35 +56,35 @@ Renode executes more than 1 step at once on given CPU, so manual synchronization
 
 # How to use Raspberry Pico simulation
 
-To use Raspberry Pico simulation clone Renode_RP2040 repository, then add path to it and include `boards/initialize_raspberry_pico.resc`. 
+To use Raspberry Pico simulation clone Renode_RP2040 repository, then add path to it and include `boards/initialize_raspberry_pico.resc`.
 
 Example use:
 ```
-(monitor) path add @repos/Renode_RP2040 
-(monitor) include @boards/initialize_raspberry_pico.resc 
+(monitor) path add @repos/Renode_RP2040
+(monitor) include @boards/initialize_raspberry_pico.resc
 (raspberry_pico) sysbus LoadELF @repos/Renode_RP2040/pico-examples/build/hello_world/serial/
 hello_serial.elf
 (raspberry_pico) showAnalyzer sysbus.uart0
 (raspberry_pico) start
 ```
-> [!NOTE] 
+> [!NOTE]
 > set VectorTableOffset to valid address for your firmware, for pico-examples it can be __VECTOR_TABLE symbol.
 
 You may use it inside your simulation scripts, look at `tests/prepare.resc` as an example.
 
-# How to define own board 
-Raspberry Pico configuration may be extended to configure board connections. 
+# How to define own board
+Raspberry Pico configuration may be extended to configure board connections.
 As an example you can check `tests/pio/clocked_input/raspberry_pico_with_redirected_spi.repl`.
 
-Then you can include `boards/initalize_custom_board.resc` after setting $platform_file variable that points to your board.
+Then you can include `boards/initialize_custom_board.resc` after setting $platform_file variable that points to your board.
 
 ```
 $platform_file=@my_board.repl
 include @boards/initialize_custom_board.resc
 ```
 
-# Easy firmware execution 
-In the root of repository, there is the `run_firmware.resc` script that configures RP2040 with specified firmware in ELF file. 
+# Easy firmware execution
+In the root of repository, there is the `run_firmware.resc` script that configures RP2040 with specified firmware in ELF file.
 
 Just define your script or use renode console to use it.
 
@@ -93,15 +93,15 @@ $global.FIRMWARE=my_awesome_binary.elf
 include @run_firmware.resc
 ```
 
-If you need to use your own board: 
+If you need to use your own board:
 ```
 $platform_file=@my_awesome_board.repl
 $global.FIRMWARE=my_awesome_binary.elf
 include @run_firmware.resc
 ```
 
-# Board visualization 
-There is possibility to visualize board using python visualization plugin. 
+# Board visualization
+There is possibility to visualize board using python visualization plugin.
 > [!IMPORTANT]
 > Only Raspberry Pico based boards are currently supported
 > You can add buttons or leds and they will be automatically registered
@@ -113,47 +113,77 @@ pip3 install -r visualization/requirements.txt
 renode --console your_simulation.resc
 
 inside renode console:
-(rasbperry_pico) startVisualization 8080 
+(rasbperry_pico) startVisualization 8080
 ```
 and open localhost:8080 in your web browser.
 
-Layouts are defined by user and can be saved in JSON file with `save` button inside `layout` section. 
+Layouts are defined by user and can be saved in JSON file with `save` button inside `layout` section.
 
-Loading is supported from website or with `visualizationLoadLayout @path_to_file` command. 
+Loading is supported from website or with `visualizationLoadLayout @path_to_file` command.
 
-Elements on PCB can be marked as board elements with `visualizationSetBoardElement <name>` command. 
-But they are not rendered yet. This is planned feature. 
+Elements on PCB can be marked as board elements with `visualizationSetBoardElement <name>` command.
+But they are not rendered yet. This is planned feature.
 
-Example GUI may look like shown below: 
+Example GUI may look like shown below:
 ![gui](./images/gui_example.png)
 
-## Known bugs 
-There is a bug that sometimes 7-segment display is not rendered correctly. 
+## Known bugs
+There is a bug that sometimes 7-segment display is not rendered correctly.
 Zooming or refreshing browser seems to fix the problem as a workaround.
 
-# Multi Node simulation. 
+# Multi Node simulation.
 Many RP2040 simulators may interwork together. I am using that possibility in full MSPC simulation. To interwork between them GPIOConnector may be used, please check existing usage (`simulation` directory):
- [MSPC Board Simulation](https://github.com/matgla/mspc-south-bridge/) 
+ [MSPC Board Simulation](https://github.com/matgla/mspc-south-bridge/)
 
-# Emulation accuracy 
-Renode is using optimizations to speed up emulation executing huge number of instructions at once per core. 
+# Emulation accuracy
+Renode is using optimizations to speed up emulation executing huge number of instructions at once per core.
 This leads to accuracy problems which may be visible in some testing scenarios.
-To improve accuracy you can use command: 
+To improve accuracy you can use command:
 ``` emulation SetGlobalQuantum "0.000001" ```
-With value necessary for your needs. 
+With value necessary for your needs.
 
 You can check example usages inside tests/pio/pio_blink/pio_blink.resc or tests/adc/adc_console/adc_console.resc.
 
 # Renode Version
 
-This respository is highly coupled with Renode version. 
-Use this repository with stable Renode **1.15.3**
+This respository is highly coupled with Renode version.
+Use this repository with stable Renode **1.16.1**.
 
-On linux only mono version is supported. 
+On Linux, use the `linux-portable.tar.gz` package rather than the dotnet portable build.
 For some reason dotnet version reports problems with IronPython, but it may be issue visible only on my machine.
 
-# Testing 
-I am testing simulator code using official pico-examples and some custom made build on top of pico-examples. For more informations look at pico_example_patches. Current tests list with statuses: 
+# Testing
+I am testing simulator code using official pico-examples and some custom made build on top of pico-examples. For more informations look at pico_example_patches. Current tests list with statuses:
+
+## Test Setup
+
+Tests require Python dependencies to be installed. The recommended way is to use a virtual environment:
+
+```bash
+# Setup virtual environment and install dependencies
+./setup_venv.sh
+
+# Run tests
+./run_tests.sh
+```
+
+Alternatively, you can manually set up the environment:
+
+```bash
+# Create virtual environment
+python3 -m venv venv
+
+# Activate it
+source venv/bin/activate
+
+# Install dependencies
+pip install -r tests/requirements.txt
+
+# Run tests
+./run_tests.sh
+```
+
+The test runner now builds `emulation/Peripherals.csproj` once at the start of a run and uses the precompiled DLL via `cores/initialize_peripherals.resc`. For live source compilation while developing peripherals, include `cores/initialize_peripherals_source.resc` explicitly.
 
 ## ADC
 | Example | Passed |
@@ -161,10 +191,10 @@ I am testing simulator code using official pico-examples and some custom made bu
 | [adc_console](https://github.com/raspberrypi/pico-examples/tree/master/adc/adc_console) | $${\color{green}✓}$$ |
 | [dma_capture](https://github.com/raspberrypi/pico-examples/tree/master/adc/dma_capture) | $${\color{green}✓}$$ |
 | [hello_adc](https://github.com/raspberrypi/pico-examples/tree/master/adc/hello_adc) | $${\color{green}✓}$$ |
-| [joystick_display](https://github.com/raspberrypi/pico-examples/tree/master/adc/joystick_display) | $${\color{green}✓}$$ | 
-| [microphone_adc](https://github.com/raspberrypi/pico-examples/tree/master/adc/microphone_adc) | $${\color{green}✓}$$ | 
-| [onboard_temperature](https://github.com/raspberrypi/pico-examples/tree/master/adc/onboard_temperature) | $${\color{green}✓}$$ | 
-| [read_vsys](https://github.com/raspberrypi/pico-examples/tree/master/adc/read_vsys) | $${\color{green}✓}$$ | 
+| [joystick_display](https://github.com/raspberrypi/pico-examples/tree/master/adc/joystick_display) | $${\color{green}✓}$$ |
+| [microphone_adc](https://github.com/raspberrypi/pico-examples/tree/master/adc/microphone_adc) | $${\color{green}✓}$$ |
+| [onboard_temperature](https://github.com/raspberrypi/pico-examples/tree/master/adc/onboard_temperature) | $${\color{green}✓}$$ |
+| [read_vsys](https://github.com/raspberrypi/pico-examples/tree/master/adc/read_vsys) | $${\color{green}✓}$$ |
 
 ## Blink
 | Example | Passed |
@@ -175,7 +205,7 @@ I am testing simulator code using official pico-examples and some custom made bu
 | Example | Passed |
 | :---: | :---:    |
 | [detached_clk_peri](https://github.com/raspberrypi/pico-examples/tree/master/clocks/detached_clk_peri) | $${\color{green}✓}$$ |
-| [hello_48MHz](https://github.com/raspberrypi/pico-examples/tree/master/clocks/hello_48MHz) | $${\color{green}✓}$$ | 
+| [hello_48MHz](https://github.com/raspberrypi/pico-examples/tree/master/clocks/hello_48MHz) | $${\color{green}✓}$$ |
 | [hello_gpout](https://github.com/raspberrypi/pico-examples/tree/master/clocks/hello_gpout) | $${\color{green}✓}$$ |
 | [hello_resus](https://github.com/raspberrypi/pico-examples/tree/master/clocks/hello_resus) | $${\color{green}✓}$$ |
 
@@ -196,7 +226,7 @@ I am testing simulator code using official pico-examples and some custom made bu
 ## Flash
 | Example | Passed |
 | :---: | :---:    |
-| [cache_perfctr](https://github.com/raspberrypi/pico-examples/tree/master/flash/cache_perfctr) | $${\color{red}✗}$$ | 
+| [cache_perfctr](https://github.com/raspberrypi/pico-examples/tree/master/flash/cache_perfctr) | $${\color{red}✗}$$ |
 | [nuke](https://github.com/raspberrypi/pico-examples/tree/master/flash/nuke) | $${\color{green}✓}$$ |
 | [program](https://github.com/raspberrypi/pico-examples/tree/master/flash/program) | $${\color{green}✓}$$ |
 | [ssi_dma](https://github.com/raspberrypi/pico-examples/tree/master/flash/ssi_dma) | $${\color{green}✓}$$ |
@@ -219,8 +249,8 @@ I am testing simulator code using official pico-examples and some custom made bu
 ## I2C
 | Example | Passed |
 | :---: | :---:    |
-| [bmp280_i2c](https://github.com/raspberrypi/pico-examples/tree/master/i2c/bmp280_i2c) | $${\color{red}✗}$$ |
-| [bus_scan](https://github.com/raspberrypi/pico-examples/tree/master/i2c/bus_scan) | $${\color{red}✗}$$ | 
+| [bmp280_i2c](https://github.com/raspberrypi/pico-examples/tree/master/i2c/bmp280_i2c) | $${\color{green}✓}$$ |
+| [bus_scan](https://github.com/raspberrypi/pico-examples/tree/master/i2c/bus_scan) | $${\color{green}✓}$$ |
 | [ht16k33_i2c](https://github.com/raspberrypi/pico-examples/tree/master/i2c/ht16k33_i2c) | $${\color{red}✗}$$ |
 | [lcd_1602_i2c](https://github.com/raspberrypi/pico-examples/tree/master/i2c/lcd_1602_i2c) | $${\color{red}✗}$$ |
 | [lis3dh_i2c](https://github.com/raspberrypi/pico-examples/tree/master/i2c/lis3dh_i2c) | $${\color{red}✗}$$ |
@@ -229,7 +259,7 @@ I am testing simulator code using official pico-examples and some custom made bu
 | [mpl3115a2_i2c](https://github.com/raspberrypi/pico-examples/tree/master/i2c/mpl3115a2_i2c) | $${\color{red}✗}$$ |
 | [mpu6050_i2c](https://github.com/raspberrypi/pico-examples/tree/master/i2c/mpu6050_i2c) | $${\color{red}✗}$$ |
 | [pa1010d_i2c](https://github.com/raspberrypi/pico-examples/tree/master/i2c/pa1010d_i2c) | $${\color{red}✗}$$ |
-| [pcf8523_i2c](https://github.com/raspberrypi/pico-examples/tree/master/i2c/pcf8523_i2c) | $${\color{red}✗}$$ |
+| [pcf8523_i2c](https://github.com/raspberrypi/pico-examples/tree/master/i2c/pcf8523_i2c) | $${\color{green}✓}$$ |
 | [slave_mem_i2c](https://github.com/raspberrypi/pico-examples/tree/master/i2c/slave_mem_i2c) | $${\color{red}✗}$$ |
 | [ssd1306_i2c](https://github.com/raspberrypi/pico-examples/tree/master/i2c/ssd1306_i2c) | $${\color{red}✗}$$ |
 
@@ -255,11 +285,11 @@ I am testing simulator code using official pico-examples and some custom made bu
 | [clocked_input](https://github.com/raspberrypi/pico-examples/tree/master/pio/clocked_input) | $${\color{green}✓}$$ |
 | [differential_manchester](https://github.com/raspberrypi/pico-examples/tree/master/pio/differential_manchester) | $${\color{green}✓}$$ |
 | [hello_pio](https://github.com/raspberrypi/pico-examples/tree/master/pio/hello_pio) | $${\color{green}✓}$$ |
-| [hub75](https://github.com/raspberrypi/pico-examples/tree/master/pio/hub75) | $${\color{red}✗}$$ | 
+| [hub75](https://github.com/raspberrypi/pico-examples/tree/master/pio/hub75) | $${\color{red}✗}$$ |
 | [i2c](https://github.com/raspberrypi/pico-examples/tree/master/pio/i2c) | $${\color{red}✗}$$ |
 | [ir_nec](https://github.com/raspberrypi/pico-examples/tree/master/pio/ir_nec) | $${\color{red}✗}$$ |
 | [logic_analyser](https://github.com/raspberrypi/pico-examples/tree/master/pio/logic_analyser) | $${\color{red}✗}$$ |
-| [manchester_encoding](https://github.com/raspberrypi/pico-examples/tree/master/pio/manchester_encoding) | $${\color{red}✗}$$ | 
+| [manchester_encoding](https://github.com/raspberrypi/pico-examples/tree/master/pio/manchester_encoding) | $${\color{red}✗}$$ |
 | [onewire](https://github.com/raspberrypi/pico-examples/tree/master/pio/onewire) | $${\color{red}✗}$$ |
 | [pio_blink](https://github.com/raspberrypi/pico-examples/tree/master/pio/pio_blink) | $${\color{green}✓}$$ |
 | [pwm](https://github.com/raspberrypi/pico-examples/tree/master/pio/pwm) | $${\color{red}✗}$$ |
@@ -315,19 +345,19 @@ I am testing simulator code using official pico-examples and some custom made bu
 | [periodic_sampler](https://github.com/raspberrypi/pico-examples/tree/master/timer/periodic_sampler) | $${\color{red}✗}$$ |
 | [timer_lowlevel](https://github.com/raspberrypi/pico-examples/tree/master/timer/timer_lowlevel) | $${\color{green}✓}$$ |
 
-# USB 
+# USB
 | Example | Passed |
 | :---: | :---:    |
 | [device](https://github.com/raspberrypi/pico-examples/tree/master/usb/device) | $${\color{red}✗}$$ |
 | [dual](https://github.com/raspberrypi/pico-examples/tree/master/usb/dual) | $${\color{red}✗}$$ |
-| [host](https://github.com/raspberrypi/pico-examples/tree/master/usb/host) | $${\color{red}✗}$$ | 
+| [host](https://github.com/raspberrypi/pico-examples/tree/master/usb/host) | $${\color{red}✗}$$ |
 
-# Watchdog 
+# Watchdog
 | Example | Passed |
 | :---: | :---:    |
 | [hello_watchdog](https://github.com/raspberrypi/pico-examples/tree/master/watchdog/hello_watchdog) | $${\color{green}✓}$$ |
 
-# License 
+# License
 
 MIT License
 

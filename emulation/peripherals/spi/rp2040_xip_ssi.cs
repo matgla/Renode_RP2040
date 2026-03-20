@@ -32,7 +32,7 @@ namespace Antmicro.Renode.Peripherals.SPI
     public const ulong clearAliasOffset = 0x3000;
     ulong GetBitWidth()
     {
-      // standard SPI 
+      // standard SPI
       if (frameFormat.Value == 0)
       {
         return 1;
@@ -55,7 +55,7 @@ namespace Antmicro.Renode.Peripherals.SPI
       }
 
       // half of frequency due to SSI logic according to datasheet
-      // divider may reduce it further 
+      // divider may reduce it further
       // SSI transfer is in (1/2/4 - bit per clock) and simulation logic in bytes
       return (uint)(systemClockFrequency / 2 / clockDivider.Value / (8 / GetBitWidth()));
     }
@@ -258,9 +258,27 @@ namespace Antmicro.Renode.Peripherals.SPI
       return received;
     }
 
+    private void WriteDummyCycles(int cycles)
+    {
+      for (int i = 0; i < cycles; ++i)
+      {
+        RegisteredPeripheral.Transmit(0x00);
+      }
+    }
+
+    private void PushReadFramesToReceiveFifo(int frameCount)
+    {
+      var bitsPerFrame = (int)dataFrameSize32.Value + 1;
+
+      for (int i = 0; i < frameCount; ++i)
+      {
+        PushToReceiveFifo(WriteToDevice(0, bitsPerFrame));
+      }
+    }
+
     int GetWaitCycles()
     {
-      // standard SPI 
+      // standard SPI
       if (frameFormat.Value == 0)
       {
         return (int)waitCycles.Value;
@@ -276,93 +294,107 @@ namespace Antmicro.Renode.Peripherals.SPI
     }
     void ProcessReceive()
     {
-      switch (state)
+      while (true)
       {
-        case State.Instruction:
-          {
-            if (!transmitBuffer.TryDequeue(out var data))
+        switch (state)
+        {
+          case State.Instruction:
             {
-              clockingThread.Stop();
-              return;
+              if (!transmitBuffer.TryDequeue(out var data))
+              {
+                clockingThread.Stop();
+                return;
+              }
+
+              this.Log(LogLevel.Noisy, "Sending command from FIFO: {0:X}", data);
+
+              if (instructionLength.Value == 0)
+              {
+                // this is XIP special mode with appending instruction after address, taking from 32-bit address
+                // for XIP operations addressing is limited to 32 bits
+                int bytes = (int)Math.Ceiling((double)addressLength.Value / 2);
+
+                this.Log(LogLevel.Noisy, "Sending continuation code: {0} and data {1:X}", bytes, data);
+                // first byte goes at end
+                WriteToDevice(data, bytes * 8);
+
+                cyclesToWait = GetWaitCycles();
+                if (cyclesToWait > 0)
+                {
+                  state = State.WaitCycles;
+                  this.Log(LogLevel.Noisy, "Wait cycles are necessary, waiting for: {0}", cyclesToWait);
+                }
+                else
+                {
+                  state = State.Data;
+                  framesToTransfer = (int)numberOfDataFrames.Value + 1;
+                }
+                continue;
+              }
+              int bits = 1 << (int)(1 + instructionLength.Value);
+              this.Log(LogLevel.Noisy, "Writing instruction with size: {0}, instru: {1}", bits, instructionLength.Value);
+              // this is just instruction, no address bytes yet
+              WriteToDevice(data, bits);
+              state = State.Address;
+              addressBytes = (int)Math.Ceiling((double)addressLength.Value / 2);
+              continue;
             }
-
-            this.Log(LogLevel.Noisy, "Sending command from FIFO: {0:X}", data);
-
-            if (instructionLength.Value == 0)
+          case State.Address:
             {
-              // this is XIP special mode with appending instruction after address, taking from 32-bit address 
-              // for XIP operations addressing is limited to 32 bits
-              int bytes = (int)Math.Ceiling((double)addressLength.Value / 2);
+              if (!transmitBuffer.TryDequeue(out var data))
+              {
+                this.Log(LogLevel.Error, "Requested address transmission, but there is no data in FIFO");
+                return;
+              }
 
-              this.Log(LogLevel.Noisy, "Sending continuation code: {0} and data {1:X}", bytes, data);
-              // first byte goes at end 
-              WriteToDevice(data, bytes * 8);
-
-              cyclesToWait = GetWaitCycles();
-              if (cyclesToWait > 0)
+              this.Log(LogLevel.Noisy, "Transmitting address bytes: {0:X}, size: {1}", data, addressBytes);
+              WriteToDevice(data, addressBytes * 8);
+              if (waitCycles.Value != 0)
               {
                 state = State.WaitCycles;
+                cyclesToWait = GetWaitCycles();
                 this.Log(LogLevel.Noisy, "Wait cycles are necessary, waiting for: {0}", cyclesToWait);
+                continue;
               }
-              else
+              state = State.Data;
+              framesToTransfer = (int)numberOfDataFrames.Value + 1;
+              this.Log(LogLevel.Noisy, "Data frames to transfer: {0}", framesToTransfer);
+              continue;
+            }
+          case State.WaitCycles:
+            {
+              WriteDummyCycles(cyclesToWait);
+              state = State.Data;
+              framesToTransfer = (int)numberOfDataFrames.Value + 1;
+              continue;
+            }
+          case State.Data:
+            {
+              if (framesToTransfer <= 0)
               {
-                state = State.Data;
-                framesToTransfer = (int)numberOfDataFrames.Value + 1;
+                clockingThread.Stop();
+                return;
+              }
+
+              this.Log(LogLevel.Noisy, "Transmiting data frames left: {0}", framesToTransfer);
+
+              var freeReceiveSlots = 16 - receiveBuffer.Count;
+              if (freeReceiveSlots <= 0)
+              {
+                return;
+              }
+
+              var framesThisRound = Math.Min(framesToTransfer, freeReceiveSlots);
+              PushReadFramesToReceiveFifo(framesThisRound);
+              framesToTransfer -= framesThisRound;
+
+              if (framesToTransfer <= 0)
+              {
+                clockingThread.Stop();
               }
               return;
             }
-            int bits = 1 << (int)(1 + instructionLength.Value);
-            this.Log(LogLevel.Noisy, "Writing instruction with size: " + bits + ", instru: " + instructionLength.Value);
-            // this is just instruction, no address bytes yet 
-            WriteToDevice(data, bits);
-            state = State.Address;
-            addressBytes = (int)Math.Ceiling((double)addressLength.Value / 2);
-            return;
-          }
-        case State.Address:
-          {
-            if (!transmitBuffer.TryDequeue(out var data))
-            {
-              this.Log(LogLevel.Error, "Requested address transmission, but there is no data in FIFO");
-              return;
-            }
-
-            this.Log(LogLevel.Noisy, "Transmitting address bytes: {0:X}, size: {1}", data, addressBytes);
-            WriteToDevice(data, addressBytes * 8);
-            if (waitCycles.Value != 0)
-            {
-              state = State.WaitCycles;
-              cyclesToWait = GetWaitCycles();
-              this.Log(LogLevel.Noisy, "Wait cycles are necessary, waiting for: {0}", cyclesToWait);
-              return;
-            }
-            state = State.Data;
-            framesToTransfer = (int)numberOfDataFrames.Value + 1;
-            this.Log(LogLevel.Noisy, "Data frames to transfer: {0}", framesToTransfer);
-            return;
-          }
-        case State.WaitCycles:
-          {
-            for (int i = 0; i < cyclesToWait; ++i)
-            {
-              RegisteredPeripheral.Transmit(0x00);
-            }
-            state = State.Data;
-            framesToTransfer = (int)numberOfDataFrames.Value + 1;
-            return;
-          }
-        case State.Data:
-          {
-            this.Log(LogLevel.Noisy, "Transmiting data frames left: " + framesToTransfer);
-            int dataSize = (int)Math.Ceiling((double)dataFrameSize32.Value / 8);
-            // if tmod is read only
-            PushToReceiveFifo(WriteToDevice(0, (int)dataFrameSize32.Value + 1));
-            if (--framesToTransfer <= 0)
-            {
-              clockingThread.Stop();
-            }
-            return;
-          }
+        }
       }
     }
 
@@ -383,7 +415,7 @@ namespace Antmicro.Renode.Peripherals.SPI
       busy.Value = false;
     }
 
-    // This is designed to transfer up to 4 bits per clock to reduce overhead 
+    // This is designed to transfer up to 4 bits per clock to reduce overhead
     // It may be not 100% clock accurate with real HW, but should be good enough
     private void TransferClock()
     {

@@ -109,8 +109,8 @@
     <Reference Include="Renode">
       <HintPath>$(RenodePath)/Renode.exe</HintPath>
     </Reference>
-    <Reference Include="Renode-peripherals">
-      <HintPath>$(RenodePath)/Renode-peripherals.dll</HintPath>
+    <Reference Include="Infrastructure">
+      <HintPath>$(RenodePath)/Infrastructure.dll</HintPath>
     </Reference>
     <Reference Include="SampleCommandPlugin">
       <HintPath>$(RenodePath)/SampleCommandPlugin.dll</HintPath>

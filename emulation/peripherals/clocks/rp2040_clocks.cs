@@ -108,7 +108,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
 
         private void UpdateGpioMapping(int id, RP2040GPIO.GpioFunction function)
         {
-            this.Log(LogLevel.Info, "Update of GPIO mapping for pin: " + id + " function: " + function);
+            this.Log(LogLevel.Info, "Update of GPIO mapping for pin: {0} function: {1}", id, function);
             switch (function)
             {
                 case RP2040GPIO.GpioFunction.CLOCK_GPOUT0:
@@ -166,13 +166,16 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
 
         public void UpdateAllClocks()
         {
+            batchingClockUpdates = true;
             UpdateRefClock();
             UpdateSysClock();
+            batchingClockUpdates = false;
             ReconfigureAllGpout();
         }
 
         private void ReconfigureAllGpout()
         {
+            if (batchingClockUpdates) return;
             for (int i = 0; i < numberOfGPOUTs; ++i)
             {
                 ReconfigureGpout(i);
@@ -182,7 +185,6 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
         private void OnPllChanged()
         {
             UpdateAllClocks();
-            ReconfigureAllGpout();
         }
 
         private ulong GetReferenceClockSourceFrequency()
@@ -548,7 +550,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             {
                 return;
             }
-            this.Log(LogLevel.Info, "Configuring GPOUT" + id + " for source " + gpout[id].auxSource);
+            this.Log(LogLevel.Info, "Configuring GPOUT{0} for source {1}", id, gpout[id].auxSource);
             if (gpout[id].thread == null)
             {
                 gpout[id].thread = machine.ObtainManagedThread(() => GpoutStep(id), 1, name: "GPOUT" + id);
@@ -556,7 +558,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             gpout[id].thread.Stop();
             if (gpout[id].auxSource == GPOUTControl.AuxSource.ClkSrcGPin0 || gpout[id].auxSource == GPOUTControl.AuxSource.ClkSrcGPin1)
             {
-                this.Log(LogLevel.Info, "Setting GPOUT" + id + " to input pin propagation");
+                this.Log(LogLevel.Info, "Setting GPOUT{0} to input pin propagation", id);
                 // register for gpio callback
                 return;
             }
@@ -566,7 +568,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                 divider = 1 << 16;
             }
             ulong frequency = GetFrequencyForAuxSource(gpout[id].auxSource) / divider;
-            this.Log(LogLevel.Info, "Setting GPOUT" + id + " frequency: " + frequency);
+            this.Log(LogLevel.Info, "Setting GPOUT{0} frequency: {1}", id, frequency);
             gpout[id].thread.Frequency = (uint)frequency << 1;
             gpout[id].thread.Start();
         }
@@ -1340,6 +1342,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
         private bool resusIrqEnabled;
         private bool resusIrqForced;
         private bool resusForced;
+        private bool batchingClockUpdates;
 
         private NVIC[] nvic;
         private const int numberOfGPOUTs = 4;

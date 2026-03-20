@@ -1,0 +1,5 @@
+$machine_name?="raspberry_pico"
+
+include $ORIGIN/../../../../cores/initialize_peripherals.resc
+machine LoadPlatformDescription $ORIGIN/raspberry_pico_with_i2c_devices.repl
+sysbus LoadELF $ORIGIN/../../../../bootroms/rp2040/b2.elf

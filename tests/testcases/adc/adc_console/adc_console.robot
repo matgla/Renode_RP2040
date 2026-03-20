@@ -10,7 +10,7 @@ Resource    ${CURDIR}/../../../common.resource
 *** Test Cases ***
 Run successfully 'adc_console' example
     Execute Command             include @${CURDIR}/adc_console.resc
-    Execute Command             logLevel -1
+
     
     Create Terminal Tester      sysbus.uart0
 
@@ -30,7 +30,7 @@ Measure Sample On Channel
     Write Char On Uart      s 
     Wait For Line On Uart   s   timeout=1 
     ${l}    Wait For Next Line On Uart      timeout=1 
-    @{words}=   Split String    ${l.line}
+    @{words}=   Split String    ${l['Line']}
     Should Be Equal As Strings      ${expected}   ${words}[0]
     Should Be Equal As Numbers With Tolerance   ${words}[2]    ${expectedVolts} 
 
@@ -45,7 +45,7 @@ Capture Samples On Channel
     FOR    ${sample}    IN   @{samples}   
         FOR    ${repeat}    IN RANGE   ${repeats} 
             ${l}    Wait For Next Line On Uart                  timeout=1 
-            Should Be Equal As Strings   ${sample}    ${l.line}
+            Should Be Equal As Strings   ${sample}    ${l['Line']}
         END
     END    
     

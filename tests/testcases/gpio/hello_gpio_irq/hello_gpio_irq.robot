@@ -5,7 +5,7 @@ Suite Teardown  Teardown
 Test Teardown   Test Teardown
 Test Timeout    300 seconds
 
-Library         ${CURDIR}/DisplayTester.py
+Library         ${CURDIR}/../../../testers/DisplayTester.py
 
 *** Test Cases ***
 Run successfully 'hello_gpio_irq' example

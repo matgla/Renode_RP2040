@@ -6,3 +6,5 @@ include $ORIGIN/../../../prepare.resc
 
 showAnalyzer sysbus.uart0
 
+emulation SetGlobalQuantum "0.000001"
+

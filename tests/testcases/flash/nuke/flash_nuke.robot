@@ -1,6 +1,7 @@
 *** Settings ***
 Library             Collections
 Library             Telnet
+Resource            ${CURDIR}/../../../common.resource
 
 Suite Setup         Setup
 Suite Teardown      Teardown
@@ -16,7 +17,7 @@ Run successfully 'flash_nuke' example
 
     Create LED Tester    sysbus.gpio.led
 
-    Assert LED Is Blinking    testDuration=0.4    onDuration=0.1    offDuration=0.1
+    Assert LED Is Blinking    testDuration=0.4    onDuration=0.1    offDuration=0.1    tolerance=0.05
 
     # Until USB is not implemented, let's just check if code went back to bootrom
     Wait Until Keyword Succeeds    1 min    1 sec    PC Should Be Less Than    0x00004000

@@ -1,0 +1,22 @@
+$global.TEST_FILE=$ORIGIN/../../../pico-examples/build/i2c/bmp280_i2c/bmp280_i2c.elf
+
+$machine_name="pico_tests"
+path add $ORIGIN/../..
+include $ORIGIN/../../../../cores/initialize_peripherals.resc
+machine LoadPlatformDescription $ORIGIN/raspberry_pico_with_bmp280.repl
+sysbus LoadELF $ORIGIN/../../../../bootroms/rp2040/b2.elf
+
+include $ORIGIN/../../../testers/load_testers.resc
+
+# Configure BMP280 sensor to report deterministic values used by the test.
+log "Configuring BMP280 sensor values"
+sysbus.i2c0.bmp280 SetTemperatureCelsius 25.0
+sysbus.i2c0.bmp280 SetPressureHpa 1013.25
+
+log "Loading firmware file"
+sysbus LoadELF $global.TEST_FILE
+
+sysbus.cpu0 VectorTableOffset 0x00000000
+sysbus.cpu1 VectorTableOffset 0x00000000
+
+showAnalyzer sysbus.uart0

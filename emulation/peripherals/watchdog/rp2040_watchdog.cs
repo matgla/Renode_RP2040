@@ -59,8 +59,8 @@ namespace Antmicro.Renode.Peripherals.Timers
             long newFrequency = frequency / (long)cycles.Value * 2;
             this.Log(LogLevel.Debug, "Changed frequency to: {0}", newFrequency);
 
-            this.Log(LogLevel.Debug, "Enabled: " + timer.Enabled + ", timer limit: " + timer.Limit + ", timer value: " + timer.Value);
-            timer.Frequency = newFrequency;
+            this.Log(LogLevel.Debug, "Enabled: {0}, timer limit: {1}, timer value: {2}", timer.Enabled, timer.Limit, timer.Value);
+            timer.Frequency = (ulong)newFrequency;
         }
         private void DefineRegisters()
         {
@@ -77,7 +77,7 @@ namespace Antmicro.Renode.Peripherals.Timers
                 .WithFlag(30, writeCallback: (_, value) =>
                 {
                     timer.Enabled = value;
-                    this.Log(LogLevel.Debug, "Watchdog enable: " + value);
+                    this.Log(LogLevel.Debug, "Watchdog enable: {0}", value);
                 }, valueProviderCallback: _ => timer.Enabled, name: "ENABLED")
                 .WithFlag(31, FieldMode.Write, writeCallback: (_, value) =>
                 {

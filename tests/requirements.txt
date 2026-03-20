@@ -1,0 +1,13 @@
+# Test dependencies for Renode RP2040 tests
+# These are based on /opt/renode/tests/requirements.txt but with
+# relative paths resolved to direct dependencies
+
+robotframework==6.1
+robotframework-retryfailed==0.2.0
+psutil==5.9.3
+pyyaml==6.0.*
+telnetlib3==2.0.*
+
+# Tools dependencies (from csv2resd and execution_tracer)
+construct==2.10.68
+pyelftools==0.30

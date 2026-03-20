@@ -15,7 +15,7 @@ using Antmicro.Renode.Peripherals.Timers;
 namespace Antmicro.Renode.Peripherals.Miscellaneous
 {
 
-    public class RP2040XOSC : RP2040PeripheralBase 
+    public class RP2040XOSC : RP2040PeripheralBase
     {
         private enum Registers
         {
@@ -36,7 +36,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             this.dormant = 0x77616b65;
             this.x4 = false;
             this.delay = 0xc4;
-            this.count = new LimitTimer(machine.ClockSource, (long)Frequency, this, "XOSC_COUNT", direction: Direction.Descending, enabled: false, workMode: WorkMode.OneShot, eventEnabled: true, autoUpdate: true);
+            this.count = new LimitTimer(machine.ClockSource, Frequency, this, "XOSC_COUNT", direction: Direction.Descending, enabled: false, workMode: WorkMode.OneShot, eventEnabled: true, autoUpdate: true);
 
             DefineRegisters();
         }
@@ -46,7 +46,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                 .WithValueField(0, 12, valueProviderCallback: _ => 0xaa0,
                     writeCallback: (_, value) =>
                     {
-                        if (value != 0xaa0 || value != 0xaa1 || value != 0xaa2 || value != 0xaa3)
+                        if (value != 0xaa0 && value != 0xaa1 && value != 0xaa2 && value != 0xaa3)
                         {
                             badwrite = true;
                         }
@@ -55,7 +55,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                     writeCallback: (_, value) =>
                     {
                         enableFlag = (ushort)value;
-                        if (value != 0xd1e || value != 0xfab)
+                        if (value != 0xd1e && value != 0xfab)
                         {
                             badwrite = true;
                         }
@@ -96,7 +96,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                     writeCallback: (_, value) =>
                     {
                         dormant = (uint)value;
-                        if (value != 0x636f6d61 || value != 0x77616b65)
+                        if (value != 0x636f6d61 && value != 0x77616b65)
                         {
                             badwrite = true;
                         }

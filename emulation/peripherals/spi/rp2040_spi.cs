@@ -34,10 +34,10 @@ namespace Antmicro.Renode.Peripherals.SPI
       this.id = id;
       this.gpio = gpio;
       this.clocks = clocks;
-      txPins = new List<int>();
-      rxPins = new List<int>();
-      clockPins = new List<int>();
-      csPins = new List<int>();
+      txPins = new HashSet<int>();
+      rxPins = new HashSet<int>();
+      clockPins = new HashSet<int>();
+      csPins = new HashSet<int>();
 
       rxBuffer = new CircularBuffer<ushort>(8);
       txBuffer = new CircularBuffer<ushort>(8);
@@ -110,7 +110,7 @@ namespace Antmicro.Renode.Peripherals.SPI
       if (newFrequency != this._executionThread.Frequency)
       {
         this._executionThread.Frequency = newFrequency;
-        this.Log(LogLevel.Debug, "SPI" + id + ": Changed frequency to: " + newFrequency);
+        this.Log(LogLevel.Debug, "SPI{0}: Changed frequency to: {1}", id, newFrequency);
         steps = clocks.SystemClockFrequency / newFrequency;
       }
     }
@@ -192,7 +192,7 @@ namespace Antmicro.Renode.Peripherals.SPI
 
     }
 
-    private void SetMultiplePins(List<int> pins, bool state)
+    private void SetMultiplePins(ICollection<int> pins, bool state)
     {
       foreach (int pin in pins)
       {
@@ -200,7 +200,7 @@ namespace Antmicro.Renode.Peripherals.SPI
       }
     }
 
-    private bool ReadMultiplePins(List<int> pins, bool doOr = false)
+    private bool ReadMultiplePins(ICollection<int> pins, bool doOr = false)
     {
       if (pins.Count == 0)
       {
@@ -209,7 +209,10 @@ namespace Antmicro.Renode.Peripherals.SPI
 
       if (!doOr)
       {
-        return this.gpio.GetGpioState((uint)pins[0]);
+        foreach (int pin in pins)
+        {
+          return this.gpio.GetGpioState((uint)pin);
+        }
       }
 
       foreach (int pin in pins)
@@ -245,15 +248,21 @@ namespace Antmicro.Renode.Peripherals.SPI
       }
 
       bool clockWasHigh = ReadMultiplePins(clockPins);
-      SetMultiplePins(clockPins, !clockWasHigh);
+
+      // SPI Mode 0: set data BEFORE raising clock so data is stable at rising edge
       if (!clockWasHigh)
       {
         SetMultiplePins(txPins, Convert.ToBoolean((transmitData >> (dataSize - 1 - transmitCounter)) & 1));
+      }
+
+      SetMultiplePins(clockPins, !clockWasHigh);
+      gpio.ReevaluatePio((uint)steps);
+
+      if (!clockWasHigh)
+      {
         receiveData = (ushort)((receiveData << 1) | Convert.ToUInt16(ReadMultiplePins(rxPins)));
         transmitCounter += 1;
       }
-
-      gpio.ReevaluatePio((uint)steps);
     }
 
     public uint ReadDoubleWord(long offset)
@@ -273,22 +282,10 @@ namespace Antmicro.Renode.Peripherals.SPI
       //   IRQs[i].Unset();
       // }
 
-      for (int i = 0; i < txPins.Count; ++i)
-      {
-        txPins[i] = 0;
-      }
-      for (int i = 0; i < rxPins.Count; ++i)
-      {
-        rxPins[i] = 0;
-      }
-      for (int i = 0; i < clockPins.Count; ++i)
-      {
-        clockPins[i] = 0;
-      }
-      for (int i = 0; i < csPins.Count; ++i)
-      {
-        csPins[i] = 0;
-      }
+      txPins.Clear();
+      rxPins.Clear();
+      clockPins.Clear();
+      csPins.Clear();
 
       rxBuffer.Clear();
       txBuffer.Clear();
@@ -354,7 +351,7 @@ namespace Antmicro.Renode.Peripherals.SPI
           return 0;
         }, writeCallback: (_, value) =>
         {
-          Logger.Log(LogLevel.Noisy, "SPI" + id + ": Adding to queue: " + value);
+          Logger.Log(LogLevel.Noisy, "SPI{0}: Adding to queue: {1}", id, value);
           if (txBuffer.Count < txBuffer.Capacity)
           {
             txBuffer.Enqueue((ushort)value);
@@ -414,10 +411,10 @@ namespace Antmicro.Renode.Peripherals.SPI
     public IGPIO[] IRQs { get; private set; }
 
     private RP2040GPIO gpio;
-    private List<int> txPins;
-    private List<int> rxPins;
-    private List<int> clockPins;
-    private List<int> csPins;
+    private HashSet<int> txPins;
+    private HashSet<int> rxPins;
+    private HashSet<int> clockPins;
+    private HashSet<int> csPins;
     private int id;
 
     private byte dataSize;

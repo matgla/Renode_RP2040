@@ -10,7 +10,7 @@ Resource    ${CURDIR}/../../../common.resource
 *** Test Cases ***
 Run successfully 'hello_adc' example
     Execute Command             include @${CURDIR}/hello_adc.resc
-    Execute Command             logLevel -1
+
     
     Create Terminal Tester      sysbus.uart0
 
@@ -29,7 +29,7 @@ Line Should Contain ADC Print
     [Arguments]     ${hex_value}    ${value}
     
     ${l}    Wait For Next Line On Uart
-    @{words}=   Split String    ${l.line}
+    @{words}=   Split String    ${l['Line']}
     Should Be Equal As Strings      ${hex_value},   ${words}[2]
     Should Be Equal As Numbers With Tolerance   ${words}[4]    ${value} 
 

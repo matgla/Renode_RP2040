@@ -1,0 +1,8 @@
+$global.TEST_FILE=$ORIGIN/../../../pico-examples/build/i2c/bus_scan/i2c_bus_scan.elf
+
+# Override the board initialization to include I2C devices
+$board_initialization_file?=$ORIGIN/raspberry_pico_with_i2c_devices.resc
+
+include $ORIGIN/../../../prepare.resc
+
+showAnalyzer sysbus.uart0

@@ -8,7 +8,7 @@ Test Timeout    100 seconds
 *** Test Cases ***
 Run successfully 'detached_clk_peri' example
     Execute Command             include @${CURDIR}/detached_clk_peri.resc
-    Execute Command             logLevel -1
+
 
     Create Terminal Tester      sysbus.uart0
 

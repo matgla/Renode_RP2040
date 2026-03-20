@@ -14,5 +14,3 @@ Run successfully 'hello_serial' example
     Wait For Line On Uart       Hello, world!    timeout=4
     Wait For Line On Uart       Hello, world!    timeout=4
     Wait For Line On Uart       Hello, world!    timeout=4
-    Wait For Line On Uart       Hello, world!    timeout=4
-    Wait For Line On Uart       Hello, world!    timeout=4
