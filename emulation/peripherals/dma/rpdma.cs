@@ -393,12 +393,12 @@ namespace Antmicro.Renode.Peripherals.DMA
       {
         if (!Enabled)
         {
-          this.Log(LogLevel.Debug, "Transfer rejected, channel: " + channelNumber + " not enabled!");
+          this.Log(LogLevel.Debug, "Transfer rejected, channel: {0} not enabled!", channelNumber);
           return;
         }
         if (transferRequestSignal != 0x3f)
         {
-          this.Log(LogLevel.Debug, "Transfer waiting for trigger " + transferRequestSignal + " on channel " + channelNumber);
+          this.Log(LogLevel.Debug, "Transfer waiting for trigger {0} on channel {1}", transferRequestSignal, channelNumber);
           transferCounter = 0;
           parent.channelFinished[channelNumber] = false;
           return;
@@ -414,7 +414,7 @@ namespace Antmicro.Renode.Peripherals.DMA
       {
         if (!Enabled)
         {
-          this.Log(LogLevel.Debug, "Transfer rejected, channel: " + channelNumber + " not enabled!");
+          this.Log(LogLevel.Debug, "Transfer rejected, channel: {0} not enabled!", channelNumber);
           return;
         }
         if (dreq != transferRequestSignal || transferCounter >= transferCount)

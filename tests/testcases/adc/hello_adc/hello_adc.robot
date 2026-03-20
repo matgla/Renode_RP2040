@@ -10,7 +10,7 @@ Resource    ${CURDIR}/../../../common.resource
 *** Test Cases ***
 Run successfully 'hello_adc' example
     Execute Command             include @${CURDIR}/hello_adc.resc
-    Execute Command             logLevel -1
+
     
     Create Terminal Tester      sysbus.uart0
 

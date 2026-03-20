@@ -110,7 +110,7 @@ namespace Antmicro.Renode.Peripherals.SPI
       if (newFrequency != this._executionThread.Frequency)
       {
         this._executionThread.Frequency = newFrequency;
-        this.Log(LogLevel.Debug, "SPI" + id + ": Changed frequency to: " + newFrequency);
+        this.Log(LogLevel.Debug, "SPI{0}: Changed frequency to: {1}", id, newFrequency);
         steps = clocks.SystemClockFrequency / newFrequency;
       }
     }
@@ -351,7 +351,7 @@ namespace Antmicro.Renode.Peripherals.SPI
           return 0;
         }, writeCallback: (_, value) =>
         {
-          Logger.Log(LogLevel.Noisy, "SPI" + id + ": Adding to queue: " + value);
+          Logger.Log(LogLevel.Noisy, "SPI{0}: Adding to queue: {1}", id, value);
           if (txBuffer.Count < txBuffer.Capacity)
           {
             txBuffer.Enqueue((ushort)value);

@@ -509,7 +509,7 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
             {
                 if (previous[i] != functionSelect[i])
                 {
-                    this.Log(LogLevel.Noisy, "GPIO" + i + ": has function: " + GetFunction(i));
+                    this.NoisyLog("GPIO{0}: has function: {1}", i, GetFunction(i));
                     foreach (var action in functionSelectCallbacks)
                     {
                         action(i, GetFunction(i));
@@ -867,17 +867,13 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
         {
             lock (State)
             {
-                for (int i = 0; i < NumberOfPins; ++i)
+                ulong changed = bitmap ^ stateBitmap;
+                while (changed != 0)
                 {
-                    if ((bitmap & (1UL << i)) != 0)
-                    {
-                        WritePin(i, true, peri);
-                    }
-                    else
-                    {
-                        WritePin(i, false, peri);
-                    }
-
+                    int i = TrailingZeroCount(changed);
+                    if (i >= NumberOfPins) break;
+                    WritePin(i, (bitmap & (1UL << i)) != 0, peri);
+                    changed &= changed - 1;
                 }
                 OperationDone.Toggle();
             }
@@ -887,12 +883,13 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
         {
             lock (State)
             {
-                for (int i = 0; i < NumberOfPins; ++i)
+                ulong masked = bitset & bitmask;
+                while (masked != 0)
                 {
-                    if (((bitset & bitmask) & (1UL << i)) != 0)
-                    {
-                        WritePin(i, true, peri);
-                    }
+                    int i = TrailingZeroCount(masked);
+                    if (i >= NumberOfPins) break;
+                    WritePin(i, true, peri);
+                    masked &= masked - 1;
                 }
                 OperationDone.Toggle();
             }
@@ -922,12 +919,13 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
         {
             lock (State)
             {
-                for (int i = 0; i < NumberOfPins; ++i)
+                ulong masked = bitset;
+                while (masked != 0)
                 {
-                    if ((bitset & (1UL << i)) != 0)
-                    {
-                        WritePin(i, false, peri);
-                    }
+                    int i = TrailingZeroCount(masked);
+                    if (i >= NumberOfPins) break;
+                    WritePin(i, false, peri);
+                    masked &= masked - 1;
                 }
             }
         }
@@ -936,18 +934,13 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
         {
             lock (State)
             {
-                for (int i = 0; i < NumberOfPins; ++i)
+                ulong masked = bitset;
+                while (masked != 0)
                 {
-                    bool state = State[i];
-                    if ((bitset & (1UL << i)) != 0)
-                    {
-                        state = state ^ true;
-                    }
-                    else
-                    {
-                        state = state ^ false;
-                    }
-                    WritePin(i, state, peri);
+                    int i = TrailingZeroCount(masked);
+                    if (i >= NumberOfPins) break;
+                    WritePin(i, !State[i], peri);
+                    masked &= masked - 1;
                 }
             }
         }
@@ -1133,11 +1126,11 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
                 return;
             }
 
-            this.Log(LogLevel.Noisy, "Setting GPIO" + number + " to: " + value + ", time: " + machine.ElapsedVirtualTime.TimeElapsed + ", from: " + peri);
+            this.NoisyLog("Setting GPIO{0} to: {1}, time: {2}, from: {3}", number, value, machine.ElapsedVirtualTime.TimeElapsed, peri);
 
             if (peripheralDrive[number] != PeripheralDrive.None && GetFunction(number) != peri)
             {
-                this.Log(LogLevel.Error, "Driving GPIO from not selected peripheral, gpio configured with: " + GetFunction(number) + ". Request received from: " + peri);
+                this.Log(LogLevel.Error, "Driving GPIO from not selected peripheral, gpio configured with: {0}. Request received from: {1}", GetFunction(number), peri);
             }
 
             if (peripheralDrive[number] == PeripheralDrive.Inverse)
@@ -1214,6 +1207,18 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
             {
                 stateBitmap &= ~bit;
             }
+        }
+
+        private static int TrailingZeroCount(ulong value)
+        {
+            if (value == 0) return 64;
+            int count = 0;
+            while ((value & 1UL) == 0)
+            {
+                count++;
+                value >>= 1;
+            }
+            return count;
         }
 
         private uint BuildRawInterruptsForCore(int core, int startingPin, bool checkForce = false)

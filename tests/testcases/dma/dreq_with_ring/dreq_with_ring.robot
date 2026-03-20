@@ -10,7 +10,7 @@ Resource    ${CURDIR}/../../../common.resource
 *** Test Cases ***
 Run successfully 'dreq_with_ring' example
     Execute Command             include @${CURDIR}/dreq_with_ring.resc
-    Execute Command             logLevel -1
+
     
     Create Terminal Tester      sysbus.uart0
 

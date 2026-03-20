@@ -10,7 +10,7 @@ Resource    ${CURDIR}/../../../common.resource
 *** Test Cases ***
 Run successfully 'onboard_temperature' example
     Execute Command             include @${CURDIR}/onboard_temperature.resc
-    Execute Command             logLevel -1
+
     
     Create Terminal Tester      sysbus.uart0
 

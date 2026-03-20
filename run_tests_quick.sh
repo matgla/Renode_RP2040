@@ -2,7 +2,7 @@
 
 # Quick smoke test script - runs only essential tests for faster feedback
 # Usage: ./run_tests_quick.sh [OPTIONS]
-#   --skip-build    Skip building pico-examples
+#   --skip-build    Skip building the peripherals DLL and pico-examples
 
 set -e
 
@@ -23,7 +23,7 @@ while [[ $# -gt 0 ]]; do
             echo "Usage: $0 [OPTIONS]"
             echo ""
             echo "Options:"
-            echo "  --skip-build    Skip building pico-examples"
+            echo "  --skip-build    Skip building the peripherals DLL and pico-examples"
             echo "  -h, --help      Show this help message"
             exit 0
             ;;
@@ -44,9 +44,11 @@ fi
 
 # Build unless skipped
 if [ "$SKIP_BUILD" -eq 0 ]; then
+    echo "Building RP2040 peripherals DLL"
+    dotnet build ./emulation/Peripherals.csproj -c Release
     ./tests/build_pico_examples.sh
 else
-    echo "Skipping build (--skip-build specified)"
+    echo "Skipping DLL and pico-examples build (--skip-build specified)"
 fi
 
 # Create output directory

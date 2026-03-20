@@ -12,7 +12,7 @@ Test Timeout        1000 seconds
 *** Test Cases ***
 Run successfully 'dma_capture' example
     Execute Command    include @${CURDIR}/dma_capture.resc
-    Execute Command    logLevel -1
+
 
     Create Terminal Tester    sysbus.uart0
 

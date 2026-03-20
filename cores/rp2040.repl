@@ -20,11 +20,13 @@ cpu0: CPU.CortexM @ sysbus
     cpuType: "cortex-m0+"
     id: 0
     nvic: nvic0
+    PerformanceInMips: 125
 
 cpu1: CPU.CortexM @ sysbus
     cpuType: "cortex-m0+"
     id: 1
     nvic: nvic1
+    PerformanceInMips: 125
     init:
         IsHalted false 
 

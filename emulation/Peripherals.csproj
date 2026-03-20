@@ -4,6 +4,7 @@
     <TargetFramework>netstandard2.1</TargetFramework>
     <PlatformTarget>x64</PlatformTarget>
     <RenodePath>/opt/renode/bin</RenodePath>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
   </PropertyGroup>
 
   <ItemGroup>
@@ -139,6 +140,69 @@
     <Reference Include="Xwt.WPF">
       <HintPath>$(RenodePath)/Xwt.WPF.dll</HintPath>
     </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Peripheral base and memory -->
+    <Compile Include="peripherals/rp2040_peripheral_base.cs" />
+    <Compile Include="peripherals/memory/memory_alias.cs" />
+    
+    <!-- Clocks -->
+    <Compile Include="peripherals/clocks/rp2040_xosc.cs" />
+    <Compile Include="peripherals/clocks/rp2040_rosc.cs" />
+    <Compile Include="peripherals/clocks/rp2040_pll.cs" />
+    <Compile Include="peripherals/clocks/rp2040_clocks.cs" />
+    
+    <!-- Power -->
+    <Compile Include="peripherals/power/power.cs" />
+    
+    <!-- GPIO -->
+    <Compile Include="peripherals/gpio/rp2040_gpio.cs" />
+    <Compile Include="peripherals/gpio/rp2040_pads.cs" />
+    <Compile Include="peripherals/gpio/rp2040_qspi_pads.cs" />
+    
+    <!-- Timer -->
+    <Compile Include="peripherals/timer/rp2040_timer.cs" />
+    
+    <!-- PIO -->
+    <Compile Include="peripherals/pio/rp2040_pio.cs" />
+    
+    <!-- SPI -->
+    <Compile Include="peripherals/spi/rp2040_spi.cs" />
+    <Compile Include="peripherals/spi/rp2040_xip_ssi.cs" />
+    
+    <!-- SIO -->
+    <Compile Include="peripherals/sio/rp2040_sio.cs" />
+    
+    <!-- ADC -->
+    <Compile Include="peripherals/adc/rp2040_adc.cs" />
+    
+    <!-- UART -->
+    <Compile Include="peripherals/uart/rp2040_uart.cs" />
+    
+    <!-- DMA -->
+    <Compile Include="peripherals/dma/rpdma_engine.cs" />
+    <Compile Include="peripherals/dma/rpdma.cs" />
+    
+    <!-- Watchdog -->
+    <Compile Include="peripherals/watchdog/rp2040_watchdog.cs" />
+    
+    <!-- I2C -->
+    <Compile Include="peripherals/i2c/rp2040_i2c.cs" />
+    
+    <!-- USB -->
+    <Compile Include="peripherals/usb/rp2040_usb.cs" />
+    
+    <!-- PSM -->
+    <Compile Include="peripherals/psm/rp2040_psm.cs" />
+    
+    <!-- External devices -->
+    <Compile Include="externals/w25q16.cs" />
+    <Compile Include="externals/pcf8523.cs" />
+    <Compile Include="externals/bmp280.cs" />
+    <Compile Include="externals/i_segment_display.cs" />
+    <Compile Include="externals/segment_display.cs" />
+    <Compile Include="externals/resistor_dac.cs" />
   </ItemGroup>
 
 </Project>

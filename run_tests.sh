@@ -18,7 +18,7 @@ cleanup() {
     local exit_code=$?
     echo ""
     echo "Cleaning up lingering processes..."
-    
+
     # Find and kill dotnet processes started by this script's tests
     # We use pgrep to find dotnet processes and check if they're related to renode
     if command -v pkill &> /dev/null; then
@@ -28,7 +28,7 @@ cleanup() {
         # Also kill any dotnet processes that may be test-related
         pkill -f "dotnet.*RobotFramework" 2>/dev/null || true
     fi
-    
+
     # Additional cleanup using ps and grep for more targeted killing
     if command -v ps &> /dev/null; then
         # Get dotnet process IDs and kill them
@@ -41,7 +41,7 @@ cleanup() {
             fi
         done 2>/dev/null || true
     fi
-    
+
     echo "Cleanup complete."
     exit $exit_code
 }
@@ -64,7 +64,7 @@ while [[ $# -gt 0 ]]; do
             echo "Usage: $0 [OPTIONS]"
             echo ""
             echo "Options:"
-            echo "  --skip-build    Skip building pico-examples (use cached binaries)"
+            echo "  --skip-build    Skip building the peripherals DLL and pico-examples"
             echo "  -j, --jobs N    Number of parallel test jobs (default: auto = physical CPU cores)"
             echo "  -h, --help      Show this help message"
             exit 0
@@ -91,9 +91,11 @@ fi
 
 # Build pico-examples unless skipped
 if [ "$SKIP_BUILD" -eq 0 ]; then
+    echo "Building RP2040 peripherals DLL"
+    dotnet build ./emulation/Peripherals.csproj -c Release
     ./tests/build_pico_examples.sh
 else
-    echo "Skipping build (--skip-build specified)"
+    echo "Skipping DLL and pico-examples build (--skip-build specified)"
 fi
 
 # Create output directory for test results

@@ -145,7 +145,7 @@ namespace Antmicro.Renode.Peripherals.CPU
                 newPerformance = 1;
             }
             this.PerformanceInMips = newPerformance;
-            this.Log(LogLevel.Debug, "Changing clock frequency to: " + newPerformance + " MIPS");
+            this.Log(LogLevel.Debug, "Changing clock frequency to: {0} MIPS", newPerformance);
         }
 
         public override void Start()

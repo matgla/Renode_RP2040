@@ -39,8 +39,8 @@ jobs:
         id: pico-examples-cache
         uses: actions/cache@v4
         with:
-          path: pico-examples
-          key: pico-examples-key-${{ hashFiles('tests/pico_examples_revision')}}-${{ hashFiles('pico_example_patches/**.patch')}}
+          path: tests/pico-examples/build
+          key: pico-examples-build-${{ hashFiles('tests/pico_examples_revision', 'tests/pico_examples_patches/*.patch', 'tests/build_pico_examples.sh') }}
 
       - name: Build Pico Examples
         shell: bash

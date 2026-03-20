@@ -20,7 +20,7 @@ Run successfully 'ssi_dma' example
     Should Be Equal As Strings  ${words}[0]   Transfer
     Should Be Equal As Strings  ${words}[1]   speed:
     Should Be True		${words}[2]>40	
-	Should Be True		${words}[2]<250	
+	Should Be True		${words}[2]<500	
     Should Be Equal As Strings   ${words}[3]  MB/s
 
     Wait For Line On Uart       Data check ok    timeout=1

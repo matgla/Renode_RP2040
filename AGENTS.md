@@ -51,7 +51,9 @@ This repository contains a **RP2040 MCU simulation** for the [Renode](https://gi
 │   └── rp2040/
 ├── cores/                     # MCU core definitions
 │   ├── rp2040.repl           # RP2040 peripheral description
-│   └── initialize_peripherals.resc     # Peripheral loading script
+│   ├── initialize_peripherals.resc     # Peripheral loading script (DLL mode)
+│   ├── initialize_peripherals_source.resc # Source-mode peripheral loader
+│   └── load_peripherals.py   # DLL loader helper script
 ├── emulation/                 # C# peripheral implementations
 │   ├── peripherals/          # Main peripheral implementations
 │   │   ├── adc/              # ADC peripheral
@@ -111,6 +113,20 @@ python3 -m venv venv
 source venv/bin/activate
 pip install -r tests/requirements.txt
 ```
+
+### Building Peripherals DLL
+
+Tests use a precompiled peripherals DLL by default and build it once per run. You can also build it manually:
+
+```bash
+# Build the peripherals DLL (one time)
+dotnet build emulation/Peripherals.csproj -c Release
+
+# The DLL will be created at:
+# emulation/bin/Release/netstandard2.1/Peripherals.dll
+```
+
+**Note:** `cores/initialize_peripherals.resc` loads the precompiled DLL. For live source compilation during peripheral development, include `cores/initialize_peripherals_source.resc` instead.
 
 ### Running Tests
 

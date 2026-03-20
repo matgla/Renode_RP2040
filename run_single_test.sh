@@ -43,9 +43,11 @@ fi
 
 # Build unless skipped
 if [ "$SKIP_BUILD" -eq 0 ]; then
+    echo "Building RP2040 peripherals DLL"
+    dotnet build ./emulation/Peripherals.csproj -c Release
     ./tests/build_pico_examples.sh
 else
-    echo "Skipping build (--skip-build specified)"
+    echo "Skipping DLL and pico-examples build (--skip-build specified)"
 fi
 
 # Find matching tests

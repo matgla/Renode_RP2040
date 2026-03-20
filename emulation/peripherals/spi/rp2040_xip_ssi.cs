@@ -332,7 +332,7 @@ namespace Antmicro.Renode.Peripherals.SPI
                 continue;
               }
               int bits = 1 << (int)(1 + instructionLength.Value);
-              this.Log(LogLevel.Noisy, "Writing instruction with size: " + bits + ", instru: " + instructionLength.Value);
+              this.Log(LogLevel.Noisy, "Writing instruction with size: {0}, instru: {1}", bits, instructionLength.Value);
               // this is just instruction, no address bytes yet
               WriteToDevice(data, bits);
               state = State.Address;
@@ -376,7 +376,7 @@ namespace Antmicro.Renode.Peripherals.SPI
                 return;
               }
 
-              this.Log(LogLevel.Noisy, "Transmiting data frames left: " + framesToTransfer);
+              this.Log(LogLevel.Noisy, "Transmiting data frames left: {0}", framesToTransfer);
 
               var freeReceiveSlots = 16 - receiveBuffer.Count;
               if (freeReceiveSlots <= 0)

@@ -2,5 +2,4 @@ $global.TEST_FILE=$ORIGIN/../../../pico-examples/build/hello_world/serial/hello_
 
 include $ORIGIN/../../../prepare.resc
 
-logLevel -1
 showAnalyzer sysbus.uart0

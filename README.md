@@ -183,6 +183,8 @@ pip install -r tests/requirements.txt
 ./run_tests.sh
 ```
 
+The test runner now builds `emulation/Peripherals.csproj` once at the start of a run and uses the precompiled DLL via `cores/initialize_peripherals.resc`. For live source compilation while developing peripherals, include `cores/initialize_peripherals_source.resc` explicitly.
+
 ## ADC
 | Example | Passed |
 | :---: | :---:    |

@@ -4,7 +4,7 @@ $machine_name="pico_tests"
 path add $ORIGIN/../../..
 include $ORIGIN/../../../../cores/initialize_peripherals.resc
 EnsureTypeIsLoaded "Antmicro.Renode.Peripherals.Analog.RP2040ADC"
-include $ORIGIN/resistor_dac.cs
+EnsureTypeIsLoaded "Antmicro.Renode.Peripherals.Miscellaneous.ResistorDAC"
 machine LoadPlatformDescription $ORIGIN/raspberry_pico_with_resistor_dac.repl
 
 sysbus LoadELF $ORIGIN/../../../../bootroms/rp2040/b2.elf

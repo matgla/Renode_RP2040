@@ -93,7 +93,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             }
             Frequency = Frequency / div;
 
-            this.Log(LogLevel.Info, "Setting ROSC frequency to: " + Frequency / 1000000 + "MHz");
+            this.Log(LogLevel.Info, "Setting ROSC frequency to: {0}MHz", Frequency / 1000000);
         }
 
         private void DefineRegisters()
@@ -112,7 +112,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                     writeCallback: (_, value) =>
                     {
                         enableFlag = (ushort)value;
-                        if (value != 0xd1e || value != 0xfab)
+                        if (value != 0xd1e && value != 0xfab)
                         {
                             badwrite = true;
                         }
@@ -207,7 +207,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                     writeCallback: (_, value) =>
                     {
                         dormant = (uint)value;
-                        if (value != 0x636f6d61 || value != 0x77616b65)
+                        if (value != 0x636f6d61 && value != 0x77616b65)
                         {
                             badwrite = true;
                         }
