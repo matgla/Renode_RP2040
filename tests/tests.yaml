@@ -45,3 +45,5 @@
 - testcases/i2c/pcf8523_i2c/pcf8523_i2c.robot
 - testcases/i2c/bmp280_i2c/bmp280_i2c.robot
 - testcases/i2c/ht16k33_i2c/ht16k33_i2c.robot
+- testcases/i2c/lcd_1602_i2c/lcd_1602_i2c.robot
+- testcases/i2c/lis3dh_i2c/lis3dh_i2c.robot

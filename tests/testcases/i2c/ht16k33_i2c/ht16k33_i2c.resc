@@ -4,7 +4,7 @@ mach create "pico_tests"
 include $ORIGIN/../../../../cores/load_peripherals.py
 machine LoadPlatformDescription $ORIGIN/raspberry_pico_with_ht16k33.repl
 sysbus LoadELF $ORIGIN/../../../../bootroms/rp2040/b2.elf
-include $ORIGIN/../../../testers/i2c_capture_tester.resc
+include $ORIGIN/../../../testers/i2c_capture_tester.py
 sysbus LoadELF $global.TEST_FILE
 sysbus.cpu0 VectorTableOffset 0x00000000
 sysbus.cpu1 VectorTableOffset 0x00000000

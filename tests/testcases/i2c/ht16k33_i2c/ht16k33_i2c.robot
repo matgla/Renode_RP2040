@@ -8,7 +8,7 @@ Test Timeout    60 seconds
 
 *** Test Cases ***
 Run successfully 'ht16k33_i2c' example
-    Load HT16K33 Test Platform
+    Execute Command             include @${CURDIR}/ht16k33_i2c.resc
     Register HT16K33 Sniffer
 
     Create Terminal Tester      sysbus.uart0
@@ -23,22 +23,6 @@ Run successfully 'ht16k33_i2c' example
     Log                         HT16K33 I2C test completed successfully with verified I2C traffic
 
 *** Keywords ***
-Load HT16K33 Test Platform
-    Run Setup Command    mach create "pico_tests"    Creating test machine    15 seconds
-    Run Setup Command    include @${CURDIR}/../../../../cores/load_peripherals.py    Loading core peripherals    15 seconds
-    Run Setup Command    machine LoadPlatformDescription @${CURDIR}/raspberry_pico_with_ht16k33.repl    Loading HT16K33 platform description
-    Run Setup Command    sysbus LoadELF @${CURDIR}/../../../../bootroms/rp2040/b2.elf    Loading RP2040 bootrom
-    Run Setup Command    include @${CURDIR}/../../../testers/i2c_capture_tester.py    Loading I2C sniffer helper
-    Run Setup Command    sysbus LoadELF @${CURDIR}/../../../pico-examples/build/i2c/ht16k33_i2c/ht16k33_i2c.elf    Loading HT16K33 firmware
-    Run Setup Command    sysbus.cpu0 VectorTableOffset 0x00000000    Setting CPU0 vector table
-    Run Setup Command    sysbus.cpu1 VectorTableOffset 0x00000000    Setting CPU1 vector table
-
-Run Setup Command
-    [Arguments]    ${command}    ${label}    ${timeout}=10 seconds
-    [Timeout]    ${timeout}
-    Log    ${label}
-    Execute Command             ${command}
-
 Register HT16K33 Sniffer
     [Timeout]    10 seconds
     Log    Registering and clearing HT16K33 sniffer

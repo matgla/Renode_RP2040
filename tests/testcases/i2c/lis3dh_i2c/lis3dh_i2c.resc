@@ -1,0 +1,25 @@
+$global.TEST_FILE=$ORIGIN/../../../pico-examples/build/i2c/lis3dh_i2c/lis3dh_i2c.elf
+
+$machine_name="pico_tests"
+path add $ORIGIN/../..
+include $ORIGIN/../../../../cores/initialize_peripherals.resc
+machine LoadPlatformDescription $ORIGIN/raspberry_pico_with_lis3dh.repl
+sysbus LoadELF $ORIGIN/../../../../bootroms/rp2040/b2.elf
+
+include $ORIGIN/../../../testers/load_testers.resc
+
+# Configure LIS3DH sensor to report deterministic values used by the test.
+# Using non-default values to verify the simulator correctly reflects configured values.
+log "Configuring LIS3DH sensor values"
+sysbus.i2c0.lis3dh SetAccelX 0.5
+sysbus.i2c0.lis3dh SetAccelY -0.25
+sysbus.i2c0.lis3dh SetAccelZ 0.75
+sysbus.i2c0.lis3dh SetTemperatureCelsius 42.5
+
+log "Loading firmware file"
+sysbus LoadELF $global.TEST_FILE
+
+sysbus.cpu0 VectorTableOffset 0x00000000
+sysbus.cpu1 VectorTableOffset 0x00000000
+
+showAnalyzer sysbus.uart0
