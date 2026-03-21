@@ -15,6 +15,20 @@ cleanup() {
     cd "$START"
 }
 
+recover_interrupted_git_am() {
+    if [ ! -d .git/rebase-apply ] && [ ! -d .git/rebase-merge ]; then
+        return 0
+    fi
+
+    echo "Found interrupted git am state; recovering before applying patches..."
+    git am --abort 2>/dev/null || true
+
+    if [ -d .git/rebase-apply ] || [ -d .git/rebase-merge ]; then
+        echo "Removing stale git am metadata from pico-examples checkout"
+        rm -rf .git/rebase-apply .git/rebase-merge
+    fi
+}
+
 compute_cache_key() {
     {
         printf 'revision=%s\n' "$revision"
@@ -80,6 +94,8 @@ fi
 
 cd "$PICO_EXAMPLES_DIR"
 
+recover_interrupted_git_am
+
 # Ensure we're at the correct revision with patches applied.
 PATCHES_APPLIED=false
 if [ -d .git ]; then
@@ -108,7 +124,7 @@ if [ "$PATCHES_APPLIED" = false ] && [ -d .git ]; then
     for patch in "$PATCHES_DIR"/*.patch; do
         if [ -f "$patch" ]; then
             echo "Applying patch: $patch"
-            git am < "$patch"
+            git am --ignore-space-change --ignore-whitespace < "$patch"
         fi
     done
 

@@ -1,0 +1,43 @@
+From 936ab4155078bb4a8a61d8d98d944e36a81b6c7c Mon Sep 17 00:00:00 2001
+From: Mateusz Stadnik <matgla@live.com>
+Date: Fri, 20 Mar 2026 23:08:36 +0100
+Subject: [PATCH] added mcp9808 i2c test
+
+---
+ i2c/mcp9808_i2c/mcp9808_i2c.c | 13 +++++++++++--
+ 1 file changed, 11 insertions(+), 2 deletions(-)
+
+diff --git a/i2c/mcp9808_i2c/mcp9808_i2c.c b/i2c/mcp9808_i2c/mcp9808_i2c.c
+index f8e146f..8326ed4 100644
+--- a/i2c/mcp9808_i2c/mcp9808_i2c.c
++++ b/i2c/mcp9808_i2c/mcp9808_i2c.c
+@@ -125,6 +125,7 @@ int main() {
+     uint16_t lower_byte;
+
+     float temperature;
++    int reading = 1;
+
+     while (1) {
+         // Start reading ambient temperature register for 2 bytes
+@@ -139,9 +140,17 @@ int main() {
+
+         //clears flag bits in upper byte
+         temperature = mcp9808_convert_temp(upper_byte & 0x1F, lower_byte);
+-        printf("Ambient temperature: %.4f°C\n", temperature);
++        printf("Reading %d: Ambient temperature: %.4f°C\n", reading, temperature);
+
+-        sleep_ms(1000);
++        if (reading >= 4) {
++            puts("Test completed.");
++            break;
++        }
++
++        reading++;
++
++        sleep_ms(500);
+     }
+ #endif
++    return 0;
+ }
+--
+2.53.0
