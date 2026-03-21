@@ -4,7 +4,7 @@ Resource        ../../../common.resource
 Suite Setup     Setup
 Suite Teardown  Teardown
 Test Teardown   Test Teardown
-Test Timeout    60 seconds
+Test Timeout    90 seconds
 
 *** Variables ***
 ${UART_TIMEOUT}              5
@@ -16,18 +16,11 @@ ${SCRIPT_DIR}                ${CURDIR}
 Run successfully 'ssd1306_i2c' example with OLED display rendering
     Start SSD1306 Example
     
-    # Wait for intro flash sequence to complete (3 flashes = ~3 seconds)
-    # The display shows raspberries after the flash sequence
-    Sleep                       5s
+    # Poll for raspberry display (appears after intro flash sequence)
+    Wait Until Keyword Succeeds    30s    1s    SSD1306 Display Should Match Reference    raspberry_render
     
-    # Capture and verify raspberry display
-    SSD1306 Display Should Match Reference    raspberry_render
-    
-    # Continue to text rendering phase (5 second scroll + text render)
-    Sleep                       8s
-    
-    # Capture and verify text display  
-    SSD1306 Display Should Match Reference    text_render
+    # Poll for text display (appears after scroll animation)
+    Wait Until Keyword Succeeds    30s    1s    SSD1306 Display Should Match Reference    text_render
     
     # Verify display is on
     SSD1306 Display Should Be On
