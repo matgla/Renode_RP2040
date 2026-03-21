@@ -1,0 +1,50 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <PlatformTarget>x64</PlatformTarget>
+    <IsTestProject>true</IsTestProject>
+    <RenodePath>/opt/renode/bin</RenodePath>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- xUnit packages -->
+    <PackageReference Include="xunit" Version="2.4.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.4.5" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.7.2" />
+    <PackageReference Include="coverlet.collector" Version="6.0.0" />
+    
+    <!-- Renode dependencies - same as main project -->
+    <Reference Include="Infrastructure">
+      <HintPath>$(RenodePath)/Infrastructure.dll</HintPath>
+    </Reference>
+    <Reference Include="Emulator">
+      <HintPath>$(RenodePath)/Emulator.dll</HintPath>
+    </Reference>
+    <Reference Include="cores-arm-m">
+      <HintPath>$(RenodePath)/cores-arm-m.dll</HintPath>
+    </Reference>
+    <Reference Include="AntShell">
+      <HintPath>$(RenodePath)/AntShell.dll</HintPath>
+    </Reference>
+    <Reference Include="Extensions">
+      <HintPath>$(RenodePath)/Extensions.dll</HintPath>
+    </Reference>
+    <Reference Include="Migrant">
+      <HintPath>$(RenodePath)/Migrant.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Main project reference -->
+    <ProjectReference Include="Peripherals.csproj" />
+    
+    <!-- Test files -->
+    <Compile Include="tests\peripherals\i2c\mocks\MockGPIO.cs" />
+    <Compile Include="tests\peripherals\i2c\mocks\MockClocks.cs" />
+    <Compile Include="tests\peripherals\i2c\mocks\MockI2CDevice.cs" />
+    <Compile Include="tests\peripherals\i2c\I2CRegisterTests.cs" />
+  </ItemGroup>
+
+</Project>
