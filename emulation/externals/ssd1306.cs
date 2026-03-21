@@ -67,6 +67,8 @@ namespace Antmicro.Renode.Peripherals.I2C
             Array.Clear(framebuffer, 0, framebuffer.Length);
             displayOn = false;
             inverted = false;
+            entireDisplayOn = false;
+            scrolling = false;
             memoryMode = 0;
             columnStart = 0;
             columnEnd = (byte)(WIDTH - 1);
@@ -74,9 +76,18 @@ namespace Antmicro.Renode.Peripherals.I2C
             pageEnd = (byte)(PAGES - 1);
             currentColumn = 0;
             currentPage = 0;
+            startLine = 0;
+            segRemap = 0;
+            comOutDir = 0;
+            displayOffset = 0;
+            multiplexRatio = (byte)(HEIGHT - 1);
             expectingControl = true;
+            continuationControl = false;
             pendingCommand = 0;
             expectingCommandData = false;
+            columnAddrStep = 0;
+            pageAddrStep = 0;
+            scrollStep = 0;
         }
 
         public void Write(byte[] data)
@@ -91,41 +102,25 @@ namespace Antmicro.Renode.Peripherals.I2C
         {
             if (expectingControl)
             {
-                // This is a control byte
-                if ((b & 0x80) != 0)
-                {
-                    // Co = 1, next byte is command
-                    expectingControl = false;
-                    nextByteIsCommand = true;
-                }
-                else if ((b & 0x40) != 0)
-                {
-                    // Co = 0, D/C = 1, stream of data follows
-                    expectingControl = false;
-                    nextByteIsCommand = false;
-                }
-                else
-                {
-                    // Co = 0, D/C = 0, single command
-                    expectingControl = false;
-                    nextByteIsCommand = true;
-                    singleCommand = true;
-                }
+                continuationControl = (b & CTRL_CMD) != 0;
+                nextByteIsCommand = (b & CTRL_DATA) == 0;
+                expectingControl = false;
+                return;
             }
-            else if (nextByteIsCommand)
+
+            if (nextByteIsCommand)
             {
                 ProcessCommand(b);
-                if (singleCommand)
-                {
-                    expectingControl = true;
-                    singleCommand = false;
-                }
             }
             else
             {
-                // Data byte
                 WriteData(b);
-                // In data stream mode, continue accepting data
+            }
+
+            if (continuationControl)
+            {
+                expectingControl = true;
+                continuationControl = false;
             }
         }
 
@@ -192,8 +187,8 @@ namespace Antmicro.Renode.Peripherals.I2C
                         chargePump = cmd;
                         break;
                     case SET_HORIZ_SCROLL:
-                        // Horizontal scroll has 6 more bytes
-                        if (scrollStep < 6)
+                        // Horizontal scroll has 6 parameter bytes.
+                        if (scrollStep < 5)
                         {
                             scrollStep++;
                             return; // Expect more data
@@ -230,7 +225,7 @@ namespace Antmicro.Renode.Peripherals.I2C
             }
 
             // Single-byte commands
-            if ((cmd & 0xFE) == SET_DISP_START_LINE)
+            if ((cmd & 0xC0) == SET_DISP_START_LINE)
             {
                 startLine = (byte)(cmd & 0x3F);
             }
@@ -238,7 +233,7 @@ namespace Antmicro.Renode.Peripherals.I2C
             {
                 segRemap = (byte)(cmd & 0x01);
             }
-            else if ((cmd & 0xFE) == SET_COM_OUT_DIR)
+            else if ((cmd & 0xF7) == SET_COM_OUT_DIR)
             {
                 comOutDir = (byte)(cmd & 0x08);
             }
@@ -301,7 +296,7 @@ namespace Antmicro.Renode.Peripherals.I2C
         {
             expectingControl = true;
             nextByteIsCommand = false;
-            singleCommand = false;
+            continuationControl = false;
         }
 
         /// <summary>
@@ -450,8 +445,8 @@ namespace Antmicro.Renode.Peripherals.I2C
         private byte chargePump;
         
         private bool expectingControl = true;
+        private bool continuationControl = false;
         private bool nextByteIsCommand = false;
-        private bool singleCommand = false;
         private bool expectingCommandData = false;
         private byte pendingCommand;
         private int columnAddrStep;

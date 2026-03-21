@@ -68,7 +68,8 @@ This repository contains a **RP2040 MCU simulation** for the [Renode](https://gi
 │   ├── externals/            # External device implementations
 │   ├── tests/                # C# unit tests
 │   │   └── peripherals/
-│   │       └── i2c/          # I2C unit tests
+│   │       ├── i2c/          # I2C unit tests
+│   │       └── spi/          # SPI unit tests
 │   ├── Peripherals.csproj    # .NET project file
 │   ├── Peripherals.Tests.csproj # Unit test project
 │   └── emulation.sln         # Visual Studio solution

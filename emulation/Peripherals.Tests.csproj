@@ -40,11 +40,15 @@
     <!-- Main project reference -->
     <ProjectReference Include="Peripherals.csproj" />
     
-    <!-- Test files -->
+    <!-- I2C Test files -->
     <Compile Include="tests\peripherals\i2c\mocks\MockGPIO.cs" />
     <Compile Include="tests\peripherals\i2c\mocks\MockClocks.cs" />
     <Compile Include="tests\peripherals\i2c\mocks\MockI2CDevice.cs" />
     <Compile Include="tests\peripherals\i2c\I2CRegisterTests.cs" />
+    <Compile Include="tests\peripherals\i2c\SSD1306Tests.cs" />
+    <!-- SPI Test files -->
+    <Compile Include="tests\peripherals\spi\mocks\MockSPIPeripheral.cs" />
+    <Compile Include="tests\peripherals\spi\SPIRegisterTests.cs" />
   </ItemGroup>
 
 </Project>

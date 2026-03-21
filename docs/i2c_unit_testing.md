@@ -14,25 +14,26 @@ The I2C peripheral (`rp2040_i2c.cs`) is tested using a **hybrid approach** that 
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                     I2C Testing Architecture                     │
+│                I2C/SPI Testing Architecture                      │
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                  │
-│  Layer 1: C# Unit Tests (emulation/tests/peripherals/i2c/)      │
-│  ├── Mocks:                                                    │
+│  Layer 1: C# Unit Tests (emulation/tests/peripherals/)          │
+│  ├── I2C:                                                      │
 │  │   ├── MockGPIO.cs          - GPIO pin control mock           │
 │  │   ├── MockClocks.cs        - Clock frequency mock            │
-│  │   └── MockI2CDevice.cs     - I2C slave device mock           │
-│  └── Tests:                                                    │
-│      └── I2CRegisterTests.cs  - Mock validation tests           │
+│  │   ├── MockI2CDevice.cs     - I2C slave device mock           │
+│  │   └── I2CRegisterTests.cs  - I2C mock tests                  │
+│  └── SPI:                                                      │
+│       ├── MockSPIPeripheral.cs - SPI slave device mock          │
+│       └── SPIRegisterTests.cs  - SPI mock tests                 │
 │                                                                  │
-│  Layer 2: Renode Python Tests (tests/unit/i2c/)                 │
-│  ├── i2c_unit_test_harness.py - Test infrastructure             │
-│  └── i2c_unit_tests.resc      - Renode test script              │
+│  Layer 2: Renode Python Tests (tests/unit/)                     │
+│  ├── i2c/ - I2C unit tests                                     │
+│  └── spi/ - SPI unit tests (TBD)                               │
 │                                                                  │
-│  Layer 3: Integration Tests (tests/testcases/i2c/)              │
-│  ├── bus_scan/               - I2C bus scanning                 │
-│  ├── slave_mem_i2c/          - EEPROM-like device tests         │
-│  └── Various sensor tests    - Real device emulations           │
+│  Layer 3: Integration Tests (tests/testcases/)                  │
+│  ├── i2c/ - I2C integration tests                              │
+│  └── spi/ - SPI integration tests (TBD)                        │
 │                                                                  │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -41,13 +42,15 @@ The I2C peripheral (`rp2040_i2c.cs`) is tested using a **hybrid approach** that 
 
 ### C# Unit Tests
 The C# unit test infrastructure is in place with:
-- **Mock implementations** for GPIO, Clocks, and I2C devices
+- **Mock implementations** for GPIO, Clocks, I2C, and SPI devices
 - **Custom test attribute** (`[Test]`) for marking test methods
 - **Console test runner** (`Tests.Runner`) that discovers and runs tests via reflection
 
 **Requirements:** .NET 6.0 SDK or later (tested on .NET 10.0)
 
-**All 10 tests passing:**
+**All 20 tests passing:**
+
+**I2C Tests (10):**
 - `MockGPIO_ConfigureI2C0Pins_FunctionsSet` ✓
 - `MockGPIO_PinState_CanBeSetAndRead` ✓
 - `MockGPIO_PinDirection_OutputCanWrite` ✓
@@ -58,6 +61,18 @@ The C# unit test infrastructure is in place with:
 - `MockI2CDevice_Read_EmptyReturns0xFF` ✓
 - `MockI2CDevice_FinishTransmission_Called` ✓
 - `MockI2CDevice_Transactions_Recorded` ✓
+
+**SPI Tests (10):**
+- `MockSPIPeripheral_Transmit_DataRecorded` ✓
+- `MockSPIPeripheral_Transmit_ReturnsResponse` ✓
+- `MockSPIPeripheral_Transmit_NoResponseReturns0xFF` ✓
+- `MockSPIPeripheral_ChipSelect_ActiveLow` ✓
+- `MockSPIPeripheral_Transactions_Recorded` ✓
+- `MockGPIO_ConfigureSPI0Pins_FunctionsSet` ✓
+- `MockGPIO_ConfigureSPI1Pins_FunctionsSet` ✓
+- `SPI_ClockPrescale_EvenNumber` ✓
+- `SPI_DataSize_ValidRange` ✓
+- `SPI_Register_SSPCR1_SSE_StartsTransmission` ✓
 
 ## Running the Tests
 
@@ -399,6 +414,60 @@ Run successfully 'slave_mem_i2c' example
 | Protocol (read) | 100% | 85% |
 | Error handling | 90% | 75% |
 | DMA integration | 80% | 60% |
+
+## SPI Bug Fixes
+
+The following bugs were identified and fixed in the SPI implementation (`rp2040_spi.cs`):
+
+### 1. Double Assignment of `this.clocks` (Line 50)
+**Issue:** The `this.clocks` field was assigned twice in the constructor.
+**Fix:** Removed the duplicate assignment.
+
+### 2. Incorrect `transmitCounter` Initialization (Line 307)
+**Issue:** `transmitCounter` was initialized to 16, causing the first transmission to be skipped.
+**Fix:** Changed to initialize to 0.
+
+### 3. Incorrect `dataSize` Default (Line 295)
+**Issue:** `dataSize` was initialized to 0, causing undefined behavior in bit shifting.
+**Fix:** Changed default to 8 bits.
+
+### 4. Missing Loopback Mode Handling (Step() method)
+**Issue:** In loopback mode, the SPI should feed transmitted data back to the receiver, but it was always reading from GPIO.
+**Fix:** Added loopback mode check in the Step() method:
+```csharp
+if (loopbackMode)
+{
+    bool transmittedBit = Convert.ToBoolean((transmitData >> (dataSize - 1 - transmitCounter)) & 1);
+    receiveData = (ushort)((receiveData << 1) | Convert.ToUInt16(transmittedBit));
+}
+else
+{
+    receiveData = (ushort)((receiveData << 1) | Convert.ToUInt16(ReadMultiplePins(rxPins)));
+}
+```
+
+### 5. SSPSR Register - RNE Bit Inverted (Line 379)
+**Issue:** `SSPSR_RNE` (Receive FIFO Not Empty) returned TRUE when FIFO WAS EMPTY (inverted logic).
+```csharp
+// Bug:
+.WithFlag(2, FieldMode.Read, valueProviderCallback: _ => rxBuffer.Count == 0, name: "SSPSR_RNE")
+// Fix:
+.WithFlag(2, FieldMode.Read, valueProviderCallback: _ => rxBuffer.Count != 0, name: "SSPSR_RNE")
+```
+
+### 6. SSPSR Register - RFF Bit Inverted (Line 380)
+**Issue:** `SSPSR_RFF` (Receive FIFO Full) returned TRUE when FIFO WAS NOT FULL (inverted logic).
+```csharp
+// Bug:
+.WithFlag(3, FieldMode.Read, valueProviderCallback: _ => rxBuffer.Count != rxBuffer.Capacity, name: "SSPSR_RFF")
+// Fix:
+.WithFlag(3, FieldMode.Read, valueProviderCallback: _ => rxBuffer.Count == rxBuffer.Capacity, name: "SSPSR_RFF")
+```
+
+### Remaining SPI Limitations
+- **Slave mode** is not implemented (marked as not supported)
+- **Clock configuration** is limited (see AGENTS.md)
+- **Chip select handling** is minimal - CS is tracked via GPIO but not fully integrated
 
 ## Debugging Failed Tests
 
