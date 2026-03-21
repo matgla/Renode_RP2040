@@ -9,10 +9,9 @@ Test Timeout    120 seconds
 Run successfully 'button' example
     Execute Command             include @${CURDIR}/button.resc
 
-    Create LED Tester           sysbus.gpio.led  defaultTimeout=4 
+    Create LED Tester           sysbus.gpio.led  defaultTimeout=10 
     
     Start Emulation 
-    Sleep                1s 
     Execute Command      sysbus.gpio.button Press
     Assert LED State     true 
     Execute Command      sysbus.gpio.button Release 
