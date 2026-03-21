@@ -1,0 +1,3 @@
+using "../../../../boards/raspberry_pico.repl"
+
+mma8451: I2C.MMA8451 @ i2c0 0x1D

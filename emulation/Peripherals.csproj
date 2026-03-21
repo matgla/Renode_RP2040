@@ -207,6 +207,7 @@
     <Compile Include="externals/segment_display.cs" />
     <Compile Include="externals/resistor_dac.cs" />
     <Compile Include="externals/mcp9808.cs" />
+    <Compile Include="externals/mma8451.cs" />
   </ItemGroup>
 
 </Project>

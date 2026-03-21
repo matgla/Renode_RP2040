@@ -48,3 +48,4 @@
 - testcases/i2c/lcd_1602_i2c/lcd_1602_i2c.robot
 - testcases/i2c/lis3dh_i2c/lis3dh_i2c.robot
 - testcases/i2c/mcp9808_i2c/mcp9808_i2c.robot
+- testcases/i2c/mma8451_i2c/mma8451_i2c.robot
