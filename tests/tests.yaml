@@ -50,3 +50,4 @@
 - testcases/i2c/mcp9808_i2c/mcp9808_i2c.robot
 - testcases/i2c/mma8451_i2c/mma8451_i2c.robot
 - testcases/i2c/mpl3115a2_i2c/mpl3115a2_i2c.robot
+- testcases/i2c/mpu6050_i2c/mpu6050_i2c.robot
