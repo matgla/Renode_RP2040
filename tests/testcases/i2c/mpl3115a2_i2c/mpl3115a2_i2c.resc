@@ -1,0 +1,23 @@
+$global.TEST_FILE=$ORIGIN/../../../pico-examples/build/i2c/mpl3115a2_i2c/mpl3115a2_i2c.elf
+
+$machine_name="pico_tests"
+path add $ORIGIN/../..
+include $ORIGIN/../../../../cores/initialize_peripherals.resc
+machine LoadPlatformDescription $ORIGIN/raspberry_pico_with_mpl3115a2.repl
+sysbus LoadELF $ORIGIN/../../../../bootroms/rp2040/b2.elf
+
+include $ORIGIN/../../../testers/load_testers.resc
+
+# Configure MPL3115A2 sensor with test values
+log "Configuring MPL3115A2 sensor values"
+
+# Test 1: Sea level at room temperature
+sysbus.i2c0.mpl3115a2 SetData 0.0 25.0
+
+log "Loading firmware file"
+sysbus LoadELF $global.TEST_FILE
+
+sysbus.cpu0 VectorTableOffset 0x00000000
+sysbus.cpu1 VectorTableOffset 0x00000000
+
+showAnalyzer sysbus.uart0

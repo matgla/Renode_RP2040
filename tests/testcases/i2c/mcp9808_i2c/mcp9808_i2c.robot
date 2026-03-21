@@ -1,6 +1,7 @@
 *** Settings ***
 
 Resource        ../../../common.resource
+Resource        ../../../sensors.resource
 Suite Setup     Setup
 Suite Teardown  Teardown
 Test Teardown   Test Teardown
@@ -39,7 +40,11 @@ Start MCP9808 Example
 
 MCP9808 Should Report Temperature
     [Arguments]    ${reading_num}    ${expected}    ${tolerance}
+    
+    # Wait for the reading line
     ${line}=    Wait For Line On Uart    Reading ${reading_num}:    timeout=${UART_TIMEOUT}
     ${text}=    Set Variable    ${line['Line']}
+    
+    # Extract and validate temperature using the sensors library helper
     ${value}=    Extract Numeric Value From Text    ${text}    Ambient temperature:
     Should Be Equal As Numbers With Tolerance    ${value}    ${expected}    ${tolerance}
