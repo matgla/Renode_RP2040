@@ -1,1 +1,3 @@
 include $ORIGIN/segment_display_tester.py
+include $ORIGIN/i2c_capture_tester.py
+include $ORIGIN/lcd1602_tester.py

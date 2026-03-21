@@ -1,0 +1,3 @@
+using "../../../../boards/raspberry_pico.repl"
+
+lis3dh: I2C.LIS3DH @ i2c0 0x18

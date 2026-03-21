@@ -1,0 +1,29 @@
+$global.TEST_FILE=$ORIGIN/../../../pico-examples/build/i2c/mcp9808_i2c/mcp9808_i2c.elf
+
+$machine_name="pico_tests"
+path add $ORIGIN/../..
+include $ORIGIN/../../../../cores/initialize_peripherals.resc
+machine LoadPlatformDescription $ORIGIN/raspberry_pico_with_mcp9808.repl
+sysbus LoadELF $ORIGIN/../../../../bootroms/rp2040/b2.elf
+
+include $ORIGIN/../../../testers/load_testers.resc
+
+# Configure MCP9808 sensor with test temperatures
+# Test with 4 different temperatures to verify dynamic updates work
+log "Configuring MCP9808 sensor values"
+
+# Temperature 1: 16.0C (simple value)
+sysbus.i2c0.mcp9808 SetAmbientTemperature 16.0
+
+# Also set limit temperatures for testing
+sysbus.i2c0.mcp9808 SetUpperTemperature 25.0
+sysbus.i2c0.mcp9808 SetLowerTemperature 10.0
+sysbus.i2c0.mcp9808 SetCriticalTemperature 30.0
+
+log "Loading firmware file"
+sysbus LoadELF $global.TEST_FILE
+
+sysbus.cpu0 VectorTableOffset 0x00000000
+sysbus.cpu1 VectorTableOffset 0x00000000
+
+showAnalyzer sysbus.uart0

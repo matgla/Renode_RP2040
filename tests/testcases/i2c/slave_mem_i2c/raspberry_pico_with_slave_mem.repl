@@ -1,0 +1,3 @@
+using "../../../../boards/raspberry_pico.repl"
+
+slave_mem: I2C.I2CEEPROM @ i2c1 0x17

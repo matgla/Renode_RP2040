@@ -8,10 +8,7 @@ import clr
 
 clr.AddReference("Infrastructure")
 
-import json
-import types
 import sys
-import threading
 import time
 
 testers = {}
@@ -19,7 +16,7 @@ testers = {}
 
 def mc_RegisterI2CCaptureTester(name, device):
     """Register an I2C capture tester for the given device.
-    
+
     Args:
         name: Unique name for this tester instance
         device: Full path to the I2C device (e.g., "sysbus.i2c0.ht16k33")
@@ -30,27 +27,27 @@ def mc_RegisterI2CCaptureTester(name, device):
 
 def mc_WaitForI2CData(name, expected_data_hex, timeout_sec):
     """Wait for specific I2C data to be written to the device.
-    
+
     Args:
         name: Name of the registered tester
         expected_data_hex: List of hex strings representing expected byte sequences
         timeout_sec: Timeout in seconds
-    
+
     Returns:
         True if data was found, False otherwise
     """
     if name not in testers:
         sys.stderr.write("Can't find I2CCaptureTester named: " + name)
         return False
-    return testers[name].wait_for_data(expected_data_hex, timeout_sec)
+    return bool(testers[name].wait_for_data(expected_data_hex, timeout_sec))
 
 
 def mc_GetI2CCapturedData(name):
     """Get all captured I2C writes.
-    
+
     Args:
         name: Name of the registered tester
-    
+
     Returns:
         List of captured byte arrays as hex strings
     """
@@ -60,9 +57,37 @@ def mc_GetI2CCapturedData(name):
     return testers[name].get_captured_data()
 
 
+def mc_AssertI2CData(name, expected_data_hex, timeout_sec):
+    """Assert that the expected I2C write appears within the timeout."""
+    if name not in testers:
+        raise Exception("Can't find I2CCaptureTester named: {}".format(name))
+
+    if not testers[name].wait_for_data(expected_data_hex, timeout_sec):
+        captured = testers[name].get_captured_data()
+        raise Exception(
+            "Expected I2C data {} was not captured within {}s. Captured writes: {}".format(
+                expected_data_hex, timeout_sec, captured
+            )
+        )
+
+
+def mc_AssertAnyCapturedWriteLength(name, expected_length):
+    """Assert that any captured I2C write has the given length."""
+    if name not in testers:
+        raise Exception("Can't find I2CCaptureTester named: {}".format(name))
+
+    captured = testers[name]._get_captured_data()
+    if not any(len(write) == int(expected_length) for write in captured):
+        raise Exception(
+            "Expected a captured write with length {}. Captured writes: {}".format(
+                expected_length, testers[name].get_captured_data()
+            )
+        )
+
+
 def mc_ClearI2CCapturedData(name):
     """Clear all captured I2C writes.
-    
+
     Args:
         name: Name of the registered tester
     """
@@ -101,47 +126,43 @@ class I2CCaptureTester:
         self.machine = emulation.Machines[0]
         self.device = machine_find_peripheral(self.machine, device)
         self.name = name
-        self.captured_data = []
-        self.data_event = threading.Event()
-        self.finished = None
-        
-        # Subscribe to DataWritten event
-        if self.device is not None:
-            self.device.DataWritten += types.MethodType(
-                I2CCaptureTester.handle_data_written, self
-            )
+        if self.device is None:
+            sys.stderr.write("ERROR: Device not found, cannot subscribe to events\n")
 
-    def handle_data_written(self, sender, data):
-        """Callback when data is written to the I2C device."""
-        data_bytes = list(data)
-        self.captured_data.append(data_bytes)
-        self.data_event.set()
+    def _get_captured_data(self):
+        if self.device is None:
+            return []
+        return [[int(byte) for byte in write] for write in self.device.GetCapturedWrites()]
 
     def wait_for_data(self, expected_data_hex, timeout_sec):
         """Wait for specific data pattern."""
-        expected = [[int(b, 16) for b in seq] for seq in expected_data_hex]
-        
+        expected = []
+        for seq in expected_data_hex:
+            if isinstance(seq, list):
+                expected.append([int(b, 16) if isinstance(b, str) else int(b) for b in seq])
+            else:
+                expected.append([int(seq, 16) if isinstance(seq, str) else int(seq)])
+
         start_time = time.time()
         while time.time() - start_time < timeout_sec:
-            # Check if we have matching data
+            captured_data = self._get_captured_data()
             for exp_seq in expected:
-                for captured in self.captured_data:
+                for captured in captured_data:
                     if captured == exp_seq:
                         return True
-            
-            # Wait a bit for new data
-            self.data_event.clear()
-            self.data_event.wait(0.1)
-        
+
+            time.sleep(0.1)
+
         return False
 
     def get_captured_data(self):
         """Return all captured data as list of hex string lists."""
         result = []
-        for data in self.captured_data:
-            result.append(["0x{:02X}".format(b) for b in data])
+        for data in self._get_captured_data():
+            result.append(["0x{:02X}".format(int(b)) for b in data])
         return result
 
     def clear_captured_data(self):
         """Clear all captured data."""
-        self.captured_data.clear()
+        if self.device is not None:
+            self.device.ClearCapturedWrites()

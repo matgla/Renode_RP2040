@@ -29,13 +29,13 @@ This repository contains a **RP2040 MCU simulation** for the [Renode](https://gi
 | **I2C** | 🟢 Full | Master mode, interrupts, DMA support |
 | **USB** | 🔴 None | Not implemented |
 | **PWM** | 🔴 None | Not implemented |
-| **RTC** | 🔴 None | Not implemented |
+| **RTC** | 🟢 External | PCF8523 I2C device simulator |
 
 ## Technology Stack
 
 - **Primary Language**: C# (for Renode peripherals)
 - **PIO Simulator**: C++ (external library)
-- **Testing**: Robot Framework + Python
+- **Testing**: Robot Framework + Python + xUnit (C#)
 - **Build System**: .NET SDK (for C#), CMake (for PIO simulator)
 - **Visualization**: Python (websockets, aiohttp)
 
@@ -66,7 +66,12 @@ This repository contains a **RP2040 MCU simulation** for the [Renode](https://gi
 │   │   ├── uart/             # UART
 │   │   └── ...
 │   ├── externals/            # External device implementations
+│   ├── tests/                # C# unit tests
+│   │   └── peripherals/
+│   │       ├── i2c/          # I2C unit tests
+│   │       └── spi/          # SPI unit tests
 │   ├── Peripherals.csproj    # .NET project file
+│   ├── Peripherals.Tests.csproj # Unit test project
 │   └── emulation.sln         # Visual Studio solution
 ├── piosim/                    # PIO simulator (C++ shared library)
 │   ├── libpiosim.so          # Linux shared library
@@ -75,7 +80,10 @@ This repository contains a **RP2040 MCU simulation** for the [Renode](https://gi
 │   ├── fetch_piosim.py       # Download script for libraries
 │   └── version               # Version specifier
 ├── tests/                     # Test suite
-│   ├── testcases/            # Robot Framework test files
+│   ├── testcases/            # Robot Framework integration tests
+│   │   └── i2c/              # I2C peripheral tests
+│   ├── unit/                 # Unit tests
+│   │   └── i2c/              # I2C unit tests (Python/IronPython)
 │   ├── pico-examples/        # Pico SDK examples (cloned)
 │   ├── pico_examples_patches/# Patches for pico-examples
 │   ├── build_pico_examples.sh# Build script for examples
@@ -140,6 +148,44 @@ python3 tests/run_tests.py -r 3 -f tests/tests.yaml -e /path/to/renode-test
 # Run with specific thread count
 python3 tests/run_tests.py -j 4
 ```
+
+### Running Unit Tests
+
+The project includes both C# unit tests and Renode-based unit tests with cross-platform support:
+
+**Requirements:**
+- .NET 6.0+ SDK (for C# unit tests, tested on .NET 10)
+- Renode 1.16.1 (for Python unit tests)
+
+**Quick start (all platforms):**
+```bash
+# Run all unit tests
+python run_unit_tests.py
+
+# Or on Linux/macOS:
+./run_unit_tests.sh
+
+# Or on Windows:
+run_unit_tests.bat
+```
+
+**Run only C# unit tests:**
+```bash
+python run_unit_tests.py -c
+```
+
+**Run only Renode Python tests:**
+```bash
+python run_unit_tests.py -r
+```
+
+**Additional options:**
+```bash
+python run_unit_tests.py -v          # Verbose output
+python run_unit_tests.py -h          # Show all options
+```
+
+See [docs/i2c_unit_testing.md](docs/i2c_unit_testing.md) for detailed documentation on I2C unit testing.
 
 ### Using the Simulation
 

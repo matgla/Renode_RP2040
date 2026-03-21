@@ -1,17 +1,10 @@
 $global.TEST_FILE=$ORIGIN/../../../pico-examples/build/i2c/ht16k33_i2c/ht16k33_i2c.elf
 
-$machine_name="pico_tests"
-path add $ORIGIN/../..
-include $ORIGIN/../../../../cores/initialize_peripherals.resc
+mach create "pico_tests"
+include $ORIGIN/../../../../cores/load_peripherals.py
 machine LoadPlatformDescription $ORIGIN/raspberry_pico_with_ht16k33.repl
 sysbus LoadELF $ORIGIN/../../../../bootroms/rp2040/b2.elf
-
-include $ORIGIN/../../../testers/load_testers.resc
-
-log "Loading firmware file"
+include $ORIGIN/../../../testers/i2c_capture_tester.py
 sysbus LoadELF $global.TEST_FILE
-
 sysbus.cpu0 VectorTableOffset 0x00000000
 sysbus.cpu1 VectorTableOffset 0x00000000
-
-showAnalyzer sysbus.uart0

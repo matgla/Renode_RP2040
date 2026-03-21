@@ -1,0 +1,13 @@
+# I2C Unit Test Setup for Renode
+# This script sets up the machine for I2C unit tests
+
+$machine_name="i2c_unit_tests"
+path add $ORIGIN/../..
+
+# Include the standard pico board setup
+include $ORIGIN/../../../boards/initialize_raspberry_pico.resc
+
+# Set a shorter quantum for more responsive tests
+emulation SetGlobalQuantum "0.00001"
+
+echo "I2C unit test environment ready"

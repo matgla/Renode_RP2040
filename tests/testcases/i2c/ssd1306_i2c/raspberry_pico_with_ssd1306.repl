@@ -1,0 +1,3 @@
+using "../../../../boards/raspberry_pico.repl"
+
+ssd1306: I2C.SSD1306 @ i2c0 0x3C

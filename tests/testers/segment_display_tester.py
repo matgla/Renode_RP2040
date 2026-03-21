@@ -1,28 +1,113 @@
+"""
+Segment Display Tester for Robot Framework tests.
+
+Provides testers for LED segment displays like HT16K33.
+"""
+
 import clr
 
 clr.AddReference("Infrastructure")
-
 
 import json
 import types
 import sys
 import threading
+import time
 
 testers = {}
 
 
-def mc_RegisterDisplayTester(name, display):
+def mc_RegisterSegmentDisplayTester(name, device):
+    """Register a segment display tester for the given HT16K33 device.
+    
+    Args:
+        name: Unique name for this tester instance
+        device: Full path to the HT16K33 device (e.g., "sysbus.i2c0.ht16k33")
+    """
     global testers
-    testers[name] = SegmentDisplayTester(display, name)
+    testers[name] = SegmentDisplayTester(device, name)
 
 
-def mc_WaitForSequence(name, file, timeout):
+def mc_GetDisplayRowData(name, row):
+    """Get the display RAM data for a specific row (0-15).
+    
+    Args:
+        name: Name of the registered tester
+        row: Row index (0-15)
+    
+    Returns:
+        Integer value for that row (0-255)
+    """
     if name not in testers:
-        sys.stderr.write("Can't find SegmentDisplayTester named:" + name)
-    testers[name].wait_for_sequence(file, timeout)
+        sys.stderr.write("Can't find SegmentDisplayTester named: " + name)
+        return 0
+    return int(testers[name].get_row_data(row))
+
+
+def mc_GetAllDisplayData(name):
+    """Get all 16 bytes of display RAM.
+    
+    Args:
+        name: Name of the registered tester
+    
+    Returns:
+        List of 16 integer values
+    """
+    if name not in testers:
+        sys.stderr.write("Can't find SegmentDisplayTester named: " + name)
+        return []
+    return [int(x) for x in testers[name].get_all_data()]
+
+
+def mc_IsDisplayEnabled(name):
+    """Check if the display is enabled.
+    
+    Args:
+        name: Name of the registered tester
+    
+    Returns:
+        True if display is enabled
+    """
+    if name not in testers:
+        sys.stderr.write("Can't find SegmentDisplayTester named: " + name)
+        return False
+    return bool(testers[name].is_display_enabled())
+
+
+def mc_GetDimmingLevel(name):
+    """Get the current dimming level (0-15).
+    
+    Args:
+        name: Name of the registered tester
+    
+    Returns:
+        Dimming level (0-15)
+    """
+    if name not in testers:
+        sys.stderr.write("Can't find SegmentDisplayTester named: " + name)
+        return 0
+    return int(testers[name].get_dimming_level())
+
+
+def mc_WaitForDisplayData(name, expected_data, timeout_sec):
+    """Wait for specific display data to be written.
+    
+    Args:
+        name: Name of the registered tester
+        expected_data: List of expected integer values for rows 0-15
+        timeout_sec: Timeout in seconds
+    
+    Returns:
+        True if data was found, False otherwise
+    """
+    if name not in testers:
+        sys.stderr.write("Can't find SegmentDisplayTester named: " + name)
+        return False
+    return bool(testers[name].wait_for_data(expected_data, timeout_sec))
 
 
 def machine_find_peripheral(machine, name):
+    """Find a peripheral by its full path name."""
     tree = name.split(".")
     tree.reverse()
     for peri in machine.GetRegisteredPeripherals():
@@ -45,140 +130,64 @@ def machine_find_peripheral(machine, name):
 
 
 class SegmentDisplayTester:
-    def __init__(self, display, timeout):
+    def __init__(self, device, name):
         emulation = Antmicro.Renode.Core.EmulationManager.Instance.CurrentEmulation
         self.machine = emulation.Machines[0]
-        self.display = machine_find_peripheral(self.machine, display)
-        self.default_timeout = timeout
-        self.finished = None
-        self.last_event = None
-        self.last_expectation = None
-        self.first_unmatched = None
-        self.success = False
-        self.display.StateChanged += types.MethodType(
-            SegmentDisplayTester.handle_display_event, self
-        )
-
-    def wait_for_sequence(self, file, timeout=None):
-        expectations = None
-        with open(file, "r") as f:
-            expectations = json.loads(f.read())
-        self.expectations = expectations
-        self.matched_elements = 0
-        self.success = False
-        if timeout is None:
-            timeout = self.default_timeout
-        self.finished = threading.Event()
-        self.finished.wait(timeout)
-        if not self.success:
-            sys.stderr.write(
-                "SegmentDisplayTester: Expected sequence was not found: "
-                + file
-                + " "
-                + str(self.first_unmatched)
-                + " "
-                + str(self.success)
+        self.device = machine_find_peripheral(self.machine, device)
+        self.name = name
+        self.data_event = threading.Event()
+        
+        # Subscribe to DataWritten event if available
+        if self.device is not None:
+            self.device.DataWritten += types.MethodType(
+                SegmentDisplayTester.handle_data_written, self
             )
 
-        self.finished = None
+    def handle_data_written(self, data):
+        """Callback when data is written to the display."""
+        self.data_event.set()
 
-    @staticmethod
-    def convert_to_array(o):
-        arr = []
-        for e in o:
-            arr.append(e)
-        return arr
+    def get_row_data(self, row):
+        """Get display RAM for a specific row."""
+        if self.device is None:
+            return 0
+        return int(self.device.GetRowData(row))
 
-    @staticmethod
-    def segments_to_value(segments):
-        arr = 0
-        for i in range(0, len(segments)):
-            arr = arr | int(segments[i]) << i
-        return arr
+    def get_all_data(self):
+        """Get all 16 bytes of display RAM."""
+        if self.device is None:
+            return []
+        return [int(self.device.GetRowData(i)) for i in range(16)]
 
-    def _expectation_matched(self):
-        if self.matched_elements + 1 >= len(self.expectations["sequence"]):
-            self.success = True
-            self.finished.set()
-        self.matched_elements += 1
-        self.last_expectation = None
+    def is_display_enabled(self):
+        """Check if display is enabled."""
+        if self.device is None:
+            return False
+        return bool(self.device.IsDisplayEnabled)
 
-    def _fail_expectation(self, event_time, segments, cells):
-        if (
-            self.first_unmatched is None
-            or self.first_unmatched["expectation_number"] < self.matched_elements
-        ):
-            self.first_unmatched = {
-                "expectation_number": self.matched_elements,
-                "expectation": self.expectations["sequence"][self.matched_elements],
-                "segments: ": hex(segments),
-                "cells": cells,
-                "time": event_time,
-            }
+    def get_dimming_level(self):
+        """Get current dimming level."""
+        if self.device is None:
+            return 0
+        return int(self.device.CurrentDimmingLevel)
 
-        self.matched_elements = 0
-        self.last_expectation = None
-
-    def _verify_element(self, cells, segments):
-        time_diff = 0
-        if self.last_event is not None:
-            time_diff = (
-                self.machine.ElapsedVirtualTime.TimeElapsed.TotalMilliseconds
-                - self.last_event
-            )
-
-        if self.last_expectation is not None:
-            # delay was scheduled, so check previous event if time matches
-            if (
-                abs(time_diff - self.last_expectation["time"] * 1000)
-                < self.last_expectation["tolerance"] * 1000
-            ):
-                # expectation matched
-                self._expectation_matched()
-            else:
-                self._fail_expectation(
-                    time_diff,
-                    int(
-                        self.expectations["mapping"][self.last_expectation["value"]], 16
-                    ),
-                    [],
-                )
-
-        if self.success:
-            return
-
-        element = self.expectations["sequence"][self.matched_elements]
-        # validate cell
-        if "cells" in element:
-            if cells != element["cells"]:
-                self._fail_expectation(
-                    time_diff, self.segments_to_value(segments), cells
-                )
-                return
-
-        # validate sequence
-        if int(
-            self.expectations["mapping"][element["value"]], 16
-        ) != SegmentDisplayTester.segments_to_value(segments):
-            self._fail_expectation(time_diff, self.segments_to_value(segments), cells)
-            return
-
-        # if time must be check, schedule it for next event
-        if "time" in self.expectations["sequence"][self.matched_elements]:
-            self.last_event = (
-                self.machine.ElapsedVirtualTime.TimeElapsed.TotalMilliseconds
-            )
-            self.last_expectation = element
-        else:
-            self._expectation_matched()
-
-    def handle_display_event(self, display, cells, segments):
-        if self.success or self.finished is None:
-            return
-
-        cells = SegmentDisplayTester.convert_to_array(cells)
-        segments = SegmentDisplayTester.convert_to_array(segments)
-        if len(cells) == 0:
-            cells = [False]
-            # this is cell 0 only event
-        self._verify_element(cells, segments)
+    def wait_for_data(self, expected_data, timeout_sec):
+        """Wait for specific display data pattern."""
+        start_time = time.time()
+        
+        while time.time() - start_time < timeout_sec:
+            match = True
+            for i, expected_value in enumerate(expected_data):
+                actual_value = self.get_row_data(i)
+                if actual_value != expected_value:
+                    match = False
+                    break
+            
+            if match:
+                return True
+            
+            # Wait a bit for new data
+            self.data_event.clear()
+            self.data_event.wait(0.1)
+        
+        return False

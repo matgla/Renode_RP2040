@@ -11,3 +11,6 @@ telnetlib3==2.0.*
 # Tools dependencies (from csv2resd and execution_tracer)
 construct==2.10.68
 pyelftools==0.30
+
+# Image processing for display tests
+pillow>=10.0.0

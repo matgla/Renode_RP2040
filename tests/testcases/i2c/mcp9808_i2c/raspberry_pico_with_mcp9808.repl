@@ -1,0 +1,3 @@
+using "../../../../boards/raspberry_pico.repl"
+
+mcp9808: I2C.MCP9808 @ i2c0 0x18

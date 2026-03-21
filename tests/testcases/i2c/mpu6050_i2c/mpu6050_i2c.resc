@@ -1,0 +1,26 @@
+$global.TEST_FILE=$ORIGIN/../../../pico-examples/build/i2c/mpu6050_i2c/mpu6050_i2c.elf
+
+$machine_name="pico_tests"
+path add $ORIGIN/../..
+include $ORIGIN/../../../../cores/initialize_peripherals.resc
+machine LoadPlatformDescription $ORIGIN/raspberry_pico_with_mpu6050.repl
+sysbus LoadELF $ORIGIN/../../../../bootroms/rp2040/b2.elf
+
+include $ORIGIN/../../../testers/load_testers.resc
+
+# Configure MPU6050 sensor with test values
+log "Configuring MPU6050 sensor values"
+
+# Test 1: Device at rest (Z = 1g acceleration, gyros at rest)
+# MPU6050 default scale is ±2g, so 1g = 16384 LSB
+sysbus.i2c0.mpu6050 SetAcceleration 0 0 16384
+sysbus.i2c0.mpu6050 SetGyro 0 0 0
+sysbus.i2c0.mpu6050 SetTemperature 25.0
+
+log "Loading firmware file"
+sysbus LoadELF $global.TEST_FILE
+
+sysbus.cpu0 VectorTableOffset 0x00000000
+sysbus.cpu1 VectorTableOffset 0x00000000
+
+showAnalyzer sysbus.uart0

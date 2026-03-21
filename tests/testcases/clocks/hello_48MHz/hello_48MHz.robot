@@ -1,5 +1,7 @@
 *** Settings ***
 
+Resource        ../../../common.resource
+
 Suite Setup     Setup
 Suite Teardown  Teardown
 Test Teardown   Test Teardown
@@ -15,9 +17,7 @@ Run successfully 'hello_48MHz' example
     Wait For Line On Uart           Hello, world!           timeout=1
     Wait For Line On Uart           pll_sys${SPACE} = 125000kHz    timeout=1
     Wait For Line On Uart           pll_usb${SPACE} = 48000kHz     timeout=1
-    ${l['Line']}    Wait For Next Line On Uart                      timeout=1
-    ${rosc_freq}=    Evaluate    int(re.search(r"\\d+","${l['Line']}")[0])     modules=re
-    Should Be True      ${rosc_freq} <= 13000 and ${rosc_freq} >= 1000
+    Uart Next Numeric Value Should Be In Range    1000    13000    1
     Wait For Line On Uart           clk_sys${SPACE} = 125000kHz     timeout=1
     Wait For Line On Uart           clk_peri = 125000kHz     timeout=1
     Wait For Line On Uart           clk_usb${SPACE} = 48000kHz     timeout=1
@@ -26,9 +26,7 @@ Run successfully 'hello_48MHz' example
 
     Wait For Line On Uart           pll_sys${SPACE} = 125000kHz    timeout=1
     Wait For Line On Uart           pll_usb${SPACE} = 48000kHz     timeout=1
-    ${l['Line']}    Wait For Next Line On Uart                      timeout=1
-    ${rosc_freq}=    Evaluate    int(re.search(r"\\d+","${l['Line']}")[0])     modules=re
-    Should Be True      ${rosc_freq} <= 13000 and ${rosc_freq} >= 1000
+    Uart Next Numeric Value Should Be In Range    1000    13000    1
     Wait For Line On Uart           clk_sys${SPACE} = 48000kHz     timeout=1
     Wait For Line On Uart           clk_peri = 48000kHz     timeout=1
     Wait For Line On Uart           clk_usb${SPACE} = 48000kHz     timeout=1

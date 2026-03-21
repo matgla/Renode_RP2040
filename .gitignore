@@ -21,3 +21,5 @@ output/
 emulation/bin
 tmp/
 profiling/
+output_unit_tests/
+emulation/Tests.Runner

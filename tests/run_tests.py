@@ -7,13 +7,16 @@ from argparse import ArgumentParser
 import sys
 import shutil
 import concurrent.futures
-from concurrent.futures import ProcessPoolExecutor, wait
+from concurrent.futures import ThreadPoolExecutor, wait
 from collections import deque
 import multiprocessing
 import time
 import subprocess
 import signal
 import psutil
+
+
+STATUS_INTERVAL_SECONDS = 30
 
 
 def kill_process_tree(pid, including_parent=True):
@@ -122,7 +125,33 @@ def load_tests(script_dir, test_file):
     return tests_to_run
 
 
-def run_test(command, test, retries, output_dir=None, timeout=300):
+def format_elapsed(seconds):
+    seconds = max(0, int(seconds))
+    minutes, seconds = divmod(seconds, 60)
+    hours, minutes = divmod(minutes, 60)
+
+    if hours:
+        return f"{hours}h {minutes}m {seconds}s"
+
+    if minutes:
+        return f"{minutes}m {seconds}s"
+
+    return f"{seconds}s"
+
+
+def print_running_tests(running_tests, queued_count):
+    if not running_tests:
+        return
+
+    print(
+        f"... Waiting on {len(running_tests)} running test(s); {queued_count} queued:",
+        flush=True,
+    )
+    for test_path, elapsed in sorted(running_tests, key=lambda item: item[1], reverse=True):
+        print(f"    - {test_path} ({format_elapsed(elapsed)})", flush=True)
+
+
+def run_test(command, test, retries, output_dir=None, timeout=300, status_interval=STATUS_INTERVAL_SECONDS, status_callback=None):
     """Run a single test with retries and proper process cleanup."""
     # Pass current environment to subprocess
     env = os.environ.copy()
@@ -145,16 +174,26 @@ def run_test(command, test, retries, output_dir=None, timeout=300):
             processes_to_cleanup.append(process.pid)
             
             try:
-                stdout, stderr = process.communicate(timeout=timeout)
-                
-                if stdout:
-                    output_buffer.append(stdout)
-                if stderr:
-                    output_buffer.append(stderr)
+                attempt_start = time.monotonic()
+                while True:
+                    elapsed_in_attempt = time.monotonic() - attempt_start
+                    remaining_timeout = timeout - elapsed_in_attempt
+                    if remaining_timeout <= 0:
+                        raise subprocess.TimeoutExpired(cmd, timeout)
 
-                if process.returncode == 0:
-                    passed = True
-                    break
+                    try:
+                        stdout, stderr = process.communicate(timeout=min(status_interval, remaining_timeout))
+                        if stdout:
+                            output_buffer.append(stdout)
+                        if stderr:
+                            output_buffer.append(stderr)
+
+                        if process.returncode == 0:
+                            passed = True
+                        break
+                    except subprocess.TimeoutExpired:
+                        if status_callback is not None:
+                            status_callback(test, time.time() - test_start, attempt)
             except subprocess.TimeoutExpired:
                 # Test timed out - kill the process tree
                 print(f"Test {test} timed out after {timeout}s, killing process tree...", flush=True)
@@ -179,6 +218,9 @@ def run_test(command, test, retries, output_dir=None, timeout=300):
                         kill_process_tree(process.pid)
                     except:
                         pass
+
+            if passed:
+                break
     finally:
         # Final cleanup - ensure no lingering processes from this test
         for pid in processes_to_cleanup:
@@ -266,12 +308,15 @@ def main():
         print(f"Scheduling at most {thread_count} tests concurrently (physical cores detected: {physical_cores})", flush=True)
 
     if thread_count != 0:
-        # Use ProcessPoolExecutor with controlled submission to limit memory usage
-        with ProcessPoolExecutor(max_workers=thread_count) as executor:
+        # Tests already run in external processes via renode-test, so threads are
+        # sufficient here and avoid lingering multiprocessing helper processes.
+        with ThreadPoolExecutor(max_workers=thread_count) as executor:
             # Use a queue to control submission rate - only submit when slots are available
             pending_tests = deque(tests_to_run)
             futures = {}
+            future_started_at = {}
             started_tests = 0
+            next_status_at = time.monotonic() + STATUS_INTERVAL_SECONDS
 
             def submit_test(test_path):
                 nonlocal started_tests
@@ -281,6 +326,7 @@ def main():
                 print(f">>> [{started_tests}/{len(tests_to_run)}] Starting test (active {active_jobs}/{thread_count}): {test_path}", flush=True)
                 future = executor.submit(run_test, str(runner), test_path, args.retry, output_dir, args.timeout)
                 futures[future] = test_path
+                future_started_at[future] = time.monotonic()
 
             # Submit initial batch up to max_workers
             for _ in range(min(thread_count, len(pending_tests))):
@@ -288,11 +334,21 @@ def main():
 
             # Process completed tests and submit new ones as slots free up
             while futures:
-                # Wait for at least one test to complete
-                done, _ = wait(futures, return_when=concurrent.futures.FIRST_COMPLETED)
+                timeout = max(0, next_status_at - time.monotonic())
+                done, _ = wait(futures, timeout=timeout, return_when=concurrent.futures.FIRST_COMPLETED)
+
+                if not done:
+                    running_tests = [
+                        (test_path, time.monotonic() - future_started_at[future])
+                        for future, test_path in futures.items()
+                    ]
+                    print_running_tests(running_tests, len(pending_tests))
+                    next_status_at = time.monotonic() + STATUS_INTERVAL_SECONDS
+                    continue
 
                 for future in done:
                     test = futures.pop(future)
+                    future_started_at.pop(future, None)
                     passed, _, output_buffer, elapsed, attempts = future.result()
                     status = "PASS" if passed else "FAIL"
                     print(f"<<< [{status}] {test} ({elapsed:.2f}s, attempts={attempts})", flush=True)
@@ -311,11 +367,32 @@ def main():
                     # Submit next test if available
                     if pending_tests:
                         submit_test(pending_tests.popleft())
+
+                if futures and time.monotonic() >= next_status_at:
+                    running_tests = [
+                        (test_path, time.monotonic() - future_started_at[future])
+                        for future, test_path in futures.items()
+                    ]
+                    print_running_tests(running_tests, len(pending_tests))
+                    next_status_at = time.monotonic() + STATUS_INTERVAL_SECONDS
     else:
         # Sequential execution
+        def print_sequential_waiting(test_path, elapsed, attempt):
+            print(
+                f"... Waiting on test: {test_path} ({format_elapsed(elapsed)}, attempt {attempt}/{args.retry})",
+                flush=True,
+            )
+
         for index, test in enumerate(tests_to_run, start=1):
             print(f">>> [{index}/{len(tests_to_run)}] Starting test: {test}", flush=True)
-            passed, test_name, output_buffer, elapsed, attempts = run_test(str(runner), test, args.retry, output_dir, args.timeout)
+            passed, test_name, output_buffer, elapsed, attempts = run_test(
+                str(runner),
+                test,
+                args.retry,
+                output_dir,
+                args.timeout,
+                status_callback=print_sequential_waiting,
+            )
             status = "PASS" if passed else "FAIL"
             print(f"<<< [{status}] {test_name} ({elapsed:.2f}s, attempts={attempts})", flush=True)
 

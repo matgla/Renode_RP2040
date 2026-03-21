@@ -47,7 +47,6 @@ namespace Antmicro.Renode.Peripherals.SPI
 
       periFrequency = clocks.PeripheralClockFrequency;
       _executionThread = machine.ObtainManagedThread(Step, 1);
-      this.clocks = clocks;
       this.gpio.SubscribeOnFunctionChange(OnGpioFunctionSelect);
       clocks.OnPeripheralChange(UpdateFrequency);
       machine.GetSystemBus(this).Register(this, new BusMultiRegistration(address + xorAliasOffset, aliasSize, "XOR"));
@@ -252,7 +251,8 @@ namespace Antmicro.Renode.Peripherals.SPI
       // SPI Mode 0: set data BEFORE raising clock so data is stable at rising edge
       if (!clockWasHigh)
       {
-        SetMultiplePins(txPins, Convert.ToBoolean((transmitData >> (dataSize - 1 - transmitCounter)) & 1));
+        bool bitToSend = Convert.ToBoolean((transmitData >> (dataSize - 1 - transmitCounter)) & 1);
+        SetMultiplePins(txPins, bitToSend);
       }
 
       SetMultiplePins(clockPins, !clockWasHigh);
@@ -260,7 +260,17 @@ namespace Antmicro.Renode.Peripherals.SPI
 
       if (!clockWasHigh)
       {
-        receiveData = (ushort)((receiveData << 1) | Convert.ToUInt16(ReadMultiplePins(rxPins)));
+        // Read data on rising edge
+        if (loopbackMode)
+        {
+          // In loopback mode, feed transmitted bit back to receiver
+          bool transmittedBit = Convert.ToBoolean((transmitData >> (dataSize - 1 - transmitCounter)) & 1);
+          receiveData = (ushort)((receiveData << 1) | Convert.ToUInt16(transmittedBit));
+        }
+        else
+        {
+          receiveData = (ushort)((receiveData << 1) | Convert.ToUInt16(ReadMultiplePins(rxPins)));
+        }
         transmitCounter += 1;
       }
     }
