@@ -29,7 +29,7 @@ This repository contains a **RP2040 MCU simulation** for the [Renode](https://gi
 | **I2C** | 🟢 Full | Master mode, interrupts, DMA support |
 | **USB** | 🔴 None | Not implemented |
 | **PWM** | 🔴 None | Not implemented |
-| **RTC** | 🔴 None | Not implemented |
+| **RTC** | 🟢 External | PCF8523 I2C device simulator |
 
 ## Technology Stack
 

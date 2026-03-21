@@ -198,6 +198,7 @@
     
     <!-- External devices -->
     <Compile Include="externals/w25q16.cs" />
+    <Compile Include="externals/I2CEEPROM.cs" />
     <Compile Include="externals/pcf8523.cs" />
     <Compile Include="externals/bmp280.cs" />
     <Compile Include="externals/lis3dh.cs" />
@@ -210,6 +211,8 @@
     <Compile Include="externals/mma8451.cs" />
     <Compile Include="externals/mpl3115a2.cs" />
     <Compile Include="externals/mpu6050.cs" />
+    <Compile Include="externals/pa1010d.cs" />
+    <Compile Include="externals/ssd1306.cs" />
   </ItemGroup>
 
 </Project>

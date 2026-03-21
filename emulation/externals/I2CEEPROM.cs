@@ -18,7 +18,14 @@ namespace Antmicro.Renode.Peripherals.I2C
     /// </summary>
     public class I2CEEPROM : II2CPeripheral
     {
-        public I2CEEPROM(int size = 256)
+        public I2CEEPROM()
+        {
+            this.size = 256;
+            memory = new byte[size];
+            Reset();
+        }
+
+        public I2CEEPROM(int size)
         {
             if (size != 256 && size != 512 && size != 1024 && size != 2048 && 
                 size != 4096 && size != 8192 && size != 16384 && size != 32768 && size != 65536)

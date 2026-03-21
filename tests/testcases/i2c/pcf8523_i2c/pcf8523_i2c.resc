@@ -8,6 +8,20 @@ sysbus LoadELF $ORIGIN/../../../../bootroms/rp2040/b2.elf
 
 include $ORIGIN/../../../testers/load_testers.resc
 
+# Configure PCF8523 RTC with initial time and date
+log "Configuring PCF8523 RTC"
+
+# Set time: 14:30:45
+sysbus.i2c0.pcf8523 SetHours 14
+sysbus.i2c0.pcf8523 SetMinutes 30
+sysbus.i2c0.pcf8523 SetSeconds 45
+
+# Set date: 15 June 2024, Saturday (weekday 6)
+sysbus.i2c0.pcf8523 SetDay 15
+sysbus.i2c0.pcf8523 SetMonth 6
+sysbus.i2c0.pcf8523 SetYear 24
+sysbus.i2c0.pcf8523 SetWeekday 6
+
 log "Loading firmware file"
 sysbus LoadELF $global.TEST_FILE
 

@@ -1,0 +1,3 @@
+using "../../../../boards/raspberry_pico.repl"
+
+pa1010d: I2C.PA1010D @ i2c0 0x10

@@ -42,6 +42,8 @@
 - testcases/pio/clocked_input/clocked_input.robot
 - testcases/watchdog/hello_watchdog/hello_watchdog.robot
 - testcases/i2c/bus_scan/bus_scan.robot
+- testcases/i2c/slave_mem_i2c/slave_mem_i2c.robot
+- testcases/i2c/slave_mem_i2c/slave_mem_i2c_burst.robot
 - testcases/i2c/pcf8523_i2c/pcf8523_i2c.robot
 - testcases/i2c/bmp280_i2c/bmp280_i2c.robot
 - testcases/i2c/ht16k33_i2c/ht16k33_i2c.robot
@@ -51,3 +53,5 @@
 - testcases/i2c/mma8451_i2c/mma8451_i2c.robot
 - testcases/i2c/mpl3115a2_i2c/mpl3115a2_i2c.robot
 - testcases/i2c/mpu6050_i2c/mpu6050_i2c.robot
+- testcases/i2c/pa1010d_i2c/pa1010d_i2c.robot
+- testcases/i2c/ssd1306_i2c/ssd1306_i2c.robot
