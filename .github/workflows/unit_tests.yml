@@ -1,0 +1,55 @@
+name: Unit Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  unit_tests:
+    name: "Unit Tests - Linux"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Download Renode
+        shell: bash
+        run: |
+          wget https://github.com/renode/renode/releases/download/v1.16.1/renode-1.16.1.linux-dotnet.tar.gz
+          mkdir -p renode
+          tar -xzf renode-1.16.1.linux-dotnet.tar.gz -C renode --strip-components=1
+
+      - name: Install Renode Test Requirements
+        shell: bash
+        run: |
+          pip3 install -r tests/requirements.txt
+
+      - name: Build Peripherals
+        shell: bash
+        run: |
+          dotnet build ./emulation/Peripherals.csproj -c Release /p:RenodePath="$PWD/renode/bin"
+
+      - name: Run Unit Tests
+        shell: bash
+        run: |
+          dotnet --info
+          export PATH=$PATH:$PWD/renode:$PWD/renode/tests
+          # Set PYTHONPATH so Renode can find installed Python packages
+          export PYTHONPATH=$(python3 -c "import site; print(site.getsitepackages()[0])")
+          python3 ./run_unit_tests.py -v
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-results
+          if: always()
+          compression-level: 9
+          path: |
+            output_unit_tests/*
