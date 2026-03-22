@@ -32,6 +32,11 @@ jobs:
         run: |
           pip3 install -r tests/requirements.txt
 
+      - name: Build Peripherals
+        shell: bash
+        run: |
+          dotnet build ./emulation/Peripherals.csproj -c Release /p:RenodePath="$PWD/renode/bin"
+
       - name: Run Unit Tests
         shell: bash
         run: |
