@@ -518,7 +518,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                         .WithValueField(0, 32, FieldMode.Write | FieldMode.Read,
                             writeCallback: (_, value) =>
                             {
-                                var cpu = CurrentCpu();
+                                var cpu = CurrentCpu() + 1;
                                 if (cpu == spinlocks[id])
                                 {
                                     spinlocks[id] = 0;
@@ -526,7 +526,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                             },
                             valueProviderCallback: _ =>
                             {
-                                var cpu = CurrentCpu();
+                                var cpu = CurrentCpu() + 1;
                                 if (spinlocks[id] == 0 || spinlocks[id] == cpu)
                                 {
                                     spinlocks[id] = cpu;
