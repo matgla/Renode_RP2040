@@ -107,6 +107,14 @@ namespace Antmicro.Renode.Peripherals.GPIOPort
             registers.Write(offset, value);
         }
 
+        // The atomic aliases (XOR/SET/CLR) act on this peripheral's own register collection; the base class's go to its empty one, so a
+        // masked write such as pico-sdk's gpio_pull_up (hw_write_masked, an XOR alias write) was lost and the pad kept its reset pull-down.
+        public override void WriteDoubleWordXor(long offset, uint value) { registers.Write(offset, registers.Read(offset) ^ value); }
+        public override void WriteDoubleWordSet(long offset, uint value) { registers.Write(offset, registers.Read(offset) | value); }
+        public override void WriteDoubleWordClear(long offset, uint value) { registers.Write(offset, registers.Read(offset) & ~value); }
+        public override uint ReadDoubleWordXor(long offset) { return registers.Read(offset); }
+        public override uint ReadDoubleWordClear(long offset) { return registers.Read(offset); }
+
         public double PadsVoltage { get; private set; }
 
         private RP2040GPIO gpio;
